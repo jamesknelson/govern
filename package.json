@@ -1,0 +1,35 @@
+{
+  "name": "react-controllers",
+  "version": "0.1.1",
+  "description": "Separate state from Components.",
+  "author": "James K Nelson <james@jamesknelson.com>",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "scripts": {
+    "clean": "rimraf lib",
+    "build:watch": "cross-env BABEL_ENV=commonjs babel --watch --source-maps=inline -d lib/ source/",
+    "build": "cross-env BABEL_ENV=commonjs babel source --out-dir lib",
+    "prepublish": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "react",
+    "controller",
+    "state"
+  ],
+  "peerDependencies": {
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2"
+  },
+  "devDependencies": {
+    "babel-core": "^6.24.0",
+    "babel-plugin-transform-class-properties": "^6.24.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.0",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-latest": "^6.24.0",
+    "cross-env": "^3.1.4"
+  },
+  "dependencies": {
+    "hoist-non-react-statics": "^1.2.0",
+    "prop-types": "^15.5.10"
+  }
+}
