@@ -55,9 +55,14 @@ export default function connectControllers(controllerPropNames) {
         // Keep track of whether there have been any changes since the last
         // flush, to make sure that empty transactions don't cause a re-render
         this.changesExist = false
+
+        // Increments every time any changes occurs within
+        this.sequenceNumber = 1
       }
 
       componentWillMount() {
+        ++this.sequenceNumber
+
         const outputs = {}
         for (let key of controllerPropNames) {
           const controller = this.props[key]
@@ -65,10 +70,13 @@ export default function connectControllers(controllerPropNames) {
             outputs[key] = this.subscribe(key, controller, this.props)
           }
         }
-        this.setState(outputs)
+        this.preventChanges = false
+        this.setState(outputs, () => { this.preventChanges = true })
       }
 
       componentWillReceiveProps(nextProps) {
+        ++this.sequenceNumber
+
         const newOutputs = {}
         let haveNewOutputs = false
 
@@ -114,7 +122,7 @@ export default function connectControllers(controllerPropNames) {
       }
 
       shouldComponentUpdate() {
-        return this.transactionLevel === 0
+        return this.transactionLevel === 0 && this.preventChanges === false
       }
 
       render() {
@@ -154,10 +162,13 @@ export default function connectControllers(controllerPropNames) {
       }
 
       handleChange(key, newState) {
+        ++this.sequenceNumber
+
         if (this.transactionLevel === 0) {
           throw new Error('controlledBy: A Controller may not emit a change without first starting a transaction.')
         }
-        if (this.flushLevel !== 0) {
+        if (this.flushLevel !== 0 && this.preventChanges) {
+          console.error(this.state[key], newState)
           throw new Error('controlledBy: A Controller may not change its output while flushing changes to the component.')
         }
 
@@ -169,6 +180,7 @@ export default function connectControllers(controllerPropNames) {
       }
 
       handleTransactionStart = () => {
+        ++this.sequenceNumber
         ++this.transactionLevel
 
         // If we're flushing when the transaction starts, we want to make sure
@@ -181,9 +193,35 @@ export default function connectControllers(controllerPropNames) {
         if (this.flushLevel > 0) {
           ++this.flushLevel
         }
+        else {
+          this.preventChanges = false
+        }
       }
 
       handleTransactionEnd = (unlock) => {
+        // React doesn't always immediately run `setState` calls, which means
+        // that there may still be pending prop updates that result from
+        // already executed code.
+        //
+        // React does seem to run `setState` calls in order, which means we
+        // can wait for all pending `setState` calls by executing an empty one
+        // here and waiting for the callback. We need to do this recursively
+        // until there are no changes, at which point we know there will be no
+        // further changes and we can flush our changes to the next component.
+        const prevSeq = this.sequenceNumber
+        this.setState({ $waitingForChanges: {} }, () => {
+          if (this.sequenceNumber !== prevSeq) {
+            this.handleTransactionEnd(unlock)
+          }
+          else {
+            this.completeTransaction(unlock)
+          }
+        })
+      }
+
+      completeTransaction(unlock) {
+        ++this.sequenceNumber
+
         // The flush level can only be positive if the transaction was started
         // during a flush.
         if (this.flushLevel > 0) {
@@ -194,14 +232,30 @@ export default function connectControllers(controllerPropNames) {
         // the flush is complete, even if the flush doesn't happen this tick.
         this.unlockQueue.push(unlock)
 
-        if (--this.transactionLevel === 0 && this.changesExist) {
-          ++this.flushLevel
-          this.changesExist = false
-          this.setState({ $flush: {} }, () => {
-            --this.flushLevel
+        if (--this.transactionLevel === 0) {
+          if (this.changesExist) {
+            ++this.flushLevel
+
+            this.changesExist = false
+            // Ensure that any prop updates we receive while flushing are
+            // not caused by children by setting up a dummy flush,
+            // and throw an error if any updates are received after its
+            // callback is executed. Any updates that are already queued
+            // should be received before its callback
+            this.preventChanges = false
+            this.setState({ $dummy: {} }, () => {
+              this.preventChanges = true
+            })
+            this.setState({ $flush: {} }, () => {
+              --this.flushLevel
+              this.unlockQueue.forEach(unlock => unlock())
+              this.unlockQueue.length = 0
+            })
+          }
+          else {
             this.unlockQueue.forEach(unlock => unlock())
             this.unlockQueue.length = 0
-          })
+          }
         }
       }
     }

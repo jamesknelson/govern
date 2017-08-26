@@ -45,11 +45,7 @@ export default class Controller {
   // Overridable by subclass
   //
 
-  doPropsDiffer(props) {
-    return true
-  }
-
-  doesStateDiffer(state) {
+  shouldCalculateOutput(previousProps, previousState) {
     return true
   }
 
@@ -111,11 +107,14 @@ export default class Controller {
   //
 
   $_doAction(key, fn, ...args) {
+    const previousProps = this.props
+    const previousState = this.state
     if (this.$isDestroyed) {
       console.error('You cannot call actions on a controller instance that has been destroyed.')
       return
     }
     if (this.$runningActions[key]) {
+      console.trace()
       console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
       return
     }
@@ -123,7 +122,7 @@ export default class Controller {
     this.$_doIncreaseTransactionLevel()
     this.$runningActions[key] = true
     fn.apply(this, args)
-    this.$_doDecreaseTransactionLevel()
+    this.$_doDecreaseTransactionLevel(previousProps, previousState)
   }
 
   $_addDefaultProps(props) {
@@ -142,26 +141,26 @@ export default class Controller {
   // This actually performs the props update. It assumes that all conditions to
   // perform an props update have been met.
   $_doPropsUpdate(props) {
+    const previousProps = this.props
+    const previousState = this.state
     const propsWithDefaults = this.$_addDefaultProps(props)
-    if (this.doPropsDiffer(propsWithDefaults)) {
-      this.$_doIncreaseTransactionLevel()
-      if (!this.$runningPropsUpdate && this.controllerWillReceiveProps) {
-        this.$runningPropsUpdate = true
-        this.controllerWillReceiveProps(propsWithDefaults)
-        this.$runningPropsUpdate = false
-      }
-      this.$props = propsWithDefaults
-      this.$_doDecreaseTransactionLevel()
+    this.$_doIncreaseTransactionLevel()
+    if (!this.$runningPropsUpdate && this.controllerWillReceiveProps) {
+      this.$runningPropsUpdate = true
+      this.controllerWillReceiveProps(propsWithDefaults)
+      this.$runningPropsUpdate = false
     }
+    this.$props = propsWithDefaults
+    this.$_doDecreaseTransactionLevel(previousProps, previousState)
   }
 
   $_doStateUpdate(update) {
+    const previousProps = this.props
+    const previousState = this.state
     const mergedState = { ...this.state, ...update }
-    if (this.doesStateDiffer(mergedState)) {
-      this.$_doIncreaseTransactionLevel()
-      this.state = Object.freeze(mergedState)
-      this.$_doDecreaseTransactionLevel()
-    }
+    this.$_doIncreaseTransactionLevel()
+    this.state = Object.freeze(mergedState)
+    this.$_doDecreaseTransactionLevel(previousProps, previousState)
   }
 
   $_doIncreaseTransactionLevel() {
@@ -172,11 +171,10 @@ export default class Controller {
     }
   }
 
-  $_doDecreaseTransactionLevel() {
+  $_doDecreaseTransactionLevel(previousProps, previousState) {
     if (--this.$transactionLevel == 0) {
-      const newOutput = this.output()
-
-      if (!this.reconcile(newOutput, this.$_cachedOutput)) {
+      if (this.shouldCalculateOutput(previousProps, previousState)) {
+        const newOutput = this.output()
         this.$_cachedOutput = newOutput
         for (let { change } of this.$listeners) {
           change(newOutput)
