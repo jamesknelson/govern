@@ -1,14 +1,9 @@
 Controllers
 ===========
 
-- `$actions` should also be added to the exports as `actions`. controllers could define `$actions` using decorators in typescript...
+- controllers could define actions using decorators in typescript (similar to mobx)...
 - `connectControllers` should be `connectController`. Use ParallelController if you'd like many
-- `connectController` should add the actions of the controller to its wrapper component instance
 - may help with performance to have some more composible method of handling multiple `connects`. Maybe a library method like "makeConnector" that returns a kinda half-thunk that checks the argument, and composes if not an element/node?
-
-next step:
-
-- attempt to implement FocusController, FocusManager
 
 
 SeriesController

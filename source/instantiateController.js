@@ -1,5 +1,15 @@
-export default function instantiateController(type, value) {
-  const instance = new type(value)
+export default function instantiateController(type, props) {
+  const propsWithDefaults = Object.assign({}, props)
+  const defaultProps = type.defaultProps
+  if (defaultProps) {
+    for (let key of Object.keys(defaultProps)) {
+      if (props[key] === undefined) {
+        propsWithDefaults[key] = defaultProps[key]
+      }
+    }
+  }
+
+  const instance = new type(propsWithDefaults)
 
   instance.$initialize()
 

@@ -1,6 +1,6 @@
 {
   "name": "react-controllers",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",

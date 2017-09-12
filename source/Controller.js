@@ -5,7 +5,7 @@
  */
 export default class Controller {
   constructor(props) {
-    this.$props = this.$_addDefaultProps(props)
+    this.$props = props
     this.$isDestroyed = false
     this.$listeners = []
 

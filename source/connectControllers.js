@@ -253,6 +253,11 @@ export default function connectControllers(controllerPropNames) {
             })
           }
           else {
+            // TODO:
+            // - what if the input props have changed, but outputs didn't?
+            //   this can happen if a controller causes side effects on
+            //   globals like history, etc. before flush
+
             this.unlockQueue.forEach(unlock => unlock())
             this.unlockQueue.length = 0
           }

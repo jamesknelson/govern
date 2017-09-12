@@ -37,7 +37,10 @@ abstract class Controller<I, O> {
 }
 ```
 
-By emiting `onTransactionStart` and `onTransactionEnd` around any possible
+- By emiting `onTransactionStart` and `onTransactionEnd` around any possible
 side effects, **react-controllers** can batch state changes across multiple
 controllers, and multiple changes to its props, before flushing them to
 a child React component in one operation.
+
+- Controllers should always return a new object if any part of it has changed.
+  Modifying an output object in-place may cause changes to go undetected.
