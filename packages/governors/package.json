@@ -1,0 +1,28 @@
+{
+  "name": "governors",
+  "version": "0.2.0",
+  "description": "Components for state.",
+  "author": "James K Nelson <james@jamesknelson.com>",
+  "license": "MIT",
+  "main": "commonjs/index.js",
+  "module": "src/index.mjs",
+  "scripts": {
+    "clean": "rimraf commonjs",
+    "build": "cross-env BABEL_ENV=commonjs babel -x .mjs src --out-dir commonjs",
+    "build:watch": "cross-env BABEL_ENV=commonjs babel -x .mjs --watch --source-maps=inline -d commonjs/ src/",
+    "test": "cross-env NODE_ENV=test mocha -r @std/esm test/*.test.mjs",
+    "test:watch": "mocha --watch -r @std/esm test/*.test.mjs",
+    "prepublish": "npm run clean && npm run build && npm run test"
+  },
+  "keywords": [
+    "state",
+    "state-management",
+    "governors",
+    "controllers"
+  ],
+  "devDependencies": {
+    "cross-env": "^3.1.4",
+    "mocha": "^4.0.1",
+    "rimraf": "^2.6.2"
+  }
+}

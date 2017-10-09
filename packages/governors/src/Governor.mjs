@@ -1,9 +1,4 @@
-/**
- * PureController aims to mirror the `state` and `props` pattern from React,
- * while assuming that the output is an object that can be shallow compared
- * to check for equivalence.
- */
-export default class Controller {
+export default class Governor {
   constructor(props) {
     this.$props = props
     this.$isDestroyed = false
@@ -15,7 +10,7 @@ export default class Controller {
     this.$transactionLevel = 0
 
     this.$actions = {}
-    const actionTemplates = this.constructor.actions
+    const actionTemplates = this.constructor.actions || {}
     const actionKeys = Object.keys(actionTemplates)
     for (let key of actionKeys) {
       this.$actions[key] = this.$_doAction.bind(this, key, actionTemplates[key])
@@ -33,7 +28,7 @@ export default class Controller {
 
   setState(state) {
     if (this.$isDestroyed) {
-      console.error('You cannot call `setState` on a controller instance that has been destroyed. Skipping setState.')
+      console.error('You cannot call `setState` on a governor instance that has been destroyed. Skipping setState.')
       return
     }
 
@@ -61,7 +56,7 @@ export default class Controller {
   }
 
   //
-  // Controller API
+  // Governor API
   //
 
   $initialize() {
@@ -74,7 +69,7 @@ export default class Controller {
 
   $set(props) {
     if (this.$isDestroyed) {
-      console.error('You cannot call `set` on a controller instance that has been destroyed. Skipping.')
+      console.error('You cannot call `set` on a governor instance that has been destroyed. Skipping.')
       return
     }
 
@@ -85,8 +80,8 @@ export default class Controller {
     return this.$_cachedOutput
   }
 
-  $subscribe(change, transactionStart, transactionEnd) {
-    const callbacks = { change, transactionStart, transactionEnd }
+  $subscribe(change, transactionStart, transactionEnd, destroy) {
+    const callbacks = { change, transactionStart, transactionEnd, destroy }
     this.$listeners.push(callbacks)
     return () => {
       const index = this.$listeners.indexOf(callbacks)
@@ -110,12 +105,16 @@ export default class Controller {
     const previousProps = this.props
     const previousState = this.state
     if (this.$isDestroyed) {
-      console.error('You cannot call actions on a controller instance that has been destroyed.')
+      if (process.env.NODE_ENV === "development") {
+        console.error('You cannot call actions on a governor instance that has been destroyed.')
+      }
       return
     }
     if (this.$runningActions[key]) {
-      console.trace()
-      console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
+      if (process.env.NODE_ENV === "development") {
+        console.trace()
+        console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
+      }
       return
     }
 
@@ -145,9 +144,10 @@ export default class Controller {
     const previousState = this.state
     const propsWithDefaults = this.$_addDefaultProps(props)
     this.$_doIncreaseTransactionLevel()
-    if (!this.$runningPropsUpdate && this.controllerWillReceiveProps) {
+    this.$_changedInTransaction = true
+    if (!this.$runningPropsUpdate && this.governorWillReceiveProps) {
       this.$runningPropsUpdate = true
-      this.controllerWillReceiveProps(propsWithDefaults)
+      this.governorWillReceiveProps(propsWithDefaults)
       this.$runningPropsUpdate = false
     }
     this.$props = propsWithDefaults
@@ -159,25 +159,29 @@ export default class Controller {
     const previousState = this.state
     const mergedState = { ...this.state, ...update }
     this.$_doIncreaseTransactionLevel()
+    this.$_changedInTransaction = true
     this.state = Object.freeze(mergedState)
     this.$_doDecreaseTransactionLevel(previousProps, previousState)
   }
 
   $_doIncreaseTransactionLevel() {
     if (++this.$transactionLevel == 1) {
+      this.$_changedInTransaction = false
       for (let { transactionStart } of this.$listeners) {
-        transactionStart()
+        if (transactionStart) transactionStart()
       }
     }
   }
 
   $_doDecreaseTransactionLevel(previousProps, previousState) {
     if (--this.$transactionLevel == 0) {
-      if (this.shouldCalculateOutput(previousProps, previousState)) {
-        const newOutput = this.output()
-        this.$_cachedOutput = newOutput
-        for (let { change } of this.$listeners) {
-          change(newOutput)
+      if (this.$_changedInTransaction) {
+        if (this.shouldCalculateOutput(previousProps, previousState)) {
+          const newOutput = this.output()
+          this.$_cachedOutput = newOutput
+          for (let { change } of this.$listeners) {
+            change(newOutput)
+          }
         }
       }
 
@@ -190,7 +194,7 @@ export default class Controller {
       }
 
       for (let { transactionEnd } of this.$listeners) {
-        transactionEnd(unlock)
+        if (transactionEnd) transactionEnd(unlock)
       }
     }
   }

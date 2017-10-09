@@ -1,34 +1,33 @@
 {
-  "name": "react-controllers",
-  "version": "0.1.3",
-  "description": "Separate state from Components.",
-  "author": "James K Nelson <james@jamesknelson.com>",
-  "license": "MIT",
-  "main": "lib/index.js",
-  "scripts": {
-    "clean": "rimraf lib",
-    "build:watch": "cross-env BABEL_ENV=commonjs babel --watch --source-maps=inline -d lib/ source/",
-    "build": "cross-env BABEL_ENV=commonjs babel source --out-dir lib",
-    "prepublish": "npm run clean && npm run build"
-  },
-  "keywords": [
-    "react",
-    "controller",
-    "state"
-  ],
-  "peerDependencies": {
-    "react": "^15.4.2",
-    "react-dom": "^15.4.2"
-  },
+  "private": true,
   "devDependencies": {
+    "@std/esm": "^0.11.3",
+    "babel-cli": "^6.26.0",
     "babel-core": "^6.24.0",
+    "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-plugin-transform-class-properties": "^6.24.0",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
-    "babel-preset-latest": "^6.24.0",
-    "cross-env": "^3.1.4"
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-react": "^6.24.1",
+    "cross-env": "^5.0.5",
+    "lerna": "^2.1.2",
+    "rimraf": "^2.6.2",
+    "sinon": "^4.0.1"
   },
-  "dependencies": {
-    "hoist-non-react-statics": "^1.2.0"
-  }
+  "scripts": {
+    "site:start": "sitepack start -c site/config/sitepack.config.js",
+    "site:clean": "rimraf site/build",
+    "site:build": " cross-env NODE_ENV=production sitepack build -c site/config/sitepack.config.js -o site/build",
+    "site:build:development": " cross-env NODE_ENV=development sitepack build -c site/config/sitepack.config.js -o site/build",
+    "site:publish": "npm run site:clean && npm run site:build && cp ./CNAME site/build && cd site/build && git init && git commit --allow-empty -m 'update docs' && git checkout -b gh-pages && touch .nojekyll && git add . && git commit -am 'update docs' && git push git@github.com:jamesknelson/junctions gh-pages --force",
+    "site:view": "sitepack view -d site/build",
+    "build": "lerna run --parallel build",
+    "build:watch": "lerna run --parallel build:watch",
+    "test": "lerna run --parallel test",
+    "test:watch": "lerna run --parallel test:watch"
+  },
+  "workspaces": [
+    "packages/*",
+    "site"
+  ]
 }

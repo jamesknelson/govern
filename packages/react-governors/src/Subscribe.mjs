@@ -70,6 +70,7 @@ export default function connectControllers(controllerPropNames) {
             outputs[key] = this.subscribe(key, controller, this.props)
           }
         }
+        // FIXME: this doesn't work. You can't prevent changes during mount.
         this.preventChanges = false
         this.setState(outputs, () => { this.preventChanges = true })
       }
@@ -208,12 +209,17 @@ export default function connectControllers(controllerPropNames) {
         // here and waiting for the callback. We need to do this recursively
         // until there are no changes, at which point we know there will be no
         // further changes and we can flush our changes to the next component.
+
+        // FIXME: this doesn't work if we're handling an event from a controlled
+        // input, as this will enqueue an update for *after* the event's DOM
+        // is updated.
         const prevSeq = this.sequenceNumber
         this.setState({ $waitingForChanges: {} }, () => {
           if (this.sequenceNumber !== prevSeq) {
             this.handleTransactionEnd(unlock)
           }
           else {
+            // FIXME: This gets called before the DOM update, but doesn't actually get updated until after
             this.completeTransaction(unlock)
           }
         })
@@ -242,6 +248,10 @@ export default function connectControllers(controllerPropNames) {
             // and throw an error if any updates are received after its
             // callback is executed. Any updates that are already queued
             // should be received before its callback
+            
+            // FIXME: we need to know if there are queued updates, because if
+            // there are not, we need to render immediately to ensure that
+            // controlled inputs work :-/
             this.preventChanges = false
             this.setState({ $dummy: {} }, () => {
               this.preventChanges = true

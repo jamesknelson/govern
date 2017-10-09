@@ -1,4 +1,12 @@
-export default function shallowCompare(a, b) {
+import Governor from './Governor'
+
+export default class PureGovernor extends Governor {
+  shouldCalculateOutput(previousProps, previousState) {
+    return !shallowCompare(this.props, previousProps) || !shallowCompare(this.state, previousState)
+  }
+}
+
+function shallowCompare(a, b) {
   var aIsNull = a === null
   var bIsNull = b === null
 

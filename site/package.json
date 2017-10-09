@@ -1,0 +1,26 @@
+{
+  "author": "James K Nelson <james@jamesknelson.com>",
+  "name": "site",
+  "private": "true",
+  "version": "0.2.0",
+  "description": "armo site",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "less": "^2.7.2",
+    "less-loader": "^2.2.3",
+    "loader-utils": "^1.1.0",
+    "mdxc": "1.0.0-beta.6",
+    "rimraf": "^2.3.4"
+  },
+  "dependencies": {
+    "memcord": "^0.1.1",
+    "prismjs": "^1.8.1",
+    "prop-types": "^15.5.8",
+    "react": "^16.0.0",
+    "react-cx": "^0.1.4",
+    "react-dom": "^16.0.0",
+    "sitepack": "^0.1.0-beta.21",
+    "sitepack-mdx-page-loader": "^0.1.0-beta.21",
+    "sitepack-react": "^0.1.0-beta.21"
+  }
+}
