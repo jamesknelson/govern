@@ -181,7 +181,6 @@ export class Component {
           const newOutput = this.output()
           this._govern_cachedOutput = newOutput
           for (let { change } of this.$listeners) {
-            console.log(newOutput)
             change(newOutput)
           }
         }

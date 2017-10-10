@@ -93,7 +93,7 @@ export default function controlledBy(governComponent) {
         return React.createElement(WrappedComponent, this.state.output)
       }
 
-      handleChange(key, output) {
+      handleChange(output) {
         ++this.sequenceNumber
 
         if (this.transactionLevel === 0) {
