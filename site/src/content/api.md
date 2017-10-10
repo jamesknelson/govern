@@ -1,6 +1,9 @@
 API
 ===
 
+This is the planned API.
+
+**Note: some parts of this API do not yet exist.**
 
 Governor Instances
 -----------------
