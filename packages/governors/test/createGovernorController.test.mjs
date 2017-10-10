@@ -1,7 +1,7 @@
 import assert from 'assert'
 
-import Governor from '../lib/Governor'
-import { createGovernorController, isGovernorController } from '../lib/GovernorController'
+import Governor from '../src/Governor'
+import { createGovernorController, isGovernorController } from '../src/GovernorController'
 
 
 describe('createGovernorController', function() {
