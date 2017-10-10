@@ -50,6 +50,7 @@ export default class SeriesComponent {
     }
 
     this.$doIncreaseTransactionLevel('main')
+    this.$changeCount = 1
     this.$leftOutput = this.$leftInstance.get()
     this.$doDecreaseTransactionLevel('main')
     return this.$output
@@ -130,12 +131,11 @@ export default class SeriesComponent {
   $handleLeftChange(data) {
     this.$changeCount++
     this.$leftOutput = data
-    this.$output = Object.assign({}, data, this.$rightOutput)
   }
   $handleRightChange(data) {
     this.$changeCount++
     this.$rightOutput = data
-    this.$output = Object.assign({}, this.$leftOutput, data)
+    this.$output = data
   }
   $handleLeftTransactionEnd(unlock) {
     this.$unlockQueue.push(unlock)
@@ -150,7 +150,9 @@ export default class SeriesComponent {
     this[`$${type}TransactionLevel`]++
     if (++this.$totalTransactionLevel === 1) {
       for (let { transactionStart } of this.$listeners) {
-        transactionStart()
+        if (transactionStart) {
+          transactionStart()
+        }
       }
     }
   }
@@ -159,11 +161,11 @@ export default class SeriesComponent {
     --this[`$${type}TransactionLevel`]
     --this.$totalTransactionLevel
 
-    if ((type === 'main' || type === 'left') && this.$totalTransactionLevel === 0) {
+    if (this.$changeCount > 0 && (type === 'main' || type === 'left') && this.$totalTransactionLevel === 0) {
       this.$rightInstance.set(this.$leftOutput)
       if (this.$listeners.length === 0) {
         this.$rightOutput = this.$rightInstance.get()
-        this.$output = Object.assign({}, this.$leftOutput, this.$rightOutput)
+        this.$output = this.$rightOutput
       }
     }
 
@@ -187,7 +189,9 @@ export default class SeriesComponent {
       }
 
       for (let { transactionEnd } of this.$listeners) {
-        transactionEnd(unlock)
+        if (transactionEnd) {
+          transactionEnd(unlock)
+        }
       }
     }
   }

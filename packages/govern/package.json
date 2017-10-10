@@ -5,7 +5,6 @@
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
   "main": "commonjs/index.js",
-  "module": "src/index.mjs",
   "scripts": {
     "clean": "rimraf commonjs",
     "build": "cross-env BABEL_ENV=commonjs babel -x .mjs src --out-dir commonjs",
