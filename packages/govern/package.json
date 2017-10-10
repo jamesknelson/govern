@@ -1,6 +1,6 @@
 {
   "name": "govern",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Components for state.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "build:watch": "cross-env BABEL_ENV=commonjs babel -x .mjs --watch --source-maps=inline -d commonjs/ src/",
     "test": "cross-env NODE_ENV=test mocha -r @std/esm test/*.test.mjs",
     "test:watch": "mocha --watch -r @std/esm test/*.test.mjs",
-    "prepublish": "npm run clean && npm run build && npm run test"
+    "prepare": "npm run clean && npm run build && npm run test"
   },
   "keywords": [
     "state",

@@ -1,6 +1,6 @@
 {
   "name": "react-govern",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "build": "cross-env BABEL_ENV=commonjs babel -x .mjs src --out-dir commonjs",
     "build:watch": "cross-env BABEL_ENV=commonjs babel -x .mjs --watch --source-maps=inline -d commonjs/ src/",
     "test": "cross-env NODE_ENV=test jest",
-    "prepublish": "npm run test && npm run clean && npm run build"
+    "prepare": "npm run test && npm run clean && npm run build"
   },
   "keywords": [
     "react",
