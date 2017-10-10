@@ -130,12 +130,12 @@ export default class SeriesComponent {
   $handleLeftChange(data) {
     this.$changeCount++
     this.$leftOutput = data
-    this.$output = { ...data, ...this.$rightOutput }
+    this.$output = Object.assign({}, data, this.$rightOutput)
   }
   $handleRightChange(data) {
     this.$changeCount++
     this.$rightOutput = data
-    this.$output = { ...this.$leftOutput, ...data }
+    this.$output = Object.assign({}, this.$leftOutput, data)
   }
   $handleLeftTransactionEnd(unlock) {
     this.$unlockQueue.push(unlock)
@@ -163,7 +163,7 @@ export default class SeriesComponent {
       this.$rightInstance.set(this.$leftOutput)
       if (this.$listeners.length === 0) {
         this.$rightOutput = this.$rightInstance.get()
-        this.$output = { ...this.$leftOutput, ...this.$rightOutput }
+        this.$output = Object.assign({}, this.$leftOutput, this.$rightOutput)
       }
     }
 

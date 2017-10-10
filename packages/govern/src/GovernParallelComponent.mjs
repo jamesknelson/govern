@@ -112,10 +112,7 @@ export default class ParallelComponent {
 
   $_handleChange(key, data) {
     this.$_changeCount++
-    this.$_cachedOutput = {
-      ...this.$_cachedOutput,
-      [key]: data,
-    }
+    this.$_cachedOutput = Object.assign({}, this.$_cachedOutput, { [key]: data })
   }
   $_handleTransactionStart() {
     this.$_doIncreaseTransactionLevel()

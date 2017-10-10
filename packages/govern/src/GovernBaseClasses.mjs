@@ -45,10 +45,9 @@ export class Component {
   }
 
   output() {
-    return {
+    return Object.assign({
       actions: this.actions,
-      ...this.state,
-    }
+    }, this.state)
   }
 
   reconcile(a, b) {
@@ -159,7 +158,7 @@ export class Component {
   _govern_doStateUpdate(update) {
     const previousProps = this.props
     const previousState = this.state
-    const mergedState = { ...this.state, ...update }
+    const mergedState = Object.assign({}, this.state, update)
     this._govern_doIncreaseTransactionLevel()
     this._govern_changedInTransaction = true
     this.state = Object.freeze(mergedState)

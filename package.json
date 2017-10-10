@@ -18,7 +18,6 @@
     "site:start": "sitepack start -c site/config/sitepack.config.js",
     "site:clean": "rimraf site/build",
     "site:build": " cross-env NODE_ENV=production sitepack build -c site/config/sitepack.config.js -o site/build",
-    "site:build:development": " cross-env NODE_ENV=development sitepack build -c site/config/sitepack.config.js -o site/build",
     "site:publish": "npm run site:clean && npm run site:build && cp ./CNAME site/build && cd site/build && git init && git commit --allow-empty -m 'update docs' && git checkout -b gh-pages && touch .nojekyll && git add . && git commit -am 'update docs' && git push git@github.com:jamesknelson/junctions gh-pages --force",
     "site:view": "sitepack view -d site/build",
     "build": "lerna run --parallel build",
