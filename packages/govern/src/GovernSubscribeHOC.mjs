@@ -1,11 +1,11 @@
-export default function subscribe(Governor) {
+export default function subscribe(Component) {
 
 }
 
 
 /**
  * The old `connectControllers` React component is similar to the `subscribe`
- * HoG, except that subscribe connects a governor into the output of another
+ * HoG, except that subscribe connects a controller into the output of another
  * govenor (as opposed to a React Component).
  */
 

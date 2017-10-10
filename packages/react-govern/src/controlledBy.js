@@ -1,25 +1,25 @@
 import React, { Component } from 'react'
+import { createController } from 'govern'
 import hoistNonReactStatics from 'hoist-non-react-statics'
-import { createGovernorController } from 'governors'
 
 
 /**
- * A HoC to create and destroy a Governor of the given type with the wrapped
- * component.
+ * A HoC to create and destroy a Govern Component of the given type with the
+ * wrapped component.
  *
- * The props for the returned component are fed to the Governor, with its
- * output injected into the wrapped componend via `<Subscribe>`.
+ * The props for the returned component are fed to the Govern Component, with
+ * its output injected into the wrapped componend via `<Subscribe>`.
  */
-export default function governedBy(governorType) {
+export default function controlledBy(governComponent) {
   return WrappedComponent => {
-    class GovernedBy extends Component {
+    class ControlledBy extends Component {
       constructor(props) {
         super(props)
 
         this.state = {}
         this.unsubscriber = null
 
-        // Keep track of the number of governors that are currently running
+        // Keep track of the number of controller that are currently running
         // actions, and thus may cause side effects that involve changes
         // to the environment or changes emitted via onChange
         this.transactionLevel = 0
@@ -29,7 +29,7 @@ export default function governedBy(governorType) {
         // considering the flush to be complete
         this.flushLevel = 0
 
-        // Keep governor actions locked until all governors leave their
+        // Keep controller actions locked until all controller leave their
         // transactiosn
         this.unlockQueue = []
 
@@ -51,16 +51,16 @@ export default function governedBy(governorType) {
       componentWillMount() {
         ++this.sequenceNumber
 
-        this.governorController = createGovernorController(governorType, this.props)
+        this.controller = createController(governComponent, this.props)
 
-        this.unsubscriber = this.governorController.subscribe(
+        this.unsubscriber = this.controller.subscribe(
           this.handleChange,
           this.handleTransactionStart,
           this.handleTransactionEnd
         )
 
         this.setState(
-          { output: this.governorController.get() },
+          { output: this.controller.get() },
           () => { this.preventChanges = true }
         )
       }
@@ -73,7 +73,7 @@ export default function governedBy(governorType) {
         // componentWillReceiveProps instead of making nested calls, and the
         // setState callback in `handleTransactionEnd` will alloy any further
         // props to be captured before flushing an update through children.
-        this.governorController.set(nextProps)
+        this.controller.set(nextProps)
       }
 
       componentWillUnmount() {
@@ -82,7 +82,7 @@ export default function governedBy(governorType) {
           this.unsubscriber = undefined
         }
 
-        this.governorController.destroy()
+        this.controller.destroy()
       }
 
       shouldComponentUpdate() {
@@ -97,11 +97,11 @@ export default function governedBy(governorType) {
         ++this.sequenceNumber
 
         if (this.transactionLevel === 0) {
-          throw new Error('governedBy: A Governor may not emit a change without first starting a transaction.')
+          throw new Error('controlledBy: A Controller may not emit a change without first starting a transaction.')
         }
         if (this.flushLevel !== 0 && this.preventChanges) {
           console.error(this.state.output, output)
-          throw new Error('governedBy: A Governor may not change its output while flushing changes to the component.')
+          throw new Error('controlledBy: A Controller may not change its output while flushing changes to the component.')
         }
 
         this.changesExist = true
@@ -158,7 +158,7 @@ export default function governedBy(governorType) {
           --this.flushLevel
         }
 
-        // Prevents actions on governors from being called again until
+        // Prevents actions on Govern Components from being called again until
         // the flush is complete, even if the flush doesn't happen this tick.
         this.unlockQueue.push(unlock)
 
@@ -185,7 +185,7 @@ export default function governedBy(governorType) {
           else {
             // TODO:
             // - what if the input props have changed, but outputs didn't?
-            //   this can happen if a governor causes side effects on
+            //   this can happen if a controller causes side effects on
             //   globals like history, etc. before flush
 
             this.unlockQueue.forEach(unlock => unlock())
@@ -195,8 +195,8 @@ export default function governedBy(governorType) {
       }
     }
 
-    hoistNonReactStatics(GovernedBy, WrappedComponent)
+    hoistNonReactStatics(ControlledBy, WrappedComponent)
 
-    return GovernedBy
+    return ControlledBy
   }
 }

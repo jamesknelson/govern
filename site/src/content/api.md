@@ -5,26 +5,25 @@ This is the planned API.
 
 **Note: some parts of this API do not yet exist.**
 
-Governor Instances
------------------
+Types
+-----
 
-*Exported from `govenors` package.*
+*Exported from `govern` package.*
 
 ```typescript
 export type Unsubscriber = () => void;
 
-// Governors can be represented by:
-// - An class that extends the `Governor.Class` class
-// - A function that takes an input and returns an output
-// - An array of govenor types whose outputs should be passed into the following input
-// - An object that shapes govenors
-export type GovernorType<I, O> =
-  GovernorConstructor<I, O>,
-  (input: I): O,
-  GovernorType<any, any>[],
-  { [key: string]: GovernorType<I, any> }
+export type GovernComponent<P, O> =
+  GovernComponentClass<P, O>,
+  (input: P): O,
+  GovernComponent<any, any>[],
+  { [key: string]: GovernComponent<P, any> }
 
-export interface GovernorOutlet<T> {
+export class GovernComponentClass<P, O> {
+  isGovernComponent()
+}
+
+export interface GovernOutlet<T> {
   get(): O;
 
   subscribe(
@@ -34,29 +33,34 @@ export interface GovernorOutlet<T> {
     // Should be called before any possible side effects
     onTransactionStart: () => void,
 
-    // Should be called once out of the side effect zone
-    onTransactionEnd: (unlock: () => void) => void
+    // Should be called once out of the side effect zone. The `done`
+    // function should be called once the subscriber has processed all of
+    // the transaction's changes.
+    onTransactionEnd: (done: () => void) => void
 
     // Signals that there will be no further transactions or changes.
     onDestroy: () => void,
   ): Unsubscriber;
 
-  // Memoized over `govenor`, so that repeated calls will result in the same
-  // govenor (until it is destroyed).
-  map<M>(type: GovernorType<T, M>): GovernorOutlet<M>;
+  // Memoized over `type`, so that repeated calls will result in the same
+  // outlet (until it is destroyed).
+  map<M>(type: GovernComponent<T, M>): GovernOutlet<M>;
 }
 
-export interface GovernorController<I, O> {
-  outlet: GovernorOutlet<O>;
-  set(input: I): void;
+export interface GovernController<P, O> extends GovernOutlet<O> {
+  changeProps(newProps: P): void;
   destroy(): void;
+
+  // A helper method to return an outlet when you want to pass a controller
+  // somewhere without giving it control authority.
+  getOutlet(): GovernOutlet<O>;
 }
 
-export function createGovernor<I, O>(type: GovernorType<I, O>, initialProps: I): Governor<I, O>;
+export function createController<P, O>(type: GovernComponent<P, O>, initialProps: P): GovernController<P, O>;
 
 
-// The interface that is used to actually create a Govenor by `createGovenor` is private.
-export class GovernorClass<I, O, S> {
+// A simple type of GovernComponentClass that can be used as a base class.
+export class Govern.Component<P, O, S> extends Govern.Component<P, O> {
   readonly actions: { [name: string]: (...args: any[]) => void };
   readonly props: I;
   readonly state: S;
@@ -65,38 +69,38 @@ export class GovernorClass<I, O, S> {
 
   setState(state: S): void;
 
-  governorWillReceiveProps(nextProps): boolean;
+  componentWillReceiveProps(nextProps): boolean;
 
   output(): O;
 
   reconcile(prevOutput: O, nextOutput: O): boolean;
 
-  governorWillBeDestroyed(): void;
+  componentWillBeDestroyed(): void;
 }
 
 
 
-`@withGovernor(prop='govenor')`
+`@withController(prop='controller')`
 ------------------------------
 
-*Exported from `react-govenors` package.*
+*Exported from `react-govern` package.*
 
-Higher Order Component that injects a govenor instance whose output is the
+Higher Order Component that injects a GovernController whose output is the
 component's current props.
 
 ### Example
 
 ```jsx
-@withGovernor()
+@withController()
 class Example extends React.Component {
   constructor(props) {
     super(props)
-    this.exampleGovernor = props.govenor.map(ExampleGovernor)
+    this.exampleController = props.controller.map(ExampleComponent)
   }
 
   render() {
     return (
-      <Subscribe to={this.exampleGovernor}>
+      <Subscribe to={this.exampleController}>
         {bus =>
           <div>
             <div className='title'>{bus.title}</div>
@@ -110,15 +114,16 @@ class Example extends React.Component {
 ```
 
 
-`@governedBy(Governor)`
+`@controlledBy(component: GovernComponent)`
 ----------------------
 
-*Exported from `react-govenors` package.*
+*Exported from `react-govern` package.*
 
 Higher Order Component that replaces a component's props with the output of the
-specified govenor.
+specified GovernComponent.
 
-Internally, this uses the `<WithGovernor>` and `<Subscribe>` components.
+Internally, this should use the `<WithController>` and `<Subscribe>` components
+with a map on the controller injected by `WithController`.
 
 ### Example
 
@@ -127,15 +132,15 @@ TODO
 ```
 
 
-`<WithGovernor props children={(govenor) => ReactElement} />`
+`<WithController props children={(controller: GovernController) => ReactElement} />`
 -------------------------------------------
 
-*Exported from `react-govenors` package.*
+*Exported from `react-govern` package.*
 
-Component that injects a govenor that just outputs whatever props were passed
-into the component.
+Component that injects a GovernController that just outputs whatever props were
+passed into the component.
 
-Used internally by the `withGovernor` decorator.
+Used internally by the `withController` decorator.
 
 ### Example
 
@@ -144,31 +149,35 @@ TODO
 ```
 
 
-`<Subscribe to={govenor} children={(bus) => ReactElement} />`
-------------------------------------------------
+`<Subscribe to={controllerOutlet} children={(bus) => ReactElement} />`
+-------------------------------------------------------------------
 
-*Exported from `react-govenors` package.*
+*Exported from `react-govern` package.*
 
-Component that subscribes to the govenor specified on `to`, and passes its
+Component that subscribes to the outlet specified on `to`, and passes its
 latest output to the render function.
 
 
-HoGs
+HoCs
 ----
 
-### `merge<I, O, M>(type: GovernorType<I, O>, mergeFn: (input: I, output: O) => M): GovernorType<I, M>`
+### `merge<P, O, M>(type: GovernComponent<P, O>, mergeFn: (props: P, output: O) => M): GovernComponent<P, M>`
 
-Returns a new GovernorType that merges the initial input back into the output
-of the passed in GovernorType.
+Returns a new GovernComponent that merges the initial input back into the output
+of the passed in GovernComponent.
 
-### `factory(type: GovernorType<I, O>)`
+### `factory(key: string, type: GovernComponent<I, O>)`
 
-Returns a new GovernorType that outputs an GovernorInstance of the given type.
-Keeps the props of the embedded Governor in sync, and destroys it when it is
+Returns a new GovernComponent that outputs a Controller on the specified key.
+Keeps the props of the embedded Component in sync, and destroys it when it is
 destroyed itself.
 
 ### `subscribe(propName: string)`
 
-Returns a new GovernorType that accepts a Governor instance via the specified
+Returns a new GovernComponent that accepts a Controller via the specified
 prop, subsribes to it, and forwards its output.
 
+### `withDefaultProps(defaultProps: Object)(component: GovernComponent<P, O> | ReactComponent)`
+
+Return a new Component with the specified default props added. Also works with
+React components.

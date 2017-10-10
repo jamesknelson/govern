@@ -1,18 +1,18 @@
 import assert from 'assert'
 
-import Governor from '../src/Governor'
-import { createGovernorController, isGovernorController } from '../src/GovernorController'
+import { Component } from '../src/GovernBaseClasses'
+import { createController, isGovernController } from '../src/GovernController'
 
 
-describe('createGovernorController', function() {
-  it("creates a minimal GovernorController", function() {
-    class TestController extends Governor {}
+describe('createController', function() {
+  it("creates a minimal GovernController", function() {
+    class TestController extends Component {}
 
-    assert(isGovernorController(createGovernorController(TestController)))
+    assert(isGovernController(createController(TestController)))
   })
 
   it("respects defaultProps", function() {
-    class TestController extends Governor {
+    class TestController extends Component {
       output() {
         return this.props
       }
@@ -21,13 +21,13 @@ describe('createGovernorController', function() {
       test: 1
     }
 
-    const controller = createGovernorController(TestController)
+    const controller = createController(TestController)
 
     assert.equal(controller.get().test, 1)
   })
 
-  it('creates function governors', function() {
-    const controller = createGovernorController(
+  it('creates function components', function() {
+    const controller = createController(
       props => ({ number: props.number + 1 }),
       { number: 1 }
     )
@@ -36,13 +36,13 @@ describe('createGovernorController', function() {
   })
 
   it('creates nested series, parallel and function controllers', function() {
-    class TestController extends Governor {
+    class TestController extends Component {
       output() {
         return { number: this.props.number + 1 }
       }
     }
 
-    const controller = createGovernorController(
+    const controller = createController(
       {
         a: [
           TestController,

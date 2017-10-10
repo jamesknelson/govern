@@ -1,6 +1,6 @@
 {
-  "name": "react-governors",
-  "version": "0.1.4",
+  "name": "react-govern",
+  "version": "0.2.0",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -21,7 +21,7 @@
   ],
   "peerDependencies": {
     "react": "^16.0.0",
-    "react-dom": "^16.0.0"
+    "govern": "^0.2.0"
   },
   "devDependencies": {
     "cross-env": "^3.1.4",

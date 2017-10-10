@@ -1,7 +1,7 @@
-import { createGovernorController } from './GovernorController'
+import { createController } from './GovernController'
 
 
-export default class ParallelGovernor {
+export default class ParallelComponent {
   constructor(props) {
     this.$_isDestroyed = false
     this.$_listeners = []
@@ -10,11 +10,11 @@ export default class ParallelGovernor {
 
     this.$_childInstances = {}
     this.$_childUnsubscribers = []
-    const childGovernors = this.constructor.childGovernors
-    const childKeys = Object.keys(childGovernors)
+    const children = this.constructor.children
+    const childKeys = Object.keys(children)
     for (let key of childKeys) {
-      const governor = childGovernors[key]
-      this.$_childInstances[key] = createGovernorController(governor, props)
+      const component = children[key]
+      this.$_childInstances[key] = createController(component, props)
     }
     Object.freeze(this.$_childInstances)
 
@@ -23,14 +23,24 @@ export default class ParallelGovernor {
   }
 
   //
-  // Governor-class API
+  // Govern Component API
   //
 
-  $initialize() {}
+  createGovernController() {
+    return {
+      // Outlet
+      get: this.$get.bind(this),
+      subscribe: this.$subscribe.bind(this),
+
+      // Controller
+      set: this.$set.bind(this),
+      destroy: this.$destroy.bind(this),
+    }
+  }
 
   $set(props) {
     if (this.$_isDestroyed) {
-      console.error('You cannot call `set` on a governor instance that has been destroyed. Skipping.')
+      console.error('You cannot call `set` on a Govern Controller instance that has been destroyed. Skipping.')
       return
     }
 
@@ -38,7 +48,7 @@ export default class ParallelGovernor {
   }
 
   $get() {
-    // Child outputs may change without notifying us, as this governor won't
+    // Child outputs may change without notifying us, as this component won't
     // be listening for changes on children unless there is somebody listening
     // to us.
     //
@@ -188,8 +198,8 @@ export default class ParallelGovernor {
   }
 }
 
-export function createParallelGovernor(childGovernors) {
-  const Governor = class extends ParallelGovernor {}
-  Governor.childGovernors = childGovernors
-  return Governor
+export function createParallelComponent(children) {
+  const Component = class extends ParallelComponent {}
+  Component.children = children
+  return Component
 }

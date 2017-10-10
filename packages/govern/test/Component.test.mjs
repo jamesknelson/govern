@@ -1,21 +1,15 @@
 import assert from 'assert'
 import sinon from 'sinon'
 
-import Governor from '../src/Governor'
+import { Component } from '../src/GovernBaseClasses'
 
 
-// A mock of `create` from `GovernorController.mjs`, with
+// A mock of `create` from `ComponentController.mjs`, with
 // the difference that it returns the internal instance too.
 function create(type, props={}) {
   const instance = new type(props)
-  instance.$initialize()
-  const governor = {
-    get: instance.$get.bind(instance),
-    subscribe: instance.$subscribe.bind(instance),
-    set: instance.$set.bind(instance),
-    destroy: instance.$destroy.bind(instance),
-  }
-  return { controller: Object.freeze(governor), instance }
+  const controller = instance.createGovernController()
+  return { controller: Object.freeze(controller), instance }
 }
 
 function createSpies() {
@@ -28,11 +22,11 @@ function createSpies() {
 }
 
 
-describe('Governor', function() {
+describe('Component', function() {
   it('checks proptypes')
 
   it('does not allow props to be changed', function() {
-    class TestGovernor extends Governor {
+    class TestComponent extends Component {
       constructor(props) {
         super(props)
         this.props = { test: 1 }
@@ -40,12 +34,12 @@ describe('Governor', function() {
     }
 
     assert.throws(() => {
-      create(TestGovernor)
+      create(TestComponent)
     })
   })
 
   it('does not allow actions to be changed', function() {
-    class TestGovernor extends Governor {
+    class TestComponent extends Component {
       constructor(props) {
         super(props)
         this.actions = { test: 1 }
@@ -53,23 +47,23 @@ describe('Governor', function() {
     }
 
     assert.throws(() => {
-      create(TestGovernor)
+      create(TestComponent)
     })
   })
 
   describe('#output', function() {
     it('returns state and action by default', function() {
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         constructor(props) {
           super(props)
           this.state = { test: 1 }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test() {}
       }
 
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
       const output = controller.get()
 
       assert(output.actions.test instanceof Function)
@@ -79,8 +73,8 @@ describe('Governor', function() {
 
   describe('#setState', function() {
     it('updates state', function() {
-      class TestGovernor extends Governor {}
-      const { controller, instance } = create(TestGovernor)
+      class TestComponent extends Component {}
+      const { controller, instance } = create(TestComponent)
 
       instance.setState({ test: 2 })
       assert.equal(instance.state.test, 2)
@@ -89,12 +83,12 @@ describe('Governor', function() {
     })
 
     it('notifies correct value', function() {
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return this.state
         }
       }
-      const { instance, controller } = create(TestGovernor)
+      const { instance, controller } = create(TestComponent)
 
       const change = sinon.spy().withArgs('CHANGED')
       controller.subscribe(change)
@@ -103,8 +97,8 @@ describe('Governor', function() {
     })
 
     it('wraps notification in a transaction when necessary', function() {
-      class TestGovernor extends Governor {}
-      const { controller, instance } = create(TestGovernor)
+      class TestComponent extends Component {}
+      const { controller, instance } = create(TestComponent)
       const spies = createSpies()
 
       controller.subscribe(spies.change, spies.transactionStart, spies.transactionEnd)
@@ -122,12 +116,12 @@ describe('Governor', function() {
     it("doesn't start transaction when it would be unnecesssary", function() {
       const spies = createSpies()
 
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return { actions: this.actions }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test() {
           assert.equal(spies.transactionStart.called, true)
           assert.equal(spies.change.called, false)
@@ -135,7 +129,7 @@ describe('Governor', function() {
         }
       }
 
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
       controller.subscribe(spies.change, spies.transactionStart)
       controller.get().actions.test()
 
@@ -146,14 +140,14 @@ describe('Governor', function() {
 
   describe('actions', function() {
     it('are created from statics', function() {
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() { return { actions: this.actions } }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test() {}
       }
 
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
 
       assert.doesNotThrow(() => {
         controller.get().actions.test()
@@ -163,19 +157,19 @@ describe('Governor', function() {
     it("doesn't start transaction when unnecessary", function() {
       const transactionStart = sinon.spy()
 
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return { actions: this.actions }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test1() {
           assert.equal(transactionStart.callCount, 1)
           this.actions.test2()
         },
         test2() {}
       }
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
 
       controller.subscribe(() => {}, transactionStart)
       controller.get().actions.test1()
@@ -184,15 +178,15 @@ describe('Governor', function() {
     })
 
     it("doesn't call change when unnecessary", function() {
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return { actions: this.actions }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test() {}
       }
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
       const change = sinon.spy()
       controller.subscribe(change)
       controller.get().actions.test()
@@ -202,15 +196,15 @@ describe('Governor', function() {
     it("can't be called again before unlock", function() {
       const action = sinon.spy()
 
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return { actions: this.actions }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test: action,
       }
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
       const actions = controller.get().actions
 
       actions.test()
@@ -222,15 +216,15 @@ describe('Governor', function() {
     it("can be called again after unlock", function() {
       const action = sinon.spy()
 
-      class TestGovernor extends Governor {
+      class TestComponent extends Component {
         output() {
           return { actions: this.actions }
         }
       }
-      TestGovernor.actions = {
+      TestComponent.actions = {
         test: action,
       }
-      const { controller } = create(TestGovernor)
+      const { controller } = create(TestComponent)
       controller.subscribe(
         () => {},
         () => {},
@@ -248,8 +242,8 @@ describe('Governor', function() {
 
   describe('subcribe', function() {
     it("doesn't immediately call its callbacks", function() {
-      class TestGovernor extends Governor {}
-      const { controller } = create(TestGovernor)
+      class TestComponent extends Component {}
+      const { controller } = create(TestComponent)
       const spies = createSpies()
 
       controller.subscribe(spies.change, spies.transactionStart, spies.transactionEnd, spies.destroy)
@@ -261,8 +255,8 @@ describe('Governor', function() {
     })
 
     it("returns a working unsubscribe function", function() {
-      class TestGovernor extends Governor {}
-      const { controller, instance } = create(TestGovernor)
+      class TestComponent extends Component {}
+      const { controller, instance } = create(TestComponent)
       const spies = createSpies()
 
       const unsubscribe = controller.subscribe(spies.change, spies.transactionStart, spies.transactionEnd, spies.destroy)
@@ -277,11 +271,11 @@ describe('Governor', function() {
   })
 
   describe('when receiving props', function() {
-    it('calls governorWillReceiveProps')
+    it('calls componentWillReceiveProps')
 
     it("respects defaultProps")
 
-    it('executes state changes from governorWillReceiveProps before running output')
+    it('executes state changes from componentWillReceiveProps before running output')
 
     it('starts transaction if necessary')
 
@@ -291,7 +285,7 @@ describe('Governor', function() {
   })
 
   describe('when destroyed', function() {
-    it('calls governorWillBeDestroyed')
+    it('calls componentWillBeDestroyed')
 
     it("notifies subscribers")
   })

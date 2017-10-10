@@ -1,3 +1,3 @@
-# Govenors
+# Hatt
 
-- [API](./api.md)
+- [Planned API](./api.md)

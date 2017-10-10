@@ -1,7 +1,7 @@
-import { createGovernorController } from './GovernorController'
+import { createController } from './GovernController'
 
 
-export default class SeriesGovernor {
+export default class SeriesComponent {
   constructor(props) {
     this.$isDestroyed = false
     this.$listeners = []
@@ -16,9 +16,9 @@ export default class SeriesGovernor {
 
     this.$props = props
 
-    this.$leftInstance = createGovernorController(this.constructor.leftGovernor, this.$props)
+    this.$leftInstance = createController(this.constructor.leftChild, this.$props)
     this.$leftOutput = this.$leftInstance.get()
-    this.$rightInstance = createGovernorController(this.constructor.rightGovernor, this.$leftOutput)
+    this.$rightInstance = createController(this.constructor.rightChild, this.$leftOutput)
 
     this.$handleLeftChange = this.$handleLeftChange.bind(this)
     this.$handleRightChange = this.$handleRightChange.bind(this)
@@ -29,10 +29,20 @@ export default class SeriesGovernor {
   }
 
   //
-  // Governor API
+  // Govern Component API
   //
 
-  $initialize() {}
+  createGovernController() {
+    return {
+      // Outlet
+      get: this.$get.bind(this),
+      subscribe: this.$subscribe.bind(this),
+
+      // Controller
+      set: this.$set.bind(this),
+      destroy: this.$destroy.bind(this),
+    }
+  }
 
   $get() {
     if (this.$listeners.length > 0) {
@@ -47,7 +57,7 @@ export default class SeriesGovernor {
 
   $set(props) {
     if (this.$isDestroyed) {
-      console.error('You cannot call `set` on a governor instance that has been destroyed. Skipping.')
+      console.error('You cannot call `set` on a Govern Controller instance that has been destroyed. Skipping.')
       return
     }
     this.$props = this.$addDefaultProps(props)
@@ -196,17 +206,17 @@ export default class SeriesGovernor {
   }
 }
 
-export function createSeriesGovernor(...childGovernors) {
-  if (childGovernors.length === 1) {
-    return childGovernors[0]
+export function createSeriesComponent(...children) {
+  if (children.length === 1) {
+    return children[0]
   }
 
-  const Governor = class extends SeriesGovernor {}
-  Governor.leftGovernor = childGovernors.shift()
-  Governor.rightGovernor = childGovernors.shift()
+  const Component = class extends SeriesComponent {}
+  Component.leftChild = children.shift()
+  Component.rightChild = children.shift()
 
-  if (childGovernors.length) {
-    return createSeriesGovernor(Governor, ...childGovernors)
+  if (children.length) {
+    return createSeriesComponent(Component, ...children)
   }
-  return Governor
+  return Component
 }

@@ -1,19 +1,19 @@
 import assert from 'assert'
 
-import merge from '../src/merge'
-import Governor from '../src/Governor'
-import { createGovernorController } from '../src/GovernorController'
+import merge from '../src/GovernMergeHOC'
+import { Component } from '../src/GovernBaseClasses'
+import { createController } from '../src/GovernController'
 
 
 describe('merge', function() {
   it('defaults to merging over props', function() {
-    class TestController extends Governor {
+    class TestController extends Component {
       output() {
         return { test1: 'OUTPUT1', test2: 'OUTPUT2' }
       }
     }
 
-    const controller = createGovernorController(
+    const controller = createController(
       merge(TestController),
       { test0: 'INPUT0', test1: 'INPUT1' }
     )
@@ -25,13 +25,13 @@ describe('merge', function() {
   })
 
   it('supports custom merge functions', function() {
-    class TestController extends Governor {
+    class TestController extends Component {
       output() {
         return { test1: 'OUTPUT1', test2: 'OUTPUT2' }
       }
     }
 
-    const controller = createGovernorController(
+    const controller = createController(
       merge(TestController, (props, output) => Object.assign({}, output, props)),
       { test0: 'INPUT0', test1: 'INPUT1' }
     )
