@@ -20,8 +20,8 @@
     "state"
   ],
   "peerDependencies": {
-    "react": "^16.0.0",
-    "govern": "^0.2.0"
+    "govern": "^0.2.0",
+    "react": "^16.0.0"
   },
   "devDependencies": {
     "cross-env": "^3.1.4",
