@@ -10,9 +10,8 @@
     "clean": "rimraf lib",
     "build": "cross-env BABEL_ENV=commonjs babel -x .mjs src --out-dir commonjs",
     "build:watch": "cross-env BABEL_ENV=commonjs babel -x .mjs --watch --source-maps=inline -d commonjs/ src/",
-    "test": "mocha -r @std/esm test/*.test.mjs",
-    "test:watch": "mocha --watch -r @std/esm test/*.test.mjs",
-    "prepublish": "npm run clean && npm run build"
+    "test": "cross-env NODE_ENV=test jest",
+    "prepublish": "npm run test && npm run clean && npm run build"
   },
   "keywords": [
     "react",
@@ -25,11 +24,24 @@
     "react-dom": "^16.0.0"
   },
   "devDependencies": {
-    "mocha": "^4.0.1",
     "cross-env": "^3.1.4",
+    "jest": "^21.2.1",
+    "react-test-renderer": "^16.0.0",
     "rimraf": "^2.6.2"
   },
   "dependencies": {
     "hoist-non-react-statics": "^1.2.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "mjs",
+      "js",
+      "json",
+      "jsx"
+    ],
+    "transform": {
+      "^.+\\.m?js$": "babel-jest"
+    },
+    "testRegex": "/__tests__/.*\\.m?js$"
   }
 }

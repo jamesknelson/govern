@@ -1,7 +1,7 @@
 import assert from 'assert'
 
-import Governor from '../src/Governor'
-import { createGovernorController, isGovernorController } from '../src/GovernorController'
+import Governor from '../lib/Governor'
+import { createGovernorController, isGovernorController } from '../lib/GovernorController'
 
 
 describe('createGovernorController', function() {
@@ -24,6 +24,15 @@ describe('createGovernorController', function() {
     const controller = createGovernorController(TestController)
 
     assert.equal(controller.get().test, 1)
+  })
+
+  it('creates function governors', function() {
+    const controller = createGovernorController(
+      props => ({ number: props.number + 1 }),
+      { number: 1 }
+    )
+
+    assert.equal(controller.get().number, 2)
   })
 
   it('creates nested series, parallel and function controllers', function() {
