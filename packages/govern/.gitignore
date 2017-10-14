@@ -1,3 +1,4 @@
 node_modules
-commonjs
+dist
 .esm-cache
+*.log

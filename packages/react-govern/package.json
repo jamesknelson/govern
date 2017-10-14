@@ -4,14 +4,16 @@
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
-  "main": "commonjs/index.js",
-  "module": "src/index.mjs",
+  "main": "./dist/commonjs/index.js",
+  "module": "dist/es/index.js",
   "scripts": {
-    "clean": "rimraf lib",
-    "build": "cross-env BABEL_ENV=commonjs babel src --out-dir commonjs",
-    "build:watch": "cross-env BABEL_ENV=commonjs babel --watch --source-maps=inline -d commonjs/ src/",
-    "test": "cross-env NODE_ENV=test jest",
-    "prepare": "npm run test && npm run clean && npm run build"
+    "clean": "rimraf dist",
+    "build:watch": "npm run build:es -- --watch",
+    "build:es": "cross-env BABEL_ENV=es babel src --source-maps --out-dir dist/es",
+    "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --source-maps --out-dir dist/commonjs",
+    "build": "npm run build:es && npm run build:commonjs",
+    "prepublish": "npm run clean && npm run build && npm run test",
+    "test": "cross-env NODE_ENV=test jest"
   },
   "keywords": [
     "react",

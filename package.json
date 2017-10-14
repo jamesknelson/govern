@@ -1,7 +1,6 @@
 {
   "private": true,
   "devDependencies": {
-    "@std/esm": "^0.11.3",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.24.0",
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
@@ -15,7 +14,7 @@
     "sinon": "^4.0.1"
   },
   "scripts": {
-    "site:start": "sitepack start -c site/config/sitepack.config.js",
+    "site:start": "cross-env BABEL_ENV=commonjs sitepack start -c site/config/sitepack.config.js",
     "site:clean": "rimraf site/build",
     "site:build": " cross-env NODE_ENV=production sitepack build -c site/config/sitepack.config.js -o site/build",
     "site:publish": "npm run site:clean && npm run site:build && cp ./CNAME site/build && cd site/build && git init && git commit --allow-empty -m 'update docs' && git checkout -b gh-pages && touch .nojekyll && git add . && git commit -am 'update docs' && git push git@github.com:jamesknelson/junctions gh-pages --force",
