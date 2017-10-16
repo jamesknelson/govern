@@ -33,18 +33,27 @@ export default class ParallelComponent {
       subscribe: this.$subscribe.bind(this),
 
       // Controller
-      set: this.$set.bind(this),
+      set: this.set,
       destroy: this.$destroy.bind(this),
     }
   }
 
-  $set(props) {
+  set = (props) => {
     if (this.$_isDestroyed) {
       console.error('You cannot call `set` on a Govern Controller instance that has been destroyed. Skipping.')
       return
     }
 
-    this.$_doPropsUpdate(props)
+    const propsWithDefaults = this.$_addDefaultProps(props)
+    this.$_doIncreaseTransactionLevel()
+    const children = {}
+    for (let instance of Object.values(this.$_childInstances)) {
+      instance.set(propsWithDefaults)
+    }
+    if (this.$_listeners.length === 0) {
+      this.$_setCachedOutput()
+    }
+    this.$_doDecreaseTransactionLevel()
   }
 
   $get() {
@@ -145,21 +154,6 @@ export default class ParallelComponent {
       }
     }
     return output
-  }
-
-  // This actually performs the props update. It assumes that all conditions to
-  // perform an props update have been met.
-  $_doPropsUpdate(props) {
-    const propsWithDefaults = this.$_addDefaultProps(props)
-    this.$_doIncreaseTransactionLevel()
-    const children = {}
-    for (let instance of Object.values(this.$_childInstances)) {
-      instance.set(propsWithDefaults)
-    }
-    if (this.$_listeners.length === 0) {
-      this.$_setCachedOutput()
-    }
-    this.$_doDecreaseTransactionLevel()
   }
 
   $_doIncreaseTransactionLevel() {

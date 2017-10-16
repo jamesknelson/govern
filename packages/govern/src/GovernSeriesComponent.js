@@ -3,153 +3,198 @@ import { createController } from './GovernController'
 
 export default class SeriesComponent {
   constructor(props) {
-    this.$isDestroyed = false
-    this.$listeners = []
-    this.$unlockQueue = []
-    this.$childUnsubscribers = []
-    this.$changeCount = 0
+    this.isInitialized = false
+    this.isDestroyed = false
+    this.listeners = []
+    this.unlockQueue = []
+    this.childSubscriptions = []
 
-    this.$totalTransactionLevel = 0
-    this.$mainTransactionLevel = 0
-    this.$leftTransactionLevel = 0
-    this.$rightTransactionLevel = 0
+    this.leftChangeCount = 0
+    this.rightChangeCount = 0
+    this.totalChangeCount = 0
 
-    this.$props = props
+    this.totalTransactionLevel = 0
+    this.mainTransactionLevel = 0
+    this.leftTransactionLevel = 0
+    this.rightTransactionLevel = 0
 
-    this.$leftInstance = createController(this.constructor.leftChild, this.$props)
-    this.$leftOutput = this.$leftInstance.get()
-    this.$rightInstance = createController(this.constructor.rightChild, this.$leftOutput)
-
-    this.$handleLeftChange = this.$handleLeftChange.bind(this)
-    this.$handleRightChange = this.$handleRightChange.bind(this)
-    this.$handleLeftTransactionStart = this.$handleLeftTransactionStart.bind(this)
-    this.$handleRightTransactionStart = this.$handleRightTransactionStart.bind(this)
-    this.$handleLeftTransactionEnd = this.$handleLeftTransactionEnd.bind(this)
-    this.$handleRightTransactionEnd = this.$handleRightTransactionEnd.bind(this)
+    this.scheduledProps = props
   }
-
-  //
-  // Govern Component API
-  //
 
   createGovernController() {
     return {
-      // Outlet
-      get: this.$get.bind(this),
-      subscribe: this.$subscribe.bind(this),
-
-      // Controller
-      set: this.$set.bind(this),
-      destroy: this.$destroy.bind(this),
+      get: this.get,
+      subscribe: this.subscribe,
+      set: this.set,
+      destroy: this.destroy,
     }
   }
 
-  $get() {
-    if (this.$listeners.length > 0) {
-      return this.$output
+  get = () => {
+    if (this.scheduledProps) {
+      this.executeScheduledPropChange()
+      return this.rightOutput
     }
 
-    this.$doIncreaseTransactionLevel('main')
-    this.$changeCount = 1
-    this.$leftOutput = this.$leftInstance.get()
-    this.$doDecreaseTransactionLevel('main')
-    return this.$output
+    if (this.listeners.length > 0) {
+      return this.rightOutput
+    }
+
+    this.increaseTransactionLevel('main')
+    this.totalChangeCount++
+    this.leftOutput = this.leftInstance.get()
+    this.rightInstance.set(this.leftOutput)
+    this.rightOutput = this.rightInstance.get()
+    this.decreaseTransactionLevel('main')
+
+    return this.rightOutput
   }
 
-  $set(props) {
-    if (this.$isDestroyed) {
+  set = (props) => {
+    if (this.isDestroyed) {
       console.error('You cannot call `set` on a Govern Controller instance that has been destroyed. Skipping.')
       return
     }
-    this.$props = this.$addDefaultProps(props)
-    this.$doIncreaseTransactionLevel('main')
-    this.$leftInstance.set(this.$props)
-    if (this.$listeners.length === 0) {
-      this.$leftOutput = this.$leftInstance.get()
+
+    const propsWithDefaults = this.addDefaultProps(props)
+
+    if (this.listeners.length > 0) {
+      this.increaseTransactionLevel('main')
+      // In a subscribed component, any changes on the left will cause the RHS
+      // to be updated automatically.
+      this.leftInstance.set(propsWithDefaults)
+      this.decreaseTransactionLevel('main')
+      return
     }
-    this.$doDecreaseTransactionLevel('main')
+
+    if (this.scheduledProps) {
+      this.executeScheduledPropChange()
+    }
+    this.scheduledProps = propsWithDefaults
   }
 
-  $subscribe(change, transactionStart, transactionEnd) {
-    if (this.$listeners.length === 0) {
-      // Caches current values
-      this.$get()
+  subscribe = (change, transactionStart, transactionEnd, destroy) => {
+    if (this.listeners.length === 0) {
+      // subscribing may cause computation, so make sure both the children
+      // have the most up to date props
+      if (this.scheduledProps) {
+        this.executeScheduledPropChange()
+      }
 
-      this.$childUnsubscribers.push(
-        this.$leftInstance.subscribe(
-          this.$handleLeftChange,
-          this.$handleLeftTransactionStart,
-          this.$handleLeftTransactionEnd
+      this.childSubscriptions = [
+        this.leftInstance.subscribe(
+          this.handleLeftChange,
+          this.handleLeftTransactionStart,
+          this.handleLeftTransactionEnd,
+          this.handleLeftDestroy
         ),
-        this.$rightInstance.subscribe(
-          this.$handleRightChange,
-          this.$handleRightTransactionStart,
-          this.$handleRightTransactionEnd
+        this.rightInstance.subscribe(
+          this.handleRightChange,
+          this.handleRightTransactionStart,
+          this.handleRightTransactionEnd,
+          this.handleRightDestroy
         )
-      )
+      ]
     }
 
-    const callbacks = { change, transactionStart, transactionEnd }
-    this.$listeners.push(callbacks)
-
-    return () => {
-      const index = this.$listeners.indexOf(callbacks)
-      if (index !== -1) {
-        this.$listeners.splice(index, 1)
-      }
-      if (this.$listeners.length === 0) {
-        for (let unsubscribe of this.$childUnsubscribers) {
-          unsubscribe()
-        }
-        this.$childUnsubscribers.length = 0
-      }
+    const callbacks = { change, transactionStart, transactionEnd, destroy }
+    this.listeners.push(callbacks)
+    return this.unsubscribe.bind(this, callbacks)
+  }
+  unsubscribe(callbacks) {
+    const index = this.listeners.indexOf(callbacks)
+    if (index !== -1) {
+      this.listeners.splice(index, 1)
+    }
+    if (this.listeners.length === 0 && this.childSubscriptions.length) {
+      this.unsubscribeFromChildren()
     }
   }
 
-  $destroy() {
-    this.$leftInstance.destroy()
-    this.$rightInstance.destroy()
+  destroy = () => {
+    this.leftInstance.destroy()
+    this.rightInstance.destroy()
 
-    this.$leftOutput = null
-    this.$rightOutput = null
-    this.$output = null
+    if (this.childSubscriptions.length) {
+      this.unsubscribeFromChildren()
+    }
 
-    this.$listeners.length = 0
-    this.$isDestroyed = true
+    while (this.totalTransactionLevel > 0) {
+      this.decreaseTransactionLevel('main')
+    }
+
+    for (let { destroy } of this.listeners) {
+      if (destroy) {
+        destroy()
+      }
+    }
+
+    this.scheduledProps = null
+    this.leftOutput = null
+    this.rightOutput = null
+    this.listeners.length = 0
+    this.isDestroyed = true
   }
 
   //
   // Implementation details
   //
 
-  $handleLeftTransactionStart() {
-    this.$doIncreaseTransactionLevel('left')
+  handleLeftChange = (data) => {
+    this.leftChangeCount++
+    this.leftOutput = data
   }
-  $handleRightTransactionStart() {
-    this.$doIncreaseTransactionLevel('right')
+  handleRightChange = (data) => {
+    this.rightChangeCount++
+    this.rightOutput = data
   }
-  $handleLeftChange(data) {
-    this.$changeCount++
-    this.$leftOutput = data
+  handleLeftTransactionStart = () => {
+    this.increaseTransactionLevel('left')
   }
-  $handleRightChange(data) {
-    this.$changeCount++
-    this.$rightOutput = data
-    this.$output = data
+  handleRightTransactionStart = () => {
+    this.increaseTransactionLevel('right')
   }
-  $handleLeftTransactionEnd(unlock) {
-    this.$unlockQueue.push(unlock)
-    this.$doDecreaseTransactionLevel('left')
+  handleLeftTransactionEnd = (unlock) => {
+    this.unlockQueue.push(unlock)
+    this.decreaseTransactionLevel('left')
   }
-  $handleRightTransactionEnd(unlock) {
-    this.$unlockQueue.push(unlock)
-    this.$doDecreaseTransactionLevel('right')
+  handleRightTransactionEnd = (unlock) => {
+    this.unlockQueue.push(unlock)
+    this.decreaseTransactionLevel('right')
+  }
+  handleLeftDestroy = () => {}
+  handleRightDestroy = () => {}
+
+
+  executeScheduledPropChange() {
+    const props = this.scheduledProps
+    this.scheduledProps = null
+
+    this.increaseTransactionLevel('main')
+    this.totalChangeCount++
+    if (!this.isInitialized) {
+      this.isInitialized = true
+      this.leftInstance = createController(this.constructor.leftChild, props)
+      this.leftOutput = this.leftInstance.get()
+      this.rightInstance = createController(this.constructor.rightChild, this.leftOutput)
+    }
+    else {
+      this.leftInstance.set(props)
+      this.leftOutput = this.leftInstance.get()
+      this.rightInstance.set(this.leftOutput)
+    }
+    this.rightOutput = this.rightInstance.get()
+    this.decreaseTransactionLevel('main')
   }
 
-  $doIncreaseTransactionLevel(type) {
-    this[`$${type}TransactionLevel`]++
-    if (++this.$totalTransactionLevel === 1) {
-      for (let { transactionStart } of this.$listeners) {
+
+  increaseTransactionLevel(type) {
+    this[`${type}TransactionLevel`]++
+    if (type === 'right' && this[`${type}TransactionLevel`] === 2) {
+      debugger
+    }
+    if (++this.totalTransactionLevel === 1) {
+      for (let { transactionStart } of this.listeners) {
         if (transactionStart) {
           transactionStart()
         }
@@ -157,30 +202,38 @@ export default class SeriesComponent {
     }
   }
 
-  $doDecreaseTransactionLevel(type) {
-    --this[`$${type}TransactionLevel`]
-    --this.$totalTransactionLevel
+  decreaseTransactionLevel(type) {
+    --this[`${type}TransactionLevel`]
+    --this.totalTransactionLevel
 
-    if (this.$changeCount > 0 && (type === 'main' || type === 'left') && this.$totalTransactionLevel === 0) {
-      this.$rightInstance.set(this.$leftOutput)
-      if (this.$listeners.length === 0) {
-        this.$rightOutput = this.$rightInstance.get()
-        this.$output = this.$rightOutput
-      }
+    // A left transaction can only start when subscribed, therefore rhs
+    // will emit any changes
+    if (type === 'left' && this.leftTransactionLevel === 0 && this.leftChangeCount) {
+      // If this was triggered by a left update, then totalTransactionLevel
+      // will be 0, triggering a new transaction. This hack prevents that.
+      this.totalTransactionLevel++
+      this.increaseTransactionLevel('main')
+      this.leftChangeCount = 0
+      this.rightInstance.set(this.leftOutput)
+      this.totalTransactionLevel--
+      this.decreaseTransactionLevel('main')
+      return
+    }
+    else if (type === 'right' && this.rightTransactionLevel === 0 && this.rightChangeCount) {
+      this.rightChangeCount = 0
+      this.totalChangeCount++
     }
 
-    // Calling `set` on `rightInstance` may cause the right transaction level
-    // to increase, so we need to check again.
-    if (this.$totalTransactionLevel === 0) {
-      if (this.$changeCount > 0) {
-        for (let { change } of this.$listeners) {
-          change(this.$output)
+    if (this.totalTransactionLevel === 0) {
+      if (this.totalChangeCount > 0) {
+        for (let { change } of this.listeners) {
+          change(this.rightOutput)
         }
-        this.$changeCount = 0
+        this.totalChangeCount = 0
       }
 
-      let unlockQueue = this.$unlockQueue
-      this.$unlockQueue = []
+      let unlockQueue = this.unlockQueue.slice(0)
+      this.unlockQueue.length = 0
       const unlock = () => {
         for (let fn of unlockQueue) {
           fn()
@@ -188,7 +241,7 @@ export default class SeriesComponent {
         unlockQueue.length = 0
       }
 
-      for (let { transactionEnd } of this.$listeners) {
+      for (let { transactionEnd } of this.listeners) {
         if (transactionEnd) {
           transactionEnd(unlock)
         }
@@ -196,7 +249,7 @@ export default class SeriesComponent {
     }
   }
 
-  $addDefaultProps(props) {
+  addDefaultProps(props) {
     const output = Object.assign({}, props)
     const defaultProps = this.constructor.defaultProps
     if (defaultProps) {
@@ -207,6 +260,12 @@ export default class SeriesComponent {
       }
     }
     return output
+  }
+
+  unsubscribeFromChildren() {
+    this.childSubscriptions[0]()
+    this.childSubscriptions[1]()
+    this.childSubscriptions.length = 0
   }
 }
 

@@ -1,6 +1,6 @@
 import assert from 'assert'
 
-import merge from '../src/GovernMergeHOC'
+import merge from '../src/GovernMerge'
 import { Component } from '../src/GovernBaseClasses'
 import { createController } from '../src/GovernController'
 

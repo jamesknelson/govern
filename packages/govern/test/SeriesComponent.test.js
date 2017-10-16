@@ -51,4 +51,52 @@ describe('SeriesComponent', function() {
     controller.get().actions.test()
     assert.equal(change.callCount, 0)
   })
+
+  it("when setting a subscribed Series, RHS set should only be called once", function() {
+    let rhsPropsSet = 0
+    class Test1 extends Component {}
+    class Test2 extends Component {
+      componentWillReceiveProps() {
+        rhsPropsSet++
+      }
+    }
+
+    const controller = createController(
+      createSeriesComponent(Test1, Test2)
+    )
+
+    controller.subscribe(() => {})
+    // subscribe may call set for some reason, and in this test we only want
+    // to check how it is called within `controller.set`
+    rhsPropsSet = 0
+    controller.set({ test: 1 })
+    assert.equal(rhsPropsSet, 1)
+  })
+
+  it("when setting a non-subscribed Series, LHS and RHS are not called until `get` is called", function() {
+    let lhsPropsSet = 0
+    let rhsPropsSet = 0
+    class Test1 extends Component {
+      componentWillReceiveProps() {
+        lhsPropsSet++
+      }
+    }
+    class Test2 extends Component {
+      componentWillReceiveProps() {
+        rhsPropsSet++
+      }
+    }
+
+    const controller = createController(
+      createSeriesComponent(Test1, Test2)
+    )
+
+    controller.set({ test: 1 })
+    assert.equal(lhsPropsSet, 0, 'lhs set is not called after controller.set')
+    assert.equal(rhsPropsSet, 0, 'rhs set is not called after controller.set')
+
+    controller.get({ test: 1 })
+    assert.equal(lhsPropsSet, 1, 'lhs set is called after controller.get')
+    assert.equal(rhsPropsSet, 1, 'rhs set is called after controller.get')
+  })
 })

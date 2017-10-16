@@ -24,7 +24,7 @@ export class GovernComponentClass<P, O> {
 }
 
 export interface GovernOutlet<T> {
-  get(): O;
+  getOutput(): O;
 
   subscribe(
     // Should only be called between `onTransactionStart` and `onTransactionEnd`
@@ -48,7 +48,15 @@ export interface GovernOutlet<T> {
 }
 
 export interface GovernController<P, O> extends GovernOutlet<O> {
-  changeProps(newProps: P): void;
+  // If this is called on a component with no subscribers, the new props won't
+  // be processed until a `getOutput`, `subscribe`, or subsequent
+  // `scheduleChange` is called. In the case that  no `getOutput` is called
+  // before a subsequent `scheduleChange`, `componentWillReceiveProps`
+  // will be called, but `output` will not be (but may be called where
+  // required on nested components)
+  scheduleChange(newProps: P): void;
+
+  // Should close any open transactions.
   destroy(): void;
 
   // A helper method to return an outlet when you want to pass a controller

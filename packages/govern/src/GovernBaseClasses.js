@@ -88,9 +88,23 @@ export class Component {
           return
         }
 
-        this._govern_doPropsUpdate(props)
+        const previousProps = this.props
+        const previousState = this.state
+        const propsWithDefaults = this._govern_addDefaultProps(props)
+        this._govern_doIncreaseTransactionLevel()
+        this._govern_changedInTransaction = true
+        if (!this.$runningPropsUpdate && this.componentWillReceiveProps) {
+          this.$runningPropsUpdate = true
+          this.componentWillReceiveProps(propsWithDefaults)
+          this.$runningPropsUpdate = false
+        }
+        this.$props = propsWithDefaults
+        this._govern_doDecreaseTransactionLevel(previousProps, previousState)
       },
       destroy: () => {
+        if (this.componentWillBeDestroyed) {
+          this.componentWillBeDestroyed()
+        }
         this.$listeners.length = 0
         this._govern_cachedOutput = null
         this.$isDestroyed = true
@@ -113,7 +127,6 @@ export class Component {
     }
     if (this.$runningActions[key]) {
       if (process.env.NODE_ENV === "development") {
-        console.trace()
         console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
       }
       return
@@ -121,8 +134,15 @@ export class Component {
 
     this._govern_doIncreaseTransactionLevel()
     this.$runningActions[key] = true
-    fn.apply(this, args)
-    this._govern_doDecreaseTransactionLevel(previousProps, previousState)
+    const result = fn.apply(this, args)
+    if (result instanceof Promise) {
+      const handler = () => this._govern_doDecreaseTransactionLevel(previousProps, previousState)
+      result.then(handler, handler)
+    }
+    else {
+      this._govern_doDecreaseTransactionLevel(previousProps, previousState)
+    }
+    return result
   }
 
   _govern_addDefaultProps(props) {
@@ -136,23 +156,6 @@ export class Component {
       }
     }
     return output
-  }
-
-  // This actually performs the props update. It assumes that all conditions to
-  // perform an props update have been met.
-  _govern_doPropsUpdate(props) {
-    const previousProps = this.props
-    const previousState = this.state
-    const propsWithDefaults = this._govern_addDefaultProps(props)
-    this._govern_doIncreaseTransactionLevel()
-    this._govern_changedInTransaction = true
-    if (!this.$runningPropsUpdate && this.componentWillReceiveProps) {
-      this.$runningPropsUpdate = true
-      this.componentWillReceiveProps(propsWithDefaults)
-      this.$runningPropsUpdate = false
-    }
-    this.$props = propsWithDefaults
-    this._govern_doDecreaseTransactionLevel(previousProps, previousState)
   }
 
   _govern_doStateUpdate(update) {
