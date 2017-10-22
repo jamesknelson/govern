@@ -273,6 +273,10 @@ describe('Component', function() {
   describe('when receiving props', function() {
     it('calls componentWillReceiveProps')
 
+    it('enqueues a call to componentWillReceiveProps if it is already running')
+
+    it('calls enqueued componentWillReceiveProps before calling output')
+
     it("respects defaultProps")
 
     it('executes state changes from componentWillReceiveProps before running output')

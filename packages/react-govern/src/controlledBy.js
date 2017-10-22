@@ -100,7 +100,9 @@ export default function controlledBy(governComponent) {
           throw new Error('controlledBy: A Controller may not emit a change without first starting a transaction.')
         }
         if (this.flushLevel !== 0 && this.preventChanges) {
-          console.error(this.state.output, output)
+          console.error("A controller tried to change its output while flushing changes to a React Component via controlledBy.")
+          console.error("Original output:", this.state.output)
+          console.error("New output", output)
           throw new Error('controlledBy: A Controller may not change its output while flushing changes to the component.')
         }
 

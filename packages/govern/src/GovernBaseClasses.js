@@ -88,17 +88,28 @@ export class Component {
           return
         }
 
+        const propsWithDefaults = this._govern_addDefaultProps(props)
+        if (this.$runningPropsUpdate) {
+          this.$runningPropsUpdate.push(propsWithDefaults)
+          return
+        }
+        this.$runningPropsUpdate = [propsWithDefaults]
+
         const previousProps = this.props
         const previousState = this.state
-        const propsWithDefaults = this._govern_addDefaultProps(props)
         this._govern_doIncreaseTransactionLevel()
         this._govern_changedInTransaction = true
-        if (!this.$runningPropsUpdate && this.componentWillReceiveProps) {
-          this.$runningPropsUpdate = true
-          this.componentWillReceiveProps(propsWithDefaults)
-          this.$runningPropsUpdate = false
+        if (this.componentWillReceiveProps) {
+          let receivedProps
+          while (receivedProps = this.$runningPropsUpdate.shift()) {
+            this.componentWillReceiveProps(receivedProps)
+            this.$props = receivedProps
+          }
         }
-        this.$props = propsWithDefaults
+        else {
+          this.$props = this.$runningPropsUpdate[0]
+        }
+        this.$runningPropsUpdate = false
         this._govern_doDecreaseTransactionLevel(previousProps, previousState)
       },
       destroy: () => {
