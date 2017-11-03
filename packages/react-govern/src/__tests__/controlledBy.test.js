@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactTestRenderer from 'react-test-renderer'
 
-import controlledBy from '../controlledBy'
+import { controlledBy } from '../ControlledBy'
 
 
 test('controlledBy decorates components', () => {

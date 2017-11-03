@@ -112,8 +112,10 @@ export default class SeriesComponent {
   }
 
   destroy = () => {
-    this.leftInstance.destroy()
+    // Destroy the right instance first, as it may depend on properties
+    // emitted by the left instance.
     this.rightInstance.destroy()
+    this.leftInstance.destroy()
 
     if (this.childSubscriptions.length) {
       this.unsubscribeFromChildren()
@@ -190,9 +192,6 @@ export default class SeriesComponent {
 
   increaseTransactionLevel(type) {
     this[`${type}TransactionLevel`]++
-    if (type === 'right' && this[`${type}TransactionLevel`] === 2) {
-      debugger
-    }
     if (++this.totalTransactionLevel === 1) {
       for (let { transactionStart } of this.listeners) {
         if (transactionStart) {

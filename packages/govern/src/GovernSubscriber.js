@@ -136,7 +136,9 @@ export default class SubscriberBase extends Component {
   notify(key, ...props) {
     for (let i = 0; i < this.subscribers.length; i++) {
       const callback = this.subscribers[i][key]
-      callback(...props)
+      if (callback) {
+        callback(...props)
+      }
     }
   }
   subscribeToChild() {

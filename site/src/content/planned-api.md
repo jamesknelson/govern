@@ -1,11 +1,12 @@
 API
 ===
 
-If you know React, you'll already be familiar with most of Govern's API.
+This is the planned API.
 
+**Note: some parts of this API do not yet exist.**
 
-
-
+Types
+-----
 
 *Exported from `govern` package.*
 
@@ -129,8 +130,8 @@ class Example extends React.Component {
 Higher Order Component that replaces a component's props with the output of the
 specified GovernComponent.
 
-Internally, this should use the `<ControllerFactory>` and `<Subscribe>` components
-with a map on the controller injected by `ControllerFactory`.
+Internally, this should use the `<WithController>` and `<Subscribe>` components
+with a map on the controller injected by `WithController`.
 
 ### Example
 
@@ -139,14 +140,13 @@ TODO
 ```
 
 
-`<ControllerFactory props component render />`
+`<WithController props children={(controller: GovernController) => ReactElement} />`
 -------------------------------------------
 
 *Exported from `react-govern` package.*
 
-Component that injects a GovernController based on the `component`,
-keeps its props updated with `props`, and passes the controller to the
-`render` function.
+Component that injects a GovernController that just outputs whatever props were
+passed into the component.
 
 Used internally by the `withController` decorator.
 
