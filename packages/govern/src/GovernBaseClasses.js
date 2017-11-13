@@ -1,3 +1,44 @@
+function doAction(key, fn, ...args) {
+  const previousProps = this.props
+  const previousState = this.state
+  if (this.$isDestroyed) {
+    if (process.env.NODE_ENV === "development") {
+      console.error('You cannot call actions on a Govern Component instance that has been destroyed.')
+    }
+    return
+  }
+  if (this.$runningActions[key]) {
+    if (process.env.NODE_ENV === "development") {
+      console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
+    }
+    return
+  }
+
+  this._govern_doIncreaseTransactionLevel()
+  this.$runningActions[key] = true
+  const result = fn.apply(this, args)
+  if (result instanceof Promise) {
+    const handler = () => this._govern_doDecreaseTransactionLevel(previousProps, previousState)
+    result.then(handler, handler)
+  }
+  else {
+    this._govern_doDecreaseTransactionLevel(previousProps, previousState)
+  }
+  return result
+}
+
+function addDefaultProps(defaultProps, props) {
+  const output = Object.assign({}, props)
+  if (defaultProps) {
+    for (let key of Object.keys(defaultProps)) {
+      if (props[key] === undefined) {
+        output[key] = defaultProps[key]
+      }
+    }
+  }
+  return output
+}
+
 export class StatefulComponent {
   constructor(props) {
     this.$props = props
@@ -14,13 +55,13 @@ export class StatefulComponent {
     const actionTemplates = this.constructor.actions || {}
     const actionKeys = Object.keys(actionTemplates)
     for (let key of actionKeys) {
-      this.actions[key] = this._govern_doAction.bind(this, key, actionTemplates[key])
+      this.actions[key] = doAction.bind(this, key, actionTemplates[key])
     }
     Object.freeze(this.actions)
   }
 
   bindAction(key) {
-    return this._govern_doAction.bind(this, key, this[key])
+    return doAction.bind(this, key, this[key])
   }
 
   bindActions(...actionKeys) {
@@ -101,7 +142,7 @@ export class StatefulComponent {
           return
         }
 
-        const propsWithDefaults = this._govern_addDefaultProps(props)
+        const propsWithDefaults = addDefaultProps(this.constructor.defaultProps, props)
         if (this.$runningPropsUpdate) {
           this.$runningPropsUpdate.push(propsWithDefaults)
           return
@@ -139,48 +180,6 @@ export class StatefulComponent {
   //
   // Implementation details
   //
-
-  _govern_doAction(key, fn, ...args) {
-    const previousProps = this.props
-    const previousState = this.state
-    if (this.$isDestroyed) {
-      if (process.env.NODE_ENV === "development") {
-        console.error('You cannot call actions on a Govern Component instance that has been destroyed.')
-      }
-      return
-    }
-    if (this.$runningActions[key]) {
-      if (process.env.NODE_ENV === "development") {
-        console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
-      }
-      return
-    }
-
-    this._govern_doIncreaseTransactionLevel()
-    this.$runningActions[key] = true
-    const result = fn.apply(this, args)
-    if (result instanceof Promise) {
-      const handler = () => this._govern_doDecreaseTransactionLevel(previousProps, previousState)
-      result.then(handler, handler)
-    }
-    else {
-      this._govern_doDecreaseTransactionLevel(previousProps, previousState)
-    }
-    return result
-  }
-
-  _govern_addDefaultProps(props) {
-    const output = Object.assign({}, props)
-    const defaultProps = this.constructor.defaultProps
-    if (defaultProps) {
-      for (let key of Object.keys(defaultProps)) {
-        if (props[key] === undefined) {
-          output[key] = defaultProps[key]
-        }
-      }
-    }
-    return output
-  }
 
   _govern_doStateUpdate(update) {
     const previousProps = this.props
