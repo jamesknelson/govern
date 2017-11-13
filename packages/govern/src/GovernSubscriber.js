@@ -1,4 +1,4 @@
-import { Component } from './GovernBaseClasses'
+import { StatefulComponent } from './GovernBaseClasses'
 
 const noop = () => {}
 
@@ -14,7 +14,7 @@ const noop = () => {}
  * This component will also forward transaction messages from the subscribed
  * component.
  */
-export default class SubscriberBase extends Component {
+export default class SubscriberBase extends StatefulComponent {
   constructor(props) {
     super(props)
     this.controller = this.constructor.controllerGetter(props)

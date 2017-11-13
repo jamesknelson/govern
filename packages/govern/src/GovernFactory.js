@@ -1,10 +1,10 @@
-import { Component } from './GovernBaseClasses'
+import { StatefulComponent } from './GovernBaseClasses'
 import { createController } from './GovernController'
 
 const identity = x => x
 
 export default function factory(componentGetter, propGetter=identity) {
-  return class Factory extends Component {
+  return class Factory extends StatefulComponent {
     constructor(props) {
       super(props)
       this.component = componentGetter(props)

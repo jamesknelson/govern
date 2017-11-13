@@ -1,13 +1,13 @@
 import assert from 'assert'
 
 import merge from '../src/GovernMerge'
-import { Component } from '../src/GovernBaseClasses'
+import { StatefulComponent } from '../src/GovernBaseClasses'
 import { createController } from '../src/GovernController'
 
 
 describe('merge', function() {
   it('defaults to merging over props', function() {
-    class TestController extends Component {
+    class TestController extends StatefulComponent {
       output() {
         return { test1: 'OUTPUT1', test2: 'OUTPUT2' }
       }
@@ -25,7 +25,7 @@ describe('merge', function() {
   })
 
   it('supports custom merge functions', function() {
-    class TestController extends Component {
+    class TestController extends StatefulComponent {
       output() {
         return { test1: 'OUTPUT1', test2: 'OUTPUT2' }
       }
@@ -43,7 +43,7 @@ describe('merge', function() {
   })
 
   it("doesn't pass throguh intermediate values", function() {
-    class TestController extends Component {
+    class TestController extends StatefulComponent {
       output() {
         return { test1: 'OUTPUT1', test2: 'OUTPUT2' }
       }

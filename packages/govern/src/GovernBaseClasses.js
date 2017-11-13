@@ -1,4 +1,4 @@
-export class Component {
+export class StatefulComponent {
   constructor(props) {
     this.$props = props
     this.$isDestroyed = false
@@ -216,7 +216,7 @@ export class Component {
 }
 
 
-export class PureComponent extends Component {
+export class PureStatefulComponent extends StatefulComponent {
   shouldCalculateOutput(previousProps, previousState) {
     return !shallowCompare(this.props, previousProps) || !shallowCompare(this.state, previousState)
   }

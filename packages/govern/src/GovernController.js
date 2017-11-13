@@ -9,7 +9,7 @@
  */
 
 
-import { Component } from './GovernBaseClasses'
+import { StatefulComponent } from './GovernBaseClasses'
 import { createParallelComponent } from './GovernParallelComponent'
 import { createSeriesComponent } from './GovernSeriesComponent'
 
@@ -49,7 +49,7 @@ function combineComponents(structure) {
       return structure
     }
     else {
-      return class extends Component {
+      return class extends StatefulComponent {
         output() { return structure(this.props) }
       }
     }

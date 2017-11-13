@@ -1,7 +1,7 @@
 import assert from 'assert'
 import sinon from 'sinon'
 
-import { Component } from '../src/GovernBaseClasses'
+import { StatefulComponent } from '../src/GovernBaseClasses'
 
 
 // A mock of `create` from `ComponentController.mjs`, with
@@ -26,7 +26,7 @@ describe('Component', function() {
   it('checks proptypes')
 
   it('does not allow props to be changed', function() {
-    class TestComponent extends Component {
+    class TestComponent extends StatefulComponent {
       constructor(props) {
         super(props)
         this.props = { test: 1 }
@@ -39,7 +39,7 @@ describe('Component', function() {
   })
 
   it('does not allow actions to be changed', function() {
-    class TestComponent extends Component {
+    class TestComponent extends StatefulComponent {
       constructor(props) {
         super(props)
         this.actions = { test: 1 }
@@ -53,7 +53,7 @@ describe('Component', function() {
 
   describe('#output', function() {
     it('returns state and action by default', function() {
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         constructor(props) {
           super(props)
           this.state = { test: 1 }
@@ -73,7 +73,7 @@ describe('Component', function() {
 
   describe('#setState', function() {
     it('updates state', function() {
-      class TestComponent extends Component {}
+      class TestComponent extends StatefulComponent {}
       const { controller, instance } = create(TestComponent)
 
       instance.setState({ test: 2 })
@@ -83,7 +83,7 @@ describe('Component', function() {
     })
 
     it('notifies correct value', function() {
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return this.state
         }
@@ -97,7 +97,7 @@ describe('Component', function() {
     })
 
     it('wraps notification in a transaction when necessary', function() {
-      class TestComponent extends Component {}
+      class TestComponent extends StatefulComponent {}
       const { controller, instance } = create(TestComponent)
       const spies = createSpies()
 
@@ -116,7 +116,7 @@ describe('Component', function() {
     it("doesn't start transaction when it would be unnecesssary", function() {
       const spies = createSpies()
 
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return { actions: this.actions }
         }
@@ -140,7 +140,7 @@ describe('Component', function() {
 
   describe('actions', function() {
     it('are created from statics', function() {
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() { return { actions: this.actions } }
       }
       TestComponent.actions = {
@@ -157,7 +157,7 @@ describe('Component', function() {
     it("doesn't start transaction when unnecessary", function() {
       const transactionStart = sinon.spy()
 
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return { actions: this.actions }
         }
@@ -178,7 +178,7 @@ describe('Component', function() {
     })
 
     it("doesn't call change when unnecessary", function() {
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return { actions: this.actions }
         }
@@ -196,7 +196,7 @@ describe('Component', function() {
     it("can't be called again before unlock", function() {
       const action = sinon.spy()
 
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return { actions: this.actions }
         }
@@ -216,7 +216,7 @@ describe('Component', function() {
     it("can be called again after unlock", function() {
       const action = sinon.spy()
 
-      class TestComponent extends Component {
+      class TestComponent extends StatefulComponent {
         output() {
           return { actions: this.actions }
         }
@@ -242,7 +242,7 @@ describe('Component', function() {
 
   describe('subcribe', function() {
     it("doesn't immediately call its callbacks", function() {
-      class TestComponent extends Component {}
+      class TestComponent extends StatefulComponent {}
       const { controller } = create(TestComponent)
       const spies = createSpies()
 
@@ -255,7 +255,7 @@ describe('Component', function() {
     })
 
     it("returns a working unsubscribe function", function() {
-      class TestComponent extends Component {}
+      class TestComponent extends StatefulComponent {}
       const { controller, instance } = create(TestComponent)
       const spies = createSpies()
 

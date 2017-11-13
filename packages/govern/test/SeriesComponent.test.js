@@ -1,7 +1,7 @@
 import assert from 'assert'
 import sinon from 'sinon'
 
-import { Component } from '../src/GovernBaseClasses'
+import { StatefulComponent } from '../src/GovernBaseClasses'
 import { createSeriesComponent } from '../src/GovernSeriesComponent'
 import { createController } from '../src/GovernController'
 
@@ -12,10 +12,10 @@ describe('SeriesComponent', function() {
   it("throw errors if any passed in Components are null")
 
   it("doesn't pass throguh intermediate values", function() {
-    class Test1 extends Component {
+    class Test1 extends StatefulComponent {
       output() { return { missing1: 'MISSING' } }
     }
-    class Test2 extends Component {
+    class Test2 extends StatefulComponent {
       output() { return { present: 'PRESENT' } }
     }
 
@@ -31,12 +31,12 @@ describe('SeriesComponent', function() {
   })
 
   it("doesn't emit when transaction starts but no changes occur", function() {
-    class Test1 extends Component {}
+    class Test1 extends StatefulComponent {}
     Test1.actions = {
       test() {}
     }
 
-    class Test2 extends Component {
+    class Test2 extends StatefulComponent {
       output() {
         return { actions: this.props.actions }
       }
@@ -54,8 +54,8 @@ describe('SeriesComponent', function() {
 
   it("when setting a subscribed Series, RHS set should only be called once", function() {
     let rhsPropsSet = 0
-    class Test1 extends Component {}
-    class Test2 extends Component {
+    class Test1 extends StatefulComponent {}
+    class Test2 extends StatefulComponent {
       componentWillReceiveProps() {
         rhsPropsSet++
       }
@@ -76,12 +76,12 @@ describe('SeriesComponent', function() {
   it("when setting a non-subscribed Series, LHS and RHS are not called until `get` is called", function() {
     let lhsPropsSet = 0
     let rhsPropsSet = 0
-    class Test1 extends Component {
+    class Test1 extends StatefulComponent {
       componentWillReceiveProps() {
         lhsPropsSet++
       }
     }
-    class Test2 extends Component {
+    class Test2 extends StatefulComponent {
       componentWillReceiveProps() {
         rhsPropsSet++
       }

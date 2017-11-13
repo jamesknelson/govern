@@ -1,14 +1,20 @@
 import { createController, isGovernController } from './GovernController'
-import { Component, PureComponent } from './GovernBaseClasses'
+import { StatefulComponent, PureStatefulComponent } from './GovernBaseClasses'
 import { default as merge } from './GovernMerge'
 import { createSubscriberComponent as subscriber } from './GovernSubscriber'
 import { default as factory } from './GovernFactory'
 
+// These are here to allow for a nicer TypeScript API; they're not actually
+// require when using Govern with plain JavaScript.
+export function sequence(...x) { return x }
+export function parallel(x) { return x }
+export function map(x) { return x }
+
 const Govern = {
   createController,
   isGovernController,
-  Component,
-  PureComponent,
+  StatefulComponent,
+  PureStatefulComponent,
   merge,
   subscriber,
   factory,
@@ -17,8 +23,8 @@ const Govern = {
 export {
   createController,
   isGovernController,
-  Component,
-  PureComponent,
+  StatefulComponent,
+  PureStatefulComponent,
   merge,
   subscriber,
   factory,

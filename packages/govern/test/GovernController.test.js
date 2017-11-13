@@ -1,18 +1,18 @@
 import assert from 'assert'
 
-import { Component } from '../src/GovernBaseClasses'
+import { StatefulComponent } from '../src/GovernBaseClasses'
 import { createController, isGovernController } from '../src/GovernController'
 
 
 describe('createController', function() {
   it("creates a minimal GovernController", function() {
-    class TestController extends Component {}
+    class TestController extends StatefulComponent {}
 
     assert(isGovernController(createController(TestController)))
   })
 
   it("respects defaultProps", function() {
-    class TestController extends Component {
+    class TestController extends StatefulComponent {
       output() {
         return this.props
       }
@@ -36,7 +36,7 @@ describe('createController', function() {
   })
 
   it('creates nested series, parallel and function controllers', function() {
-    class TestController extends Component {
+    class TestController extends StatefulComponent {
       output() {
         return { number: this.props.number + 1 }
       }
