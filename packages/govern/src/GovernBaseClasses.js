@@ -23,7 +23,7 @@ export class StatefulComponent {
     return this._govern_doAction.bind(this, key, this[key])
   }
 
-  bindActions(keys) {
+  bindActions(...actionKeys) {
     let result = {}
     for (let key of actionKeys) {
       result[key] = this.bindAction(key)

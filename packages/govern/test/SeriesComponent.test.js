@@ -31,8 +31,8 @@ describe('SeriesComponent', function() {
   })
 
   it("doesn't emit when transaction starts but no changes occur", function() {
-    class Test1 extends StatefulComponent {}
-    Test1.actions = {
+    class Test1 extends StatefulComponent {
+      actions = this.bindActions('test')
       test() {}
     }
 

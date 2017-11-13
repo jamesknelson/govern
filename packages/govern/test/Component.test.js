@@ -43,10 +43,9 @@ describe('Component', function() {
       class TestComponent extends StatefulComponent {
         constructor(props) {
           super(props)
+          this.actions = this.bindActions('test')
           this.state = { test: 1 }
         }
-      }
-      TestComponent.actions = {
         test() {}
       }
 
@@ -104,11 +103,10 @@ describe('Component', function() {
       const spies = createSpies()
 
       class TestComponent extends StatefulComponent {
+        actions = this.bindActions('test')
         output() {
           return { actions: this.actions }
         }
-      }
-      TestComponent.actions = {
         test() {
           assert.equal(spies.transactionStart.called, true)
           assert.equal(spies.change.called, false)
@@ -126,12 +124,11 @@ describe('Component', function() {
   })
 
   describe('actions', function() {
-    it('are created from statics', function() {
+    it('are created via bindActions', function() {
       class TestComponent extends StatefulComponent {
-        output() { return { actions: this.actions } }
-      }
-      TestComponent.actions = {
+        actions = this.bindActions('test')
         test() {}
+        output() { return { actions: this.actions } }
       }
 
       const { controller } = create(TestComponent)
@@ -145,15 +142,15 @@ describe('Component', function() {
       const transactionStart = sinon.spy()
 
       class TestComponent extends StatefulComponent {
+        actions = this.bindActions('test1', 'test2')
+
         output() {
           return { actions: this.actions }
         }
-      }
-      TestComponent.actions = {
         test1() {
           assert.equal(transactionStart.callCount, 1)
           this.actions.test2()
-        },
+        }
         test2() {}
       }
       const { controller } = create(TestComponent)
@@ -166,11 +163,11 @@ describe('Component', function() {
 
     it("doesn't call change when unnecessary", function() {
       class TestComponent extends StatefulComponent {
+        actions = this.bindActions('test')
+
         output() {
           return { actions: this.actions }
         }
-      }
-      TestComponent.actions = {
         test() {}
       }
       const { controller } = create(TestComponent)
@@ -184,12 +181,12 @@ describe('Component', function() {
       const action = sinon.spy()
 
       class TestComponent extends StatefulComponent {
+        test = action
+        actions = this.bindActions('test')
+
         output() {
           return { actions: this.actions }
         }
-      }
-      TestComponent.actions = {
-        test: action,
       }
       const { controller } = create(TestComponent)
       const actions = controller.get().actions
@@ -204,12 +201,12 @@ describe('Component', function() {
       const action = sinon.spy()
 
       class TestComponent extends StatefulComponent {
+        test = action
+        actions = this.bindActions('test')
+
         output() {
           return { actions: this.actions }
         }
-      }
-      TestComponent.actions = {
-        test: action,
       }
       const { controller } = create(TestComponent)
       controller.subscribe(
