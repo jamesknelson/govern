@@ -7,7 +7,7 @@ function doAction(key, fn, ...args) {
     }
     return
   }
-  if (this.$runningActions[key]) {
+  if (this.$isStrict && this.$runningActions[key]) {
     if (process.env.NODE_ENV === "development") {
       console.error(`Stubbornly refusing to start running action ${key} that has already run since the previous update. If you really want to recurse, do so outside of your actions.`)
     }
@@ -231,6 +231,13 @@ export class StatefulComponent {
 export class PureStatefulComponent extends StatefulComponent {
   shouldCalculateOutput(previousProps, previousState) {
     return !shallowCompare(this.props, previousProps) || !shallowCompare(this.state, previousState)
+  }
+}
+
+export class StrictStatefulComponent extends PureStatefulComponent {
+  constructor(props) {
+    super(props)
+    this.$isStrict = true
   }
 }
 

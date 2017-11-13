@@ -22,7 +22,7 @@ function createSpies() {
 }
 
 
-describe('Component', function() {
+describe('StatefulComponent', function() {
   it('checks proptypes')
 
   it('does not allow props to be changed', function() {
@@ -177,7 +177,7 @@ describe('Component', function() {
       assert.equal(change.callCount, 0)
     })
 
-    it("can't be called again before unlock", function() {
+    it("can be called again before unlock", function() {
       const action = sinon.spy()
 
       class TestComponent extends StatefulComponent {
@@ -194,7 +194,7 @@ describe('Component', function() {
       actions.test()
       actions.test()
 
-      assert.equal(action.callCount, 1)
+      assert.equal(action.callCount, 2)
     })
 
     it("can be called again after unlock", function() {

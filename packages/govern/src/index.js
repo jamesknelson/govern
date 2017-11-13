@@ -1,5 +1,5 @@
 import { createController, isGovernController } from './GovernController'
-import { StatefulComponent, PureStatefulComponent } from './GovernBaseClasses'
+import { StatefulComponent, PureStatefulComponent, StrictStatefulComponent } from './GovernBaseClasses'
 import { default as merge } from './GovernMerge'
 import { createSubscriberComponent as subscriber } from './GovernSubscriber'
 import { default as factory } from './GovernFactory'
@@ -15,6 +15,7 @@ const Govern = {
   isGovernController,
   StatefulComponent,
   PureStatefulComponent,
+  StrictStatefulComponent,
   merge,
   subscriber,
   factory,
@@ -25,6 +26,7 @@ export {
   isGovernController,
   StatefulComponent,
   PureStatefulComponent,
+  StrictStatefulComponent,
   merge,
   subscriber,
   factory,
