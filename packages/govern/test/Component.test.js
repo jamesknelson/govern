@@ -38,19 +38,6 @@ describe('Component', function() {
     })
   })
 
-  it('does not allow actions to be changed', function() {
-    class TestComponent extends StatefulComponent {
-      constructor(props) {
-        super(props)
-        this.actions = { test: 1 }
-      }
-    }
-
-    assert.throws(() => {
-      create(TestComponent)
-    })
-  })
-
   describe('#output', function() {
     it('returns state and action by default', function() {
       class TestComponent extends StatefulComponent {

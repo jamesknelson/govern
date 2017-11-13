@@ -9,13 +9,28 @@ export class StatefulComponent {
 
     this.$transactionLevel = 0
 
-    this.$actions = {}
+    // TODO: deprecate static actions setter in favor of this.bindActions
+    this.actions = {}
     const actionTemplates = this.constructor.actions || {}
     const actionKeys = Object.keys(actionTemplates)
     for (let key of actionKeys) {
-      this.$actions[key] = this._govern_doAction.bind(this, key, actionTemplates[key])
+      this.actions[key] = this._govern_doAction.bind(this, key, actionTemplates[key])
     }
-    Object.freeze(this.$actions)
+    Object.freeze(this.actions)
+  }
+
+  bindAction(key) {
+    let action = this._govern_doAction.bind(this, key, this[key])
+    this[key] = action
+    return action
+  }
+
+  bindActions(keys) {
+    let result = {}
+    for (let key of actionKeys) {
+      result[key] = this.bindAction(key)
+    }
+    return Object.freeze(result)
   }
 
 
@@ -23,7 +38,6 @@ export class StatefulComponent {
   // Internal API
   //
 
-  get actions()   { return this.$actions }
   get props()       { return this.$props }
 
   setState(state) {
@@ -44,6 +58,7 @@ export class StatefulComponent {
     return true
   }
 
+  // TODO: deprecate default output
   output() {
     return Object.assign({
       actions: this.actions,
