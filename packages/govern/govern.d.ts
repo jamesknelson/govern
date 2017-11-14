@@ -146,7 +146,7 @@ declare namespace Govern {
 
     setState(state: Partial<S>): void;
 
-    componentWillReceiveProps(nextProps): boolean;
+    componentWillReceiveProps(nextProps: I): void;
 
     output(): O;
 
