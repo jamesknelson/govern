@@ -47,13 +47,18 @@ declare namespace Govern {
 
   export function map<I, O>(fn: (input: I) => O):
     FunctionComponent<I, O>;
+    
+  export function factory<I, C extends Component<any, any>>(
+    getComponent: (input: I) => C,
+    getProps: (input: I) => Partial<I>
+  ): Component<I, Outlet<Output<C>>>
+
+  export function subscriber<I, O>(
+    getOutlet: (input: I) => Outlet<O>
+  ): Component<I, O>
 
   export type Input<C extends Component<any, any>> = C['_tsi']
   export type Output<C extends Component<any, any>> = C['_tso']
-
-  // TODO
-  // - factory
-  // - subscribe
 
   export type Component<I, O> = (
     Constructor<ClassComponent<I, O>> |
