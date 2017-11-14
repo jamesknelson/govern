@@ -50,7 +50,7 @@ declare namespace Govern {
     
   export function factory<I, C extends Component<any, any>>(
     getComponent: (input: I) => C,
-    getProps: (input: I) => Partial<I>
+    getProps: (input: I) => any,
   ): Component<I, Outlet<Output<C>>>
 
   export function subscriber<I, O>(
