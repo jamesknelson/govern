@@ -63,7 +63,7 @@ If you've used React, Govern's renderless components will feel familiar. They ha
 
 Govern components have two main differences from React components:
 
-- They don't output React elements. Instead of an `rende()` method, they have an `output()` method that returns a plain JavaScript object.
+- They don't output React elements. Instead of an `render()` method, they have an `output()` method that returns a plain JavaScript object.
 - Handler methods must be bound using the `this.bindActions()` method instead of JavaScript's `Function.prototype.bind()`.
 
 For example, here is a Govern component that could be used to manage a single input's state:
@@ -107,7 +107,7 @@ Using Govern components
 
 ### controlledBy(governComponent)
 
-Once you have a Govern component, you can attach an instance to a React component with the `controlledBy` decorator function. It's signature is:
+Once you have a Govern component, you can attach an instance to a React component with the `controlledBy` decorator function. Its signature is:
 
 ```
 controlledBy: (component: GovernComponent) => (component: ReactComponent) => ReactComponent
@@ -155,7 +155,7 @@ class EmailForm extends React.Component {
       E-mail:
       <input
         value={this.props.value}
-        onChange={e => this.props.change(e.targe.value)}
+        onChange={e => this.props.change(e.target.value)}
       />
     </label>
   }
@@ -166,7 +166,7 @@ While `controlledBy` is the simplest way of using a Govern component, there can 
 
 ### `createController(component, initialProps)`
 
-Unlike React components, Govern components can be instantiated manually. You won't often need to to this, but the option is there.
+Unlike React components, Govern components can be instantiated manually. You won't often need to do this, but the option is there.
 
 To instantiate a Govern component, you use the `createController` method. This returns a **Controller** object; i.e. an object that wraps your component instance, and can be used to interact with your component instance.
 
@@ -195,7 +195,7 @@ modelController.get().value
 
 ### `<Subscribe to={controller} render={(output) => ReactNode} />`
 
-Once you have a Controller object, you can use the `<Subscribe>`  access its output in a React component. This React component will use the controller's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the `render` function.
+Once you have a Controller object, you can use `<Subscribe>` to access its output in a React component. This React component will use the controller's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the `render` function.
 
 For example, you could re-implement the above form using `createController` and `<Subscribe>`, but with the form's state stored *outside* the form component:
 
@@ -319,7 +319,7 @@ class LoginEndpoint extends Govern.StatefulComponent {
 }
 
 // An array indicates that props will flow from the output of one component
-// to input of the next component.
+// to the input of the next component.
 const Login = [
   LoginFormModel,
   LoginEndpoint,
