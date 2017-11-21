@@ -6,6 +6,8 @@ Govern
 
 **A component-based state management tool for React.**
 
+[Try it out](https://reactarmory.com/examples/govern/govern-form) in React Armory's live editor!
+
 Govern is based around the concept of *renderless components*, i.e. components without a `render` function.
 
 Renderless components are great for managing application state. For example, you can use them to implement re-usable form controllers, authentication logic, or even a JSON API interface. And best of all, they can be composed and re-used.
