@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+// import PropTypes from 'prop-types'
 
 
 /**
@@ -10,13 +10,13 @@ import PropTypes from 'prop-types'
  * its output injected into the wrapped componend via `<Subscribe>`.
  */
 export default class Subscribe extends React.Component {
-  static propTypes = {
-    // A controller
-    to: PropTypes.any.isRequired,
+  // static propTypes = {
+  //   // A controller
+  //   to: PropTypes.any.isRequired,
 
-    // A function to render the output
-    render: PropTypes.func.isRequired,
-  }
+  //   // A function to render the output
+  //   render: PropTypes.func.isRequired,
+  // }
 
   constructor(props) {
     super(props)

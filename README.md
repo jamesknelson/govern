@@ -155,7 +155,7 @@ class EmailForm extends React.Component {
         value={this.props.value}
         onChange={e => this.props.change(e.targe.value)}
       />
-    </div>
+    </label>
   }
 }
 ```
@@ -388,8 +388,8 @@ This is identical to the React lifecycle method.
 Called when a component will be be destroyed. Use this in the same way that you'd use React's `componentWillUnmount()` lifecycle method.
 
 
-Component Methods
------------------
+Component Instance API
+----------------------
 
 ### `this.bindActions(...methodNames)`
 

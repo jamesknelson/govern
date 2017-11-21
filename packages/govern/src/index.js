@@ -19,6 +19,10 @@ const Govern = {
   merge,
   subscriber,
   factory,
+
+  sequence,
+  parallel,
+  map,
 }
 
 export {

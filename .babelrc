@@ -1,7 +1,19 @@
 {
   "presets": [
-    ["env", { "modules": false }],
-    "react"
+    "react",
+    [
+      "env",
+      {
+        "targets": {
+          "browsers": [
+            "ie >= 11"
+          ]
+        },
+        "exclude": ["transform-async-to-generator", "transform-regenerator"],
+        "modules": false,
+        "loose": true
+      }
+    ]
   ],
   "plugins": [
     "transform-class-properties",
@@ -10,7 +22,16 @@
   "env": {
     "commonjs": {
       "plugins": [
+        "transform-class-properties",
         ["transform-es2015-modules-commonjs", { "loose": true }]
+      ],
+      "presets": [
+        [
+          "env",
+          {
+            "loose": true
+          }
+        ]
       ]
     },
     "test": {

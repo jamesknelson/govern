@@ -1,5 +1,5 @@
 import React from 'react'
-import PropTypes from 'prop-types'
+// import PropTypes from 'prop-types'
 import { createController } from 'govern'
 
 
@@ -10,11 +10,11 @@ import { createController } from 'govern'
  * The controller is then passed out via a render prop.
  */
 export default class ControllerFactory extends React.Component {
-  static propTypes = {
-    component: PropTypes.any,
-    props: PropTypes.any,
-    render: PropTypes.func.isRequired,
-  }
+  // static propTypes = {
+  //   component: PropTypes.any,
+  //   props: PropTypes.any,
+  //   render: PropTypes.func.isRequired,
+  // }
 
   componentWillMount() {
     // Create controllers within `componentWillMount` instead of in
