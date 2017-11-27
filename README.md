@@ -127,7 +127,7 @@ const EmailForm = (model) =>
     E-mail:
     <input
       value={model.value}
-      onChange={e => model.change(e.targe.value)}
+      onChange={e => model.change(e.target.value)}
     />
   </label>
 
@@ -139,7 +139,7 @@ ReactDOM.render(
   // The props for `ControlledEmailForm` will be passed to the Model
   // Govern component.
   //
-  // The output of Model wil then be used as the props of <EmailForm>.
+  // The output of Model will then be used as the props of <EmailForm>.
   <ControlledEmailForm defaultValue='hello@example.com' />,
   document.getElementById('app')
 )
@@ -208,7 +208,7 @@ const EmailForm = ({ controller }) =>
       E-mail:
       <input
         value={model.value}
-        onChange={e => model.change(e.targe.value)}
+        onChange={e => model.change(e.target.value)}
       />
     </label>
   } />
@@ -371,13 +371,13 @@ As Govern components are not mounted/unmounted from the DOM, their lifecycle is 
 
 ### `constructor(props)`
 
-The constructor is called when a Controller isntance is instantiated.
+The constructor is called when a Controller instance is instantiated.
 
 Perform any initialization here, including:
 
 - creating actions with `bindActions`
 - setting an initial value of `this.state`
-- addings event handlers to stores, etc.
+- adding event handlers to stores, etc.
 
 *Note that Govern components do **not** receive `context`, so you'll need to pass any required data in via props.*
 
