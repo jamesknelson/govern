@@ -1,6 +1,6 @@
 {
   "name": "react-govern",
-  "version": "0.3.7",
+  "version": "0.4.0",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -8,46 +8,59 @@
   "module": "dist/es/react-govern.js",
   "scripts": {
     "clean": "rimraf dist",
-    "build:watch": "npm run build:es -- --watch",
-    "build:commonjs": "cross-env NODE_ENV=cjs rollup -c -o dist/commonjs/react-govern.js",
-    "build:es": "cross-env BABEL_ENV=es NODE_ENV=es rollup -c -o dist/es/react-govern.js",
-    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/umd/react-govern.js",
-    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/umd/react-govern.min.js",
-    "build": "npm run build:commonjs && npm run build:es && npm run build:umd && npm run build:umd:min",
+    "build:commonjs": "tsc --pretty --module commonjs --outDir dist/commonjs",
+    "build:es": "tsc --pretty --module es2015 --outDir dist/es",
+    "build:umd": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=development rollup -c -o dist/umd/react-govern.js && rimraf dist/umd-intermediate",
+    "build:umd:min": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=production rollup -c -o dist/umd/react-govern.min.js && rimraf dist/umd-intermediate",
+    "build": "npm run build:es && npm run build:commonjs && npm run build:umd && npm run build:umd:min",
+    "build:watch": "npm run clean && npm run build:es -- --watch",
     "prepublish": "npm run clean && npm run build && npm run test",
-    "test": "cross-env NODE_ENV=test jest"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "react",
+    "govern",
     "governors",
     "controller",
     "state"
   ],
   "peerDependencies": {
-    "govern": "^0.2.0",
+    "govern": "^0.4.0",
     "react": "^16.0.0"
   },
   "devDependencies": {
-    "cross-env": "^3.1.4",
-    "jest": "^21.2.1",
+    "@types/jest": "^22.1.0",
+    "cross-env": "^5.0.5",
+    "jest": "^22.1.4",
     "react-test-renderer": "^16.0.0",
     "rimraf": "^2.6.2",
-    "rollup": "^0.50.0"
+    "rollup": "^0.50.0",
+    "rollup-plugin-commonjs": "^8.2.6",
+    "rollup-plugin-node-resolve": "^3.0.0",
+    "ts-jest": "^22.0.1",
+    "typescript": "^2.6.2"
   },
   "dependencies": {
-    "hoist-non-react-statics": "^1.2.0",
+    "@types/react": "^16.0.35",
     "prop-types": "^15.6.0"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "mjs",
-      "js",
-      "json",
-      "jsx"
-    ],
     "transform": {
-      "^.+\\.m?js$": "babel-jest"
+      "^.+\\.tsx?$": "ts-jest"
     },
-    "testRegex": "/__tests__/.*\\.m?js$"
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json"
+    ],
+    "globals": {
+      "ts-jest": {
+        "skipBabel": true
+      }
+    }
   }
 }

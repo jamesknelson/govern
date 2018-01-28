@@ -1,2 +1,2 @@
-import Govern from './index'
+import * as Govern from './index'
 export default Govern

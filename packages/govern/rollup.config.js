@@ -3,40 +3,19 @@
  * Copyright (c) 2015-present Dan Abramov
  */
 
-import nodeResolve from 'rollup-plugin-node-resolve'
-import babel from 'rollup-plugin-babel'
-import { list as babelHelpersList } from 'babel-helpers'
 import replace from 'rollup-plugin-replace'
 import uglify from 'rollup-plugin-uglify'
 
 const env = process.env.NODE_ENV
 const config = {
-  input: env === 'es' ? 'src/index.js' : 'src/index-umd.js',
+  input: 'dist/umd-intermediate/index.js',
   plugins: []
-}
-
-if (env === 'es' || env === 'cjs') {
-  config.output = { format: env }
-  config.plugins.push(
-    babel({
-      plugins: ['external-helpers'],
-      externalHelpersWhitelist: babelHelpersList.filter(helperName => helperName !== 'asyncGenerator')
-    })
-  )
 }
 
 if (env === 'development' || env === 'production') {
   config.output = { format: 'umd' }
   config.name = 'Govern'
   config.plugins.push(
-    nodeResolve({
-      jsnext: true
-    }),
-    babel({
-      exclude: 'node_modules/**',
-      plugins: ['external-helpers'],
-      externalHelpersWhitelist: babelHelpersList.filter(helperName => helperName !== 'asyncGenerator')
-    }),
     replace({
       'process.env.NODE_ENV': JSON.stringify(env)
     })
