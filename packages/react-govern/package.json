@@ -1,11 +1,12 @@
 {
   "name": "react-govern",
-  "version": "0.4.0-0",
+  "version": "0.4.0-1",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
-  "main": "./dist/commonjs/react-govern.js",
-  "module": "dist/es/react-govern.js",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/es/index.js",
+  "types": "./src/index.ts",
   "scripts": {
     "clean": "rimraf dist",
     "build:commonjs": "tsc --pretty --module commonjs --outDir dist/commonjs",
