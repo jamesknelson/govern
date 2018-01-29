@@ -1,7 +1,4 @@
 export interface Observable<T> {
-    // Get the latest value.
-    get(): T;
-
     // Subscribes to the sequence with an observer
     subscribe(observer: Observer<T>): Subscription;
 
@@ -9,8 +6,8 @@ export interface Observable<T> {
     subscribe(onNext: (value: T) => void,
               onError?: (error: any) => void,
               onComplete?: () => void,
-              onStartBatch?: () => void,
-              onFlushBatch?: () => void): Subscription;
+              onTransactionStart?: () => void,
+              onTransactionEnd?: () => void): Subscription;
 }
 
 export interface Subscription {
@@ -43,8 +40,8 @@ export interface Observer<T> {
     //   However, the change events will be wrapped in batch events, allowing
     //   us to only perform the computation once, and only emit a single
     //   change.
-    startBatch?(): void;
-    flushBatch?(): void;
+    transactionStart?(): void;
+    transactionEnd?(): void;
 
     // Receives the sequence error
     error?(errorValue: any): void;

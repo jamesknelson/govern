@@ -20,11 +20,11 @@ function createModelClass() {
     }
 
     render() {
-      return shape({
+      return {
         change: this.change,
         value: this.state.value,
         error: this.props.validate(this.state.value)
-      })
+      }
     }
   }
 
@@ -48,7 +48,7 @@ function createModelClass() {
     }
 
     render() {
-      return shape({
+      return map({
         name: createElement(ModelPrimitive, {
           defaultValue: this.props.defaultValue.name,
           validate: (value) => {
@@ -65,13 +65,13 @@ function createModelClass() {
             }
           }
         }),
-      }).map(children => {
+      }, children => {
         let error = {} as any
         if (children.name.error) error.name = children.name.error
         if (children.email.error) error.email = children.email.error
         if (!Object.keys(error).length) error = undefined
 
-        return shape({
+        return {
           children: children,
           value: {
             name: children.name.value,
@@ -79,7 +79,7 @@ function createModelClass() {
           },
           error: error,
           change: this.change,
-        })
+        }
       })
     }
   }
@@ -98,10 +98,10 @@ function createDataSourceClass() {
     }
 
     render() {
-      return shape({
+      return {
         receive: this.receive,
         observable: source(shape(this.state.store))
-      })
+      }
     }
   }
 }
@@ -113,10 +113,10 @@ function createFormControllerClass() {
     awaitingData: boolean = true
 
     render() {
-      return shape({
+      return {
         data: sink(this.props.data),
         model: createElement(Model, null)
-      })
+      }
     }
 
     componentDidInstantiate() {

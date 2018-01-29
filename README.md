@@ -64,14 +64,14 @@ If you've used React, Govern's renderless components will feel familiar. They ha
 Govern components have two main differences from React components:
 
 - They don't output React elements. Instead of an `rende()` method, they have an `output()` method that returns a plain JavaScript object.
-- Handler methods must be bound using the `this.bindActions()` method instead of JavaScript's `Function.prototype.bind()`.
+- Handler methods must be bound using the `this.bindAction()` method instead of JavaScript's `Function.prototype.bind()`.
 
 For example, here is a Govern component that could be used to manage a single input's state:
 
 ```js
 import Govern from 'govern'
 
-class Model extends Govern.StatefulComponent {
+class Model extends Govern.Component {
   constructor(props) {
     super(props)
 
@@ -79,76 +79,89 @@ class Model extends Govern.StatefulComponent {
     this.state = {
       value: props.defaultValue || '',
     }
-
-    // This binds the class's `change` method as a handler function
-    this.actions = this.bindActions(
-      'change'
-    )
   }
 
-  change(newValue) {
+  change = (newValue) => {
     this.setState({
       value: newValue,
     })
   }
 
-  output() {
+  render() {
+    // Govern components output plain old JavaScript objects and arrays.
     return {
-      change: this.actions.change,
+      change: this.change,
       value: this.state.value,
+      error: !this.props.validate || this.props.validate(this.state.value)
     }
   }
 }
+```
+
+Govern also supports stateless function components. For example, this component builds on the above Model component to add e-mail specific validation:
+
+```js
+const EmailModel = (props) =>
+  Govern.createElement(Model, {
+    defaultValue: props.defaultValue,
+    validate: (value) =>
+      (!value || value.indexOf('@') === -1)
+        ? ['Please enter an e-mail address']
+        : (props.validate && props.validate())
+  })
 ```
 
 
 Using Govern components
 -----------------------
 
-### controlledBy(governComponent)
+### govern(mapOwnPropsToGovernElement, mapOutputToProps)
 
-Once you have a Govern component, you can attach an instance to a React component with the `controlledBy` decorator function. It's signature is:
+Once you have a Govern component, you can instantiate it and attach its output to a React component with the `govern` decorator function. It's signature is:
 
 ```
-controlledBy: (component: GovernComponent) => (component: ReactComponent) => ReactComponent
+govern(
+  GovernElement | (ownProps: Props) => GovernElement,
+  (elementOutput: any, ownProps: Props) => Props
+):
+  (component: ReactComponent) => ReactComponent
 ```
 
-If you've used Redux before, `controlledBy` will be familiar; it is a lot like `connect`. It accepts a Govern Component as an argument, and returns another function that can be used to create stateful React components.
-
-The return React component's props will be passed to your Govern component, and the Govern component's output will be passed to the wrapped React component.
+If you've used Redux before, `govern` will be familiar; it is a lot like `connect`. It's first function is used to specify what data you need, and its second (optional) function let's you specify how to inject that data into an attached component.
 
 For example:
 
 ```jsx
-import { controlledBy } from 'react-govern'
+import * as React from 'react'
+import * as Govern from 'govern'
+import { govern } from 'react-govern'
 
-const EmailForm = (model) =>
+const EmailForm = (props) =>
   <label>
     E-mail:
     <input
-      value={model.value}
-      onChange={e => model.change(e.targe.value)}
+      value={props.value}
+      onChange={e => props.change(e.target.value)}
     />
   </label>
 
-// Create a stateful React component from a stateful Govern component
-// and a stateless React component.
-const ControlledEmailForm = controlledBy(Model)(EmailForm)
+// Create a new component which uses the output of EmailModel as the props
+// for EmailForm.
+const ControlledEmailForm =
+  govern(props => Govern.createElement(EmailModel, props))(EmailForm)
 
 ReactDOM.render(
-  // The props for `ControlledEmailForm` will be passed to the Model
-  // Govern component.
-  //
-  // The output of Model wil then be used as the props of <EmailForm>.
+  // The props for `ControlledEmailForm` will be passed to
+  // `getEmailFormController`, and used to create the Model element.
   <ControlledEmailForm defaultValue='hello@example.com' />,
   document.getElementById('app')
 )
 ```
 
-You can also use `controlledBy` with the ESNext decorator syntax:
+You can also use `govern` with the ESNext decorator syntax:
 
 ```jsx
-@controlledBy(Model)
+@govern(props => Govern.createElement(EmailModel, props))
 class EmailForm extends React.Component {
   render() {
     <label>
@@ -162,48 +175,68 @@ class EmailForm extends React.Component {
 }
 ```
 
-While `controlledBy` is the simplest way of using a Govern component, there can be times when it doesn't give you enough... control (*ba-dum-tsh*). And that's why Govern gives you options.
-
-### `createController(component, initialProps)`
-
-Unlike React components, Govern components can be instantiated manually. You won't often need to to this, but the option is there.
-
-To instantiate a Govern component, you use the `createController` method. This returns a **Controller** object; i.e. an object that wraps your component instance, and can be used to interact with your component instance.
-
-```
-createController: (component: GovernComponent, initialProps: object) => Controller
-```
-
-For example, if you wanted to create an instance of the above Model component, you would do the following:
-
-```js
-import { createController } from 'govern'
-
-let modelController = createController(Model, { defaultValue: 'test@example.com' })
-```
-
-You can then interact with the component through the returned controller's `get()`, `set(...)`, `subscribe(...)` and `destroy()` methods:
-
-```js
-// `test@example.com`
-modelController.get().value
-
-// `no`
-modelController.set({ value: 'no' })
-modelController.get().value
-```
-
-### `<Subscribe to={controller} render={(output) => ReactNode} />`
-
-Once you have a Controller object, you can use the `<Subscribe>`  access its output in a React component. This React component will use the controller's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the `render` function.
-
-For example, you could re-implement the above form using `createController` and `<Subscribe>`, but with the form's state stored *outside* the form component:
+Creating a Govern element that receives all input props is a common scenario,
+so there is a shortcut, where you can just pass in a component:
 
 ```jsx
-import { Subscribe } from 'react-govern'
+@govern(EmailModel)
+class EmailForm extends React.Component {
+  render() {
+    <label>
+      E-mail:
+      <input
+        value={this.props.value}
+        onChange={e => this.props.change(e.targe.value)}
+      />
+    </label>
+  }
+}
+```
 
-const EmailForm = ({ controller }) =>
-  <Subscribe to={controller} render={model =>
+While `govern` is the simplest way of using a Govern component, there can be times when it doesn't give you enough control. Luckily, you have other options.
+
+### `createGovernor(element: GovernElement)`
+
+This function instantiates the argument element, and returns a `Governor` object, which allows you to subscribe to the output, or make changes to the props.
+
+The equivalent in the React world is `ReactDOM.render`; the main difference being that in the React world, the component output is written directly to the DOM, while with Govern, you'll need to consume the output yourself.
+
+```
+createGovernor: (element: GovernElement) => Governor
+```
+
+For example, if you wanted to create an instance of the above EmailModel component, you would do the following:
+
+```js
+import { createElement, createGovernor } from 'govern'
+
+let emailModel = createGovernor(
+  createElement(EmailModel, { defaultValue: 'test@example.com' })
+)
+```
+
+You can then interact with the component through the returned controller's `get()`, `setProps(...)`, `subscribe(...)` and `destroy()` methods:
+
+```js
+// undefined
+modelController.get().error
+
+// ["I don't like e-mails!"]
+modelController.setProps({ validate: () => ["I don't like e-mails!"] })
+modelController.get().error
+```
+
+### `<Connect to={observable} children={(output) => ReactNode} />`
+
+Once you have a Governor object, you can use the `<Connect>` component to access its output in a React component. Internally, this uses the governor's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the render function passed via the `children` prop.
+
+For example, you could re-implement the above form example using `createGovernor` and `<Subscribe>`, but with the form's state stored *outside* the form component:
+
+```jsx
+import { Connect } from 'react-govern'
+
+const EmailForm = ({ governor }) =>
+  <Connect to={governor} children={model =>
     <label>
       E-mail:
       <input
@@ -213,12 +246,14 @@ const EmailForm = ({ controller }) =>
     </label>
   } />
 
-const controller = createController(Model, {
-  initialProps: 'test@example.com'
-})
+const governor = createGovernor(
+  createElement(Model, {
+    defaultValue: 'test@example.com'
+  })
+)
 
 ReactDOM.render(
-  <EmailForm controller={controller} />,
+  <EmailForm governor={governor} />,
   document.getElementById('app')
 )
 ```
@@ -229,139 +264,87 @@ Composing components
 
 The best part about having state in components, is that you can *compose* those components to make bigger components.
 
-As Govern components aren't tied to the DOM, Govern's approach to composition is a little different than React. Instead of nesting components with JSX and elements, Govern allows you to create **parallel** and **sequential** components.
 
-
-### Parallel composition
+### Objects
 
 When you have multiple independent components that share the same inputs, you can use an object to indicate that you'd like a new component that nests the output of each child component.
 
-For example, you could create a LoginFormModel by composing a number of the Model components from the previous examples:
+For example, you could create a LoginFormModel component that contains the state for an entire login form.
 
 ```jsx
-const LoginFormModel = {
-  email: Model,
-  password: Model
+const LoginFormModel = ({ defaultValue }) =>
+  ({
+    email: createElement(EmailModel, {
+      defaultValue: props.defaultValue.email
+    }),
+    password: createElement(Model, {
+      defaultValue: '',
+      validate: (value) => !value && ["Please enter your password"]
+    }),
+  })
 }
 
-let controller = createController(LoginFormModel, { defaultValue: '' })
-let output = controller.get()
+// Govern respects `defaultProps`, just like React.
+LoginFormModel.defaultProps = {
+  defaultValue: {},
+}
+
+let governor = createGovernor(createElement(LoginFormModel, null))
+let output = governor.get()
 
 // you can set the value of "email" without affecting the value of "password"
 output.email.change('james@reactarmory.com')
 
 // returns 'james@reactarmory.com'
-controller.get().email.value
+governor.get().email.value
 
 // returns an empty string
-controller.get().password.value
+governor.get().password.value
 ```
 
-*Note: if you're using TypeScript, you can wrap the object in `Govern.parallel()` to get proper typings.*
 
+### <map from={GovernElement} to={mapOutputToElementLike} />
 
-### Sequence composition
+The built-in `map` element allows you to use the output of one component to compute the props of another element.
 
-Sometimes, you'll want to use the output of one component as the input for another component.
+For example, you can use this to select part of the output:
 
-For example, you may want to use the output of the above model component as the input for a "LoginEndpoint" component:
-
-```jsx
-class LoginEndpoint extends Govern.StatefulComponent {
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      status: 'ready',
-      error: null,
-    }
-    this.actions = this.bindActions(
-      'start',
-      'handleSuccess',
-      'handleFailure',
-    )
-  }
-
-  start() {
-    this.setState({
-      status: 'busy',
-    })
-
-    postToAPI(URL, {
-      email: this.props.email.value,
-      password: this.props.password.value,
-    }).then(
-      this.actions.handleSuccess,
-      this.actions.handleFailure,
-    )
-  }
-
-  handleSuccess() {
-    this.setState({
-      status: 'complete',
-    })
-  }
-
-  handleFailure(error) {
-    this.setState({
-      status: 'error',
-      error: error,
-    })
-  }
-
-  output() {
-    return {
-      start: this.actions.start,
-      ...this.state,
-      ...this.props,
-    }
-  }
-}
-
-// An array indicates that props will flow from the output of one component
-// to input of the next component.
-const Login = [
-  LoginFormModel,
-  LoginEndpoint,
-]
-
-let controller = createController(Login, { defaultValue: '' })
-let output = controller.get()
-
-output.email.set('james@reactarmory.com')
-output.password.set('kangaroo')
-output.start()
-
-// returns 'busy'
-output.get().status
+```js
+createElement('map', {
+  from: createElement(Model, { defaultValue: 1 }),
+  to: (output) => output.value
+})
 ```
 
-*Note: if you're using TypeScript, you can wrap the array in `Govern.sequence()` to get proper typings.*
+### <sink observable={Observable}>
 
+The built-in `sink` element accepts a `Governor` or `Observable`, and outputs each of value that the observable emits.
 
-### Stateless function components
+Use `sink` to pass through the output of another governor. 
 
-In practice, you'll sometimes find that the output of one component is not exactly what you need. Luckily, Govern also supports React-style stateless function components; they just return props instead of elements.
+For example, if you have a global `auth` governor, you may want to feed part of its output through to an `AuthStatus` React component within your application:
 
-For example, you could use a stateless function component along with parallel/sequence components to create a `merge` higher-order component to merge the output of a controller with its input props:
+```js
+const AuthStatusController = () => ({
+  auth: createElement('sink', { observable: authGovernor })
+})
 
-```jsx
-function defaultMergeFn(props, output) {
-  return Object.assign({}, props, output)
-}
-
-function merge(governComponent, mergeFn=defaultMergeFn) {
-  return [
-    {
-      props: props => props,
-      output: governComponent,
-    },
-    ({ props, output }) => mergeFn(props, output)
-  ]
-}
+let ConnectedAuthStatus = govern(AuthStatusController)(AuthStatus)
 ```
 
-This higher-order govern component (or HoG) is so useful that it actually comes with Govern. You can access it at `Govern.merge()`.
+
+### <source children={GovernElement} />
+
+The built-in `source` element outputs an `Observable` with the output of its children elements. You can use this along with `sink` to create a "portal" from one component to another.
+
+```js
+// This component will have the same output as its children.
+const Identity = ({ children }) =>
+  createElement('sink', {
+    observable: createElement('source', { children })
+  })
+}
+```
 
 
 Component Lifecycle
@@ -381,9 +364,17 @@ Perform any initialization here, including:
 
 *Note that Govern components do **not** receive `context`, so you'll need to pass any required data in via props.*
 
+### `componentWasInstantiated()`
+
+Similar to `componentDidMount`, this component will be called once the initial output is available.
+
 ### `componentWillReceiveProps(nextProps)`
 
 This is identical to the React lifecycle method.
+
+### `componentDidUpdate(nextProps, nextState, nextOutput)`
+
+Similar to React's `componentDidUpdate`, but also receives the updated `output`. This can be used in a similar way to React's `refs`.
 
 ### `componentWillBeDestroyed()`
 
@@ -393,71 +384,85 @@ Called when a component will be be destroyed. Use this in the same way that you'
 Component Instance API
 ----------------------
 
-### `this.bindActions(...methodNames)`
+### `this.output`
 
-This function accepts a list of methods names from your class, and returns an object containing *action* functions; i.e. functions that are bound to the component instance, and whose changes are wrapped in a transaction. It should be used in the constructor; conventionally, you'll assign its output to `this.actions`.
+A property that contains the last output of the component.
 
-Generally speaking, you'll want to create actions for any methods which call `setState`, or cause side-effects (such as changing the component's input props).
-
-#### Usage
-
-```
-class Model extends Govern.StatefulComponent {
-  constructor(props) {
-    super(props)
-
-    // This binds the class's `change` and `save` methods as handler functions
-    this.actions = this.bindActions(
-      'change',
-      'save'
-    )
-  }
-
-  change(newValue) {
-    this.setState({
-      value: newValue,
-    })
-  }
-
-  save() {
-    this.props.onSave(this.state)
-  }
-}
-```
+This is similar in purpose to React's `refs` property. You can use it to interact with child components when required, but it is generally cleaner to avoid this if possible.
 
 ### `this.setState(changes)`
 
-Usage is mostly identical to React's `setState`, but with two main differences:
+Usage is identical to React's `setState`.
 
-- It is executed synchronously, so it doesn't accept an on-complete callback
-- It doesn't yet accept a reducer function (pull requests are welcome!)
+### `this.transaction(Function)`
+
+Used to ensure that multiple changes to a component's state (or props) will only result in one change being emitted to subscribers.
 
 
-Controller API
---------------
+Governor API
+------------
 
-Controller objects have the following API:
+Governor objects implement the ESNext [Observable proposal](https://github.com/tc39/proposal-observable). This means they work great with RxJS.
 
 ```typescript
-interface Controller<Input, Output> {
+interface Governor<Props, Output> {
   // Return the result of `output()`
   get(): Output,
 
   // Set the current input props
-  set(newProps: I): void,
+  setProps(newProps: P): void,
 
   // Clean up the component instance
   destroy(): void,
 
-  // Allows you to subscribe to changes, or notification of the start/end of
-  // a group of changes (i.e. the start/end of an action).
-  //
-  // You can pass `null` for callbacks which you don't need.
-  subscribe(
-    onChange?: (output: Output) => void,
-    onTransactionStart?: () => void,
-    onTransactionEnd?: (confirm: () => void) => void,
-    onDestroy?: () => void,
-  ): UnsubscribeCallback,
+  // Subscribes to the sequence with an observer
+  subscribe(observer: Observer<T>): Subscription;
+
+  // Subscribes to the sequence with callbacks
+  subscribe(onNext: (value: T) => void,
+            onError?: (error: any) => void,
+            onComplete?: () => void,
+            onTransactionStart?: () => void,
+            onTransactionEnd?: () => void): Subscription;
+}
+
+export interface Subscription {
+    // Cancels the subscription
+    unsubscribe(): void;
+
+    // A boolean value indicating whether the subscription is closed
+    readonly closed: Boolean;
+}
+
+export interface Observer<T> {
+    // Receives the subscription object when `subscribe` is called
+    start?(subscription: Subscription): void;
+
+    // Receives the next value in the sequence
+    next(value: T): void;
+
+    // While not useful at the level of a single observable, these allow
+    // observers to arbitrarily split observables, and then recombine
+    // them, and still only emit a single batch (while there will now
+    // be multiple transactions.)
+    //
+    // For example:
+    // - Observable emits { users: ['Alice', 'Bob', 'Carol'] }
+    // - This is split into two separate observables, { firstUser: 'Alice' }
+    //   and { 'lastUser': 'Carol' }
+    // - These are recombined into 'Alice to Carol'
+    // - As two separate change events are emitted on the two intermediate
+    //   observables, two changes will be emitted on the final observable.
+    //   However, the change events will be wrapped in batch events, allowing
+    //   us to only perform the computation once, and only emit a single
+    //   change.
+    transactionStart?(): void;
+    transactionEnd?(): void;
+
+    // Receives the sequence error
+    error?(errorValue: any): void;
+
+    // Receives a completion notification
+    complete?(): void;
 }
 ```

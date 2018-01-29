@@ -2,6 +2,10 @@ import { Governable, GovernableClass } from './Governable'
 import { GovernNode } from './Core'
 import { ComponentImplementation, ComponentLifecycle } from './ComponentImplementation'
 
+export interface ComponentClass<P, O> extends GovernableClass<P, O> {
+    new (props: P): Component<P, O>;
+}
+
 export abstract class Component<P, O, S={}> implements Governable<P, O>, ComponentLifecycle<P, O, S> {
     protected impl: ComponentImplementation<P, O, S>;
 
@@ -60,13 +64,13 @@ export abstract class Component<P, O, S={}> implements Governable<P, O>, Compone
                 throw new Error(`You cannot call bound actions within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
             }
 
-            this.impl.increaseBatchLevel()
+            this.impl.increaseTransactionLevel()
             fn.apply(this, args)
-            this.impl.decreaseBatchLevel()
+            this.impl.decreaseTransactionLevel()
         }) as any
     }
 
-    action(run: Function): void {
+    transaction(run: Function): void {
         if (!this.impl.governor) {
             throw new Error(`You cannot call "action" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
@@ -77,16 +81,16 @@ export abstract class Component<P, O, S={}> implements Governable<P, O>, Compone
             throw new Error(`You cannot call "action" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
-        this.impl.increaseBatchLevel()
+        this.impl.increaseTransactionLevel()
         run()
-        this.impl.decreaseBatchLevel()
+        this.impl.decreaseTransactionLevel()
     }
 
     createGovernor() {
         return this.impl.createGovernor()
     }
 
-    abstract render(): GovernNode | null;
+    abstract render(): GovernNode<any, O> | null;
 }
 
 export function getDisplayName(componentClass) {

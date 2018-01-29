@@ -35,10 +35,10 @@ export class ComponentImplementation<P, O, S> {
     output: Readonly<O>;
     state: Readonly<S>;
 
-    batchInitialProps: P;
-    batchInitialOutput: O;
-    batchInitialState: S;
-    batchLevel: number;
+    transactionInitialProps: P;
+    transactionInitialOutput: O;
+    transactionInitialState: S;
+    transactionLevel: number;
     callbacks: Function[];
     children: {
         [name: string]: {
@@ -66,7 +66,7 @@ export class ComponentImplementation<P, O, S> {
     subscriptions: WeakMap<Observer<any>, Subscription>
 
     constructor(lifecycle: ComponentLifecycle<P, O, S>, props: P, isStrict = false) {
-        this.batchLevel = 0
+        this.transactionLevel = 0
         this.callbacks = []
         this.canDirectlySetOutput = false
         this.children = {}
@@ -82,11 +82,11 @@ export class ComponentImplementation<P, O, S> {
     }
 
     enqueueSetState(updater: (prevState: Readonly<S>, props: P) => any, callback?: Function) {
-        if (this.isStrict && this.batchLevel === 0) {
+        if (this.isStrict && this.transactionLevel === 0) {
             throw new Error(`You cannot call "setState" outside of an action within a StrictComponent. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
 
-        this.increaseBatchLevel()
+        this.increaseTransactionLevel()
         let batch = this.queue[0]
         if (!batch) {
             batch = { updaters: [] }
@@ -99,7 +99,7 @@ export class ComponentImplementation<P, O, S> {
         if (callback) {
             this.callbacks.push(callback)
         }
-        this.decreaseBatchLevel()
+        this.decreaseTransactionLevel()
     }
 
     destroy = () => {
@@ -107,9 +107,9 @@ export class ComponentImplementation<P, O, S> {
             throw new Error(`You cannot call "destroy" on a governor that has been already destroyed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         this.isDestroyed = true
-        if (!this.batchLevel) {
-            this.increaseBatchLevel()
-            this.decreaseBatchLevel()
+        if (!this.transactionLevel) {
+            this.increaseTransactionLevel()
+            this.decreaseTransactionLevel()
         }
     }
 
@@ -117,11 +117,11 @@ export class ComponentImplementation<P, O, S> {
         if (this.isDestroyed) {
             throw new Error(`You cannot call "setProps" on a governor that has been already destroyed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
-        this.increaseBatchLevel()
+        this.increaseTransactionLevel()
         this.queue.push({
             setProps: props,
         })
-        this.decreaseBatchLevel()
+        this.decreaseTransactionLevel()
     }
 
     createGovernor(): Governor<P, O> {
@@ -225,8 +225,8 @@ export class ComponentImplementation<P, O, S> {
                         value => this.handleChildChange(key, value),
                         this.handleChildError,
                         this.handleChildComplete,
-                        this.increaseBatchLevel,
-                        this.decreaseBatchLevel,
+                        this.increaseTransactionLevel,
+                        this.decreaseTransactionLevel,
                     )
 
                     nextChildren[key] = {
@@ -292,8 +292,8 @@ export class ComponentImplementation<P, O, S> {
         onNextOrObserver: Observer<O> | ((value: O) => void),
         onError?: (error: any) => void,
         onComplete?: () => void,
-        onStartBatch?: () => void,
-        onFlushBatch?: () => void
+        onTransactionStart?: () => void,
+        onTransactionEnd?: () => void
     ): Subscription => {
         let unsubscribe = () => {
             let index = this.observers.indexOf(observer)
@@ -314,35 +314,35 @@ export class ComponentImplementation<P, O, S> {
                 : { next: onNextOrObserver,
                     error: onError,
                     complete: onComplete,
-                    startBatch: onStartBatch, 
-                    flushBatch: onFlushBatch }
+                    transactionStart: onTransactionStart, 
+                    transactionEnd: onTransactionEnd }
                     
         this.observers.push(observer)
         this.subscriptions.set(observer, subscription)
         
-        // Emit the current value on subscription, without emitting a batch
+        // Emit the current value on subscription, without emitting a transaction
         observer.next(this.output)
 
         return subscription
     }
     
-    increaseBatchLevel = () => {
-        if (++this.batchLevel === 1) {
-            this.batchInitialProps = this.props
-            this.batchInitialOutput = this.output
-            this.batchInitialState = this.state
+    increaseTransactionLevel = () => {
+        if (++this.transactionLevel === 1) {
+            this.transactionInitialProps = this.props
+            this.transactionInitialOutput = this.output
+            this.transactionInitialState = this.state
 
             for (let i = 0; i < this.observers.length; i++) {
                 let observer = this.observers[i]
-                if (observer.startBatch) {
-                    observer.startBatch()
+                if (observer.transactionStart) {
+                    observer.transactionStart()
                 }
             }
         }
     }
     
-    decreaseBatchLevel = () => {
-        if (this.batchLevel === 1) {
+    decreaseTransactionLevel = () => {
+        if (this.transactionLevel === 1) {
             this.processQueue()
             
             if (this.isDestroyed) {
@@ -374,7 +374,7 @@ export class ComponentImplementation<P, O, S> {
                 this.state = {} as any
             }
         }
-        this.batchLevel -= 1
+        this.transactionLevel -= 1
     }
 
     processQueue() {
@@ -422,7 +422,7 @@ export class ComponentImplementation<P, O, S> {
 
         if (!queueIsEmpty &&
             (!this.lifecycle.shouldComponentEmit ||
-                this.lifecycle.shouldComponentEmit(this.batchInitialProps, this.batchInitialState, this.batchInitialOutput))) {
+                this.lifecycle.shouldComponentEmit(this.transactionInitialProps, this.transactionInitialState, this.transactionInitialOutput))) {
             for (let i = 0; i < this.observers.length; i++) {
                 this.observers[i].next(this.output)
             }
@@ -430,8 +430,8 @@ export class ComponentImplementation<P, O, S> {
 
         for (let i = 0; i < this.observers.length; i++) {
             let observer = this.observers[i]
-            if (observer.flushBatch) {
-                observer.flushBatch()
+            if (observer.transactionEnd) {
+                observer.transactionEnd()
             }
         }
 
@@ -456,18 +456,11 @@ export class ComponentImplementation<P, O, S> {
         else {
             // If we're dealing with sinked observables from other libraries,
             // changes may not be batched.
-            let isUnbatchedChange = this.batchLevel === 0
-            if (isUnbatchedChange) {
-                this.increaseBatchLevel()
+            let isIndividualChange = this.transactionLevel === 0
+            if (isIndividualChange) {
+                this.increaseTransactionLevel()
             }
 
-            // - if this happens within componentDidUpdate, componentDidInstantiate,
-            //   or outside of a batch, and there is no queue, then enqueue the
-            //   changes.
-            // - if there is a queue, don't worry, as we'll render again anyway.
-            // - if this happens within componentWillReceiveProps or within render,
-            //   add it directly to the the output
-            
             if (this.queue.length === 0) {
                 this.queue.push({
                     changes: [[key, output]]
@@ -481,8 +474,8 @@ export class ComponentImplementation<P, O, S> {
                 changes.push([key, output])
             }
 
-            if (isUnbatchedChange) {
-                this.decreaseBatchLevel()
+            if (isIndividualChange) {
+                this.decreaseTransactionLevel()
             }
         }
     }

@@ -7,7 +7,7 @@ import { createGovernor, Governor } from '../Governor'
 import { GovernElement } from '../Element'
 
 export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>, ToOut>, ComponentLifecycle<MapProps<FromOut, ToOut>, ToOut, any> {
-    element: GovernElement<any, any>
+    element: GovernElementLike<any, any>
     governor: Governor<any, any>
     impl: ComponentImplementation<MapProps<FromOut, ToOut>, ToOut, any>;
     
@@ -41,8 +41,8 @@ export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>,
                 this.handleChange,
                 this.impl.handleChildError,
                 this.impl.handleChildComplete,
-                this.impl.increaseBatchLevel,
-                this.impl.decreaseBatchLevel
+                this.impl.increaseTransactionLevel,
+                this.impl.decreaseTransactionLevel
             )
         }
         else {

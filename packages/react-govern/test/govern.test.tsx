@@ -34,6 +34,26 @@ test('injects initial value', () => {
   expect(renderer.toJSON()).toEqual("1")
 })
 
+test('allows for elements as first argument', () => {
+  let decorator = govern(
+    Govern.createElement(TestController, { defaultValue: 1 })
+  )
+  let DecoratedComponent = decorator(TestComponent)
+  let renderer = ReactTestRenderer.create(
+    <DecoratedComponent defaultValue={1} />
+  )
+  expect(renderer.toJSON()).toEqual("1")
+})
+
+test('allows for components as first argument', () => {
+  let decorator = govern(TestController)
+  let DecoratedComponent = decorator(TestComponent)
+  let renderer = ReactTestRenderer.create(
+    <DecoratedComponent defaultValue={1} />
+  )
+  expect(renderer.toJSON()).toEqual("1")
+})
+
 test('injects subsequent outputs', () => {
   let governor = Govern.createGovernor(
     Govern.createElement(TestController, { defaultValue: 1 }),

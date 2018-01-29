@@ -55,8 +55,8 @@ export class Source<T> implements Governable<SourceProps<T>, Observable<T>> {
                 this.handleChange,
                 this.outputImpl.handleChildError,
                 this.outputImpl.handleChildComplete,
-                this.outputImpl.increaseBatchLevel,
-                this.outputImpl.decreaseBatchLevel
+                this.outputImpl.increaseTransactionLevel,
+                this.outputImpl.decreaseTransactionLevel
             )
         }
         else {

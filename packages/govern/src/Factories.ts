@@ -24,7 +24,7 @@ export function sink<T>(
 }
 
 export function map<FromOut, ToOut>(
-    from: GovernElement<any, FromOut>,
+    from: GovernElementLike<any, FromOut>,
     to: SFC<FromOut, ToOut>,
     key?: Key
 ): GovernElement<MapProps<FromOut, ToOut>, ToOut> {
