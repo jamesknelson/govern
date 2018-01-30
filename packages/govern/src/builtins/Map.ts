@@ -6,10 +6,10 @@ import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
 import { GovernElement } from '../Element'
 
-export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>, ToOut>, ComponentLifecycle<MapProps<FromOut, ToOut>, ToOut, any> {
+export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>, ToOut>, ComponentLifecycle<MapProps<FromOut, ToOut>, any, ToOut> {
     element: GovernElementLike<any, any>
     governor: Governor<any, any>
-    impl: ComponentImplementation<MapProps<FromOut, ToOut>, ToOut, any>;
+    impl: ComponentImplementation<MapProps<FromOut, ToOut>, any, ToOut>;
     
     constructor(props: MapProps<FromOut, ToOut>) {
         this.impl = new ComponentImplementation(this, props)

@@ -10,6 +10,10 @@ export interface Observable<T> {
               onTransactionEnd?: () => void): Subscription;
 }
 
+export interface GovernObservable<T> extends Observable<T> {
+    get(): T;
+}
+
 export interface Subscription {
     // Cancels the subscription
     unsubscribe(): void;

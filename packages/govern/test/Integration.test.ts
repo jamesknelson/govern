@@ -2,12 +2,12 @@ import * as Observable from 'zen-observable'
 import { map, source, sink, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 
 function createModelClass() {
-  class ModelPrimitive extends StrictComponent<{ defaultValue, validate }, { change, value, error }, { value }> {
+  class ModelPrimitive extends StrictComponent<{ defaultValue, validate }, any, { value }> {
     static defaultProps = {
       validate: () => {},
     }
 
-    constructor(props) {
+    constructor(props: { defaultValue, validate }) {
       super(props)
       this.change = this.bindAction(this.change)
       this.state = {
@@ -28,7 +28,7 @@ function createModelClass() {
     }
   }
 
-  return class Model extends StrictComponent<{ defaultValue }, { children, change, value, error }> {
+  return class Model extends StrictComponent<{ defaultValue }> {
     static defaultProps = {
       defaultValue: {},
     }
@@ -39,11 +39,13 @@ function createModelClass() {
     }
 
     change(value) {
+      let output = this.getTypedOutput(this)
+
       if (value.name) {
-        this.output.children.name.change(value.name)
+        output.children.name.change(value.name)
       }
       if (value.email) {
-        this.output.children.email.change(value.email)
+        output.children.email.change(value.email)
       }
     }
 
@@ -86,7 +88,7 @@ function createModelClass() {
 }
 
 function createDataSourceClass() {
-  return class DataSource extends StrictComponent<{}, { receive, observable }, { store }> {
+  return class DataSource extends StrictComponent<{}, { store }> {
     constructor(props) {
       super(props)
       this.state = { store: null }
@@ -98,10 +100,10 @@ function createDataSourceClass() {
     }
 
     render() {
-      return {
+      return shape({
         receive: this.receive,
         observable: source(shape(this.state.store))
-      }
+      })
     }
   }
 }
@@ -109,14 +111,14 @@ function createDataSourceClass() {
 function createFormControllerClass() {
   const Model = createModelClass()
 
-  return class FormController extends StrictComponent<{ data }, { data, model }> {
+  return class FormController extends StrictComponent<{ data }> {
     awaitingData: boolean = true
 
     render() {
-      return {
+      return shape({
         data: sink(this.props.data),
         model: createElement(Model, null)
-      }
+      })
     }
 
     componentDidInstantiate() {

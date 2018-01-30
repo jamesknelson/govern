@@ -1,7 +1,7 @@
 import { Component } from './Component'
 import { GovernElement } from './Element'
 import { Governable } from './Governable'
-import { Observable } from './Observable'
+import { GovernObservable } from './Observable'
 import { Sink } from './builtins/Sink'
 import { Source } from './builtins/Source'
 import { Map } from './builtins/Map'
@@ -15,9 +15,8 @@ const BuiltInComponents = {
     shape: Shape,
 }
 
-export interface Governor<P, O> extends Observable<O> {
-    get(): O;
-    getObservable(): Observable<O>;
+export interface Governor<P, O> extends GovernObservable<O> {
+    getObservable(): GovernObservable<O>;
     setProps(props: P): void;
     destroy(): void;
 }

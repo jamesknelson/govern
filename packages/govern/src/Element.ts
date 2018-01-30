@@ -49,10 +49,14 @@ export class GovernElement<P, O> {
         this.key = key
     }
 
+    // This isn't ever actually set, as it doesn't make sense for an element
+    // to have an output. However, it can be used to access the type of the
+    // element's output in TypeScript types.
+    output: O;
+
     // TODO:
-    // - if this doesn't work, try the intersection type trick along with
-    //   a dummy type param on GovernElement to see if we can infer the
-    //   output across elements and primitives
+    // - Do we need this? Using the `Govern.map` factory should usually do,
+    //   the trick, the only issue is it ends up in ugly pyramids
     map<MappedOutput>(mapper: SFC<O, MappedOutput>): GovernElement<any, MappedOutput> {
         return createElement('map', { from: this, to: mapper })
     }
@@ -91,11 +95,15 @@ export function createElement<P, O>(
     props: Attributes & P | null,
     ...children: GovernNode[]): SFCElement<P, O>;
 export function createElement<P, O>(
-    type: GovernableClass<P, O>,
+    type:
+        (new (props: P) => { props: P }) &
+        (new (props: P) => {
+            render(): GovernNode<any, O> | null;
+        }),
     props: Attributes & P | null,
     ...children: GovernNode[]): ComponentElement<P, O>;
 export function createElement<P, O>(
-    type: SFC<P, O> | GovernableClass<P, O> | BuiltInType,
+    type: any,
     config: Attributes & P | null,
     ...children: GovernNode[]
 ): GovernElement<P, O> {

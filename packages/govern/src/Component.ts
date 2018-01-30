@@ -1,13 +1,17 @@
 import { Governable, GovernableClass } from './Governable'
-import { GovernNode } from './Core'
+import { ComponentState, GovernNode } from './Core'
 import { ComponentImplementation, ComponentLifecycle } from './ComponentImplementation'
 
-export interface ComponentClass<P, O> extends GovernableClass<P, O> {
-    new (props: P): Component<P, O>;
+export interface ComponentClass<P, O=any> extends GovernableClass<P, O> {
+    new (props: P): Component<P, ComponentState, O>;
+    defaultProps?: Partial<P>;
+    displayName?: string;
 }
 
-export abstract class Component<P, O, S={}> implements Governable<P, O>, ComponentLifecycle<P, O, S> {
-    protected impl: ComponentImplementation<P, O, S>;
+export interface Component<P={}, S={}, O=any> extends ComponentLifecycle<P, S, O> { }
+
+export abstract class Component<P, S={}, O=any> implements Governable<P, O>, ComponentLifecycle<P, S, O> {
+    protected impl: ComponentImplementation<P, S, O>;
 
     constructor(props: P, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props, !!strict)
@@ -18,7 +22,6 @@ export abstract class Component<P, O, S={}> implements Governable<P, O>, Compone
         if (this.impl.canDirectlySetOutput) {
             throw new Error(`You cannot access a component's "output" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
-
         return this.impl.output
     }
     get state() { return this.impl.state }
@@ -91,6 +94,13 @@ export abstract class Component<P, O, S={}> implements Governable<P, O>, Compone
     }
 
     abstract render(): GovernNode<any, O> | null;
+
+    // TypeScript isn't able to infer the output of the subclass's `render`
+    // function by just accessing `this`, so we need to pass in the subclass
+    // if we want access to a correctly typed output :-(
+    getTypedOutput<O>(component: { render: () => GovernNode<any, O> | null }): O {
+        return this.impl.output as any
+    }
 }
 
 export function getDisplayName(componentClass) {

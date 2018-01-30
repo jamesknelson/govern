@@ -4,16 +4,16 @@ import { doNodesReconcile } from '../doNodesReconcile'
 import { convertToElementIfPossible } from '../convertToElementIfPossible'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { Observable, Observer, Subscription } from '../Observable'
+import { GovernObservable, Observer, Subscription } from '../Observable'
 import { GovernElement } from '../Element'
 
-export class Source<T> implements Governable<SourceProps<T>, Observable<T>> {
+export class Source<T> implements Governable<SourceProps<T>, GovernObservable<T>> {
 	childGovernor: Governor<any, any>
 	childElement: GovernElement<any, any>
-	impl: ComponentImplementation<SourceProps<T>, Observable<T>, any>
+	impl: ComponentImplementation<SourceProps<T>, any, GovernObservable<T>>
 	outputGovernor: Governor<any, T>
-	outputObservable: Observable<T>
-	outputImpl: ComponentImplementation<SourceProps<T>, T, any>
+	outputObservable: GovernObservable<T>
+	outputImpl: ComponentImplementation<SourceProps<T>, any, T>
     
     constructor(props: SourceProps<T>) {
 		this.impl = new ComponentImplementation(this, props)
@@ -77,7 +77,7 @@ export class Source<T> implements Governable<SourceProps<T>, Observable<T>> {
         return this.outputObservable
 	}
 
-    createGovernor(): Governor<SourceProps<T>, Observable<T>> {
+    createGovernor(): Governor<SourceProps<T>, GovernObservable<T>> {
 		this.receiveProps(this.impl.props)
 		this.outputGovernor = this.outputImpl.createGovernor()
 		this.outputObservable = this.outputGovernor.getObservable()

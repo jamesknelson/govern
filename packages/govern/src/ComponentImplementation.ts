@@ -8,7 +8,7 @@ import { Observable, Observer, Subscription } from './Observable'
 import { GovernNode } from './Core'
 import { GovernElement } from './Element'
 
-type Batch<P, O, S> = {
+type Batch<P, S, O> = {
     setProps?: P,
     updaters?: ((prevState: Readonly<S>, props: P) => any)[],
     changes?: [string, any][],
@@ -19,7 +19,7 @@ type Batch<P, O, S> = {
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export interface ComponentLifecycle<P, O, S> {
+export interface ComponentLifecycle<P, S, O> {
     componentWillReceiveProps?(nextProps: P);
     componentWillBeDestroyed?();
     componentDidInstantiate?();
@@ -27,10 +27,10 @@ export interface ComponentLifecycle<P, O, S> {
 
     shouldComponentEmit?(prevProps: P, prevState: S, prevOutput: O);
 
-    render(): GovernNode<O> | null;
+    render(): GovernNode<any, O> | null;
 }
 
-export class ComponentImplementation<P, O, S> {
+export class ComponentImplementation<P, S, O> {
     props: Readonly<P>;
     output: Readonly<O>;
     state: Readonly<S>;
@@ -59,13 +59,13 @@ export class ComponentImplementation<P, O, S> {
     canDirectlySetOutput: boolean
     isStrict: boolean
     lastRender: any
-    lifecycle: ComponentLifecycle<P, O, S>
+    lifecycle: ComponentLifecycle<P, S, O>
     nextOutput: any
     observers: Observer<O>[]
-    queue: Batch<P, O, S>[]
+    queue: Batch<P, S, O>[]
     subscriptions: WeakMap<Observer<any>, Subscription>
 
-    constructor(lifecycle: ComponentLifecycle<P, O, S>, props: P, isStrict = false) {
+    constructor(lifecycle: ComponentLifecycle<P, S, O>, props: P, isStrict = false) {
         this.transactionLevel = 0
         this.callbacks = []
         this.canDirectlySetOutput = false
@@ -186,7 +186,7 @@ export class ComponentImplementation<P, O, S> {
         else if (isPlainObject(rendered)) {
             this.nextOutput = {}
             nextChildNodes = rendered
-            nextChildrenKeys = Object.keys(rendered)
+            nextChildrenKeys = Object.keys(rendered!)
         }
         else {
             nextChildNodes = { [Root]: rendered }
@@ -238,8 +238,7 @@ export class ComponentImplementation<P, O, S> {
                 else if (nextChildNode.type !== 'sink') {
                     // If `setProps` causes a change in output, it will
                     // immediately be emitted to the observer.
-                    let governor = (prevChild as any).governor as Governor<any, any>
-                    governor.setProps(nextChildNode.props)
+                    prevChild.governor!.setProps(nextChildNode.props)
                 }
                 else {
                     // Sinks won't emit a new value, so we need to manually 
@@ -378,7 +377,7 @@ export class ComponentImplementation<P, O, S> {
     }
 
     processQueue() {
-        let batch: Batch<P, O, S> | undefined = this.queue.shift()
+        let batch: Batch<P, S, O> | undefined = this.queue.shift()
         let queueIsEmpty = !batch
         while (batch) {
             let prevProps = this.props

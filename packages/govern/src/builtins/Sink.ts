@@ -3,8 +3,8 @@ import { SinkProps } from '../Core'
 import { createElement } from '../Element'
 import { Governable } from '../Governable'
 
-export class Sink<T> implements Governable<SinkProps<T>, T>, ComponentLifecycle<SinkProps<T>, T, {}> {
-    impl: ComponentImplementation<SinkProps<T>, T, {}>;
+export class Sink<T> implements Governable<SinkProps<T>, T>, ComponentLifecycle<SinkProps<T>, {}, T> {
+    impl: ComponentImplementation<SinkProps<T>, {}, T>;
     
     constructor(props: SinkProps<T>) {
         this.impl = new ComponentImplementation(this, props)
