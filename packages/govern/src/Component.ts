@@ -19,7 +19,7 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
 
     get props() { return this.impl.props }
     get output() {
-        if (this.impl.canDirectlySetOutput) {
+        if (this.impl.isRendering) {
             throw new Error(`You cannot access a component's "output" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
         return this.impl.output
@@ -44,7 +44,7 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
         if (this.impl.isDestroyed) {
             throw new Error(`You cannot call "setState" on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.canDirectlySetOutput) {
+        if (this.impl.isRendering) {
             throw new Error(`You cannot call "setState" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -63,7 +63,7 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
             if (this.impl.isDestroyed) {
                 throw new Error(`You cannot call bound actions on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
             }
-            if (this.impl.canDirectlySetOutput) {
+            if (this.impl.isRendering) {
                 throw new Error(`You cannot call bound actions within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
             }
 
@@ -80,7 +80,7 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
         if (this.impl.isDestroyed) {
             throw new Error(`You cannot call "action" on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.canDirectlySetOutput) {
+        if (this.impl.isRendering) {
             throw new Error(`You cannot call "action" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 

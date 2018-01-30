@@ -35,11 +35,8 @@ export class ComponentImplementation<P, S, O> {
     output: Readonly<O>;
     state: Readonly<S>;
 
-    transactionInitialProps: P;
-    transactionInitialOutput: O;
-    transactionInitialState: S;
-    transactionLevel: number;
     callbacks: Function[];
+    canDirectlySetOutput: boolean
     children: {
         [name: string]: {
             node: any,
@@ -53,17 +50,19 @@ export class ComponentImplementation<P, S, O> {
     // These are stored separately to children, as they may contain a symbol,
     // which doesn't appear in the result of Object.keys()
     childrenKeys: any[]
-
     governor?: Governor<P, O>
     isDestroyed: boolean
-    canDirectlySetOutput: boolean
+    isRendering: boolean
     isStrict: boolean
-    lastRender: any
     lifecycle: ComponentLifecycle<P, S, O>
     nextOutput: any
     observers: Observer<O>[]
     queue: Batch<P, S, O>[]
     subscriptions: WeakMap<Observer<any>, Subscription>
+    transactionInitialProps: P;
+    transactionInitialOutput: O;
+    transactionInitialState: S;
+    transactionLevel: number;
 
     constructor(lifecycle: ComponentLifecycle<P, S, O>, props: P, isStrict = false) {
         this.transactionLevel = 0
@@ -73,6 +72,7 @@ export class ComponentImplementation<P, S, O> {
         this.childrenKeys = []
         this.governor = undefined
         this.isDestroyed = false
+        this.isRendering = false
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.observers = []
@@ -170,6 +170,7 @@ export class ComponentImplementation<P, S, O> {
 
     performRender() {
         this.canDirectlySetOutput = true
+        this.isRendering = true
         let rendered = this.lifecycle.render()
         if (rendered === undefined) {
             console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its render method. If you really want to return an empty value, return "null" instead.`)
@@ -177,7 +178,6 @@ export class ComponentImplementation<P, S, O> {
 
         let nextChildrenKeys: string[]
         let nextChildNodes
-        this.lastRender = rendered
         if (Array.isArray(rendered)) {
             this.nextOutput = []
             nextChildNodes = rendered
@@ -276,6 +276,7 @@ export class ComponentImplementation<P, S, O> {
         this.children = nextChildren
         this.childrenKeys = nextChildrenKeys
         this.canDirectlySetOutput = false
+        this.isRendering = false
     }
 
     setOutput(key: string | Symbol, value: any) {

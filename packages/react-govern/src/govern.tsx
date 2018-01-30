@@ -28,6 +28,10 @@ export function govern(
     mapFn = (props) => Govern.createElement(mapPropsToElement as any, props)
   }
 
+  if (typeof mapFn !== 'function') {
+    throw new Error(`"govern(..., mapFn)" received an unknown "mapFn" of type "${typeof mapFn}" for "${String(mapPropsToElement)}".`)
+  }
+
   return WrappedComponent => {
     return class Govern extends React.Component<any, any> {
       renderChild = (output) =>

@@ -101,5 +101,32 @@ describe('Component', () => {
     expect(governor.get()).toEqual({ a: 1 })
     expect(didUpdateCallCount).toBe(2)
   })
+
+  it("setState within componentWillReceiveProps is reflected within the output", () => {
+    class TestComponent extends Component<{ updated }, { a }> {
+      state = { a: 1 }
+
+			componentWillReceiveProps(nextProps) {
+        this.setState({ a: 2 })
+			}
+
+			render() {
+			  return shape({
+				  a: this.state.a
+			  })
+			}
+    }
+    
+    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let latest
+    let updateCount = 0
+    governor.subscribe(value => {
+      latest = value
+      updateCount++
+    })
+    governor.setProps({ updated: true })
+    expect(updateCount).toBe(2)
+    expect(latest).toEqual({ a: 2 })
+  })
 })
   
