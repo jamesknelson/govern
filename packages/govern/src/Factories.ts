@@ -1,7 +1,7 @@
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, SourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
-import { Observable } from './Observable'
+import { GovernObservable, Observable } from './Observable'
 
 type Factory<P, O> = (props?: Attributes & P, ...children: GovernNode[]) => GovernElement<P, O>;
 
@@ -34,7 +34,7 @@ export function map<FromOut, ToOut>(
 export function source<O = any>(
     element: GovernElementLike<any, O>,
     key?: Key
-): GovernElement<SourceProps<O>, Observable<O>> {
+): GovernElement<SourceProps<O>, GovernObservable<O>> {
     return createElement("source", { children: element, key })
 }
 
