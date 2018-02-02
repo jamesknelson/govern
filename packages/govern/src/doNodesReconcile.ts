@@ -1,6 +1,6 @@
 import { isPlainObject } from './isPlainObject'
 import { GovernNode } from './Core'
-import { GovernElement } from './Element'
+import { isValidElement } from './Element'
 
 export function doNodesReconcile(x?: GovernNode, y?: GovernNode) {
     if (x === y) return true
@@ -19,8 +19,8 @@ export function doNodesReconcile(x?: GovernNode, y?: GovernNode) {
     if (isXArray && isYArray) return true
     if (isXArray || isYArray) return false
 
-    let isXElement = x instanceof GovernElement
-    let isYElement = y instanceof GovernElement
+    let isXElement = isValidElement(x)
+    let isYElement = isValidElement(y)
 
     if (isXElement && isYElement) {
         // Sinks are a special case; their props are never updated as they're
@@ -28,13 +28,13 @@ export function doNodesReconcile(x?: GovernNode, y?: GovernNode) {
         // different if their properties are not identical.
         return (
             x.type === 'sink'
-                ? (y.type === 'sink' && x.props.observable === y.props.observable)
+                ? (y.type === 'sink' && x.props.from === y.props.from)
                 : (x.type === y.type && x.key === y.key)
         )
     }
     else {
         // If we're not an element, object or array, we won't need to create or
-        // destroy a governor, so we're good.
+        // dispose a governor, so we're good.
         return !isXElement && !isYElement
     }
 }

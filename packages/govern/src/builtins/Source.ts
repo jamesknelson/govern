@@ -1,19 +1,20 @@
-import { ComponentImplementation, ComponentLifecycle } from '../ComponentImplementation'
+import { ComponentImplementation } from '../ComponentImplementation'
+import { ComponentLifecycle } from '../ComponentLifecycle'
 import { GovernElementLike, SourceProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { convertToElementIfPossible } from '../convertToElementIfPossible'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { GovernObservable, Observer, Subscription } from '../Observable'
-import { GovernElement } from '../Element'
+import { Outlet, Subscription } from '../Observable'
+import { GovernElement, isValidElement } from '../Element'
 
-export class Source<T> implements Governable<SourceProps<T>, GovernObservable<T>> {
+export class Source<T> implements Governable<SourceProps<T>, Outlet<T>>, ComponentLifecycle<SourceProps<T>, {}, void, Outlet<T>> {
 	childGovernor: Governor<any, any>
 	childElement: GovernElement<any, any>
-	impl: ComponentImplementation<SourceProps<T>, any, GovernObservable<T>>
+	impl: ComponentImplementation<SourceProps<T>, any, void, Outlet<T>>
 	outputGovernor: Governor<any, T>
-	outputObservable: GovernObservable<T>
-	outputImpl: ComponentImplementation<SourceProps<T>, any, T>
+	outputObservable: Outlet<T>
+	outputImpl: ComponentImplementation<SourceProps<T>, any, void, T>
     
     constructor(props: SourceProps<T>) {
 		this.impl = new ComponentImplementation(this, props)
@@ -28,9 +29,9 @@ export class Source<T> implements Governable<SourceProps<T>, GovernObservable<T>
         this.receiveProps(nextProps)
     }
 
-    componentWillBeDestroyed() {
-		this.outputGovernor.destroy()
-		this.childGovernor.destroy()
+    componentWillBeDisposeed() {
+		this.outputGovernor.dispose()
+		this.childGovernor.dispose()
 		delete this.outputGovernor
 		delete this.childGovernor
     }
@@ -41,13 +42,13 @@ export class Source<T> implements Governable<SourceProps<T>, GovernObservable<T>
 		}
 	
 		let element = convertToElementIfPossible(props.children)
-		if (!(element instanceof GovernElement)) {
+		if (!isValidElement(element)) {
 			throw new Error(`A Govern <source> element's children must be an element, array, or object.`)
-		}
+        }
 
         if (!doNodesReconcile(this.childElement, element)) {
             if (this.childGovernor) {
-                this.childGovernor.destroy()
+                this.childGovernor.dispose()
             }
             this.childElement = element
             this.childGovernor = createGovernor(element)
@@ -77,10 +78,10 @@ export class Source<T> implements Governable<SourceProps<T>, GovernObservable<T>
         return this.outputObservable
 	}
 
-    createGovernor(): Governor<SourceProps<T>, GovernObservable<T>> {
+    createGovernor(): Governor<SourceProps<T>, Outlet<T>> {
 		this.receiveProps(this.impl.props)
 		this.outputGovernor = this.outputImpl.createGovernor()
-		this.outputObservable = this.outputGovernor.getObservable()
+		this.outputObservable = this.outputGovernor.getOutlet()
 		return this.impl.createGovernor()
     }
 }

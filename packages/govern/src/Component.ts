@@ -1,6 +1,7 @@
 import { Governable, GovernableClass } from './Governable'
 import { ComponentState, GovernNode } from './Core'
-import { ComponentImplementation, ComponentLifecycle } from './ComponentImplementation'
+import { ComponentImplementation } from './ComponentImplementation'
+import { ComponentLifecycle } from './ComponentLifecycle'
 
 export interface ComponentClass<P, O=any> extends GovernableClass<P, O> {
     new (props: P): Component<P, ComponentState, O>;
@@ -8,21 +9,21 @@ export interface ComponentClass<P, O=any> extends GovernableClass<P, O> {
     displayName?: string;
 }
 
-export interface Component<P={}, S={}, O=any> extends ComponentLifecycle<P, S, O> { }
+export interface Component<P={}, S={}, C=any, O=any> extends ComponentLifecycle<P, S, C, O> { }
 
-export abstract class Component<P, S={}, O=any> implements Governable<P, O>, ComponentLifecycle<P, S, O> {
-    protected impl: ComponentImplementation<P, S, O>;
+export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, O>, ComponentLifecycle<P, S, C, O> {
+    protected impl: ComponentImplementation<P, S, C, O>;
 
     constructor(props: P, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props, !!strict)
     }
 
     get props() { return this.impl.props }
-    get output() {
-        if (this.impl.isRendering) {
+    get comp() {
+        if (this.impl.isComposing) {
             throw new Error(`You cannot access a component's "output" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.impl.output
+        return this.impl.comp
     }
     get state() { return this.impl.state }
 
@@ -41,10 +42,10 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
         if (!this.impl.governor) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isDestroyed) {
-            throw new Error(`You cannot call "setState" on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
+        if (this.impl.isDisposed) {
+            throw new Error(`You cannot call "setState" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isRendering) {
+        if (this.impl.isComposing) {
             throw new Error(`You cannot call "setState" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -55,32 +56,14 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
         this.impl.enqueueSetState(updater, callback)
     }
 
-    bindAction<F extends Function>(fn: F): F {
-        return ((...args) => {
-            if (!this.impl.governor) {
-                throw new Error(`You cannot call bound actions within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
-            }
-            if (this.impl.isDestroyed) {
-                throw new Error(`You cannot call bound actions on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
-            }
-            if (this.impl.isRendering) {
-                throw new Error(`You cannot call bound actions within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
-            }
-
-            this.impl.increaseTransactionLevel()
-            fn.apply(this, args)
-            this.impl.decreaseTransactionLevel()
-        }) as any
-    }
-
     transaction(run: Function): void {
         if (!this.impl.governor) {
             throw new Error(`You cannot call "action" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isDestroyed) {
-            throw new Error(`You cannot call "action" on a component instance that has been destroyed. See component "${getDisplayName(this.constructor)}".`)
+        if (this.impl.isDisposed) {
+            throw new Error(`You cannot call "action" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isRendering) {
+        if (this.impl.isComposing) {
             throw new Error(`You cannot call "action" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -93,13 +76,13 @@ export abstract class Component<P, S={}, O=any> implements Governable<P, O>, Com
         return this.impl.createGovernor()
     }
 
-    abstract render(): GovernNode<any, O> | null;
+    abstract render(): O;
 
     // TypeScript isn't able to infer the output of the subclass's `render`
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
-    getTypedOutput<O>(component: { render: () => GovernNode<any, O> | null }): O {
-        return this.impl.output as any
+    getTypedComp<C>(component: { compose: () => GovernNode<any, C> | null }): C {
+        return this.impl.comp as any
     }
 }
 

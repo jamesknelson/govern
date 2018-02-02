@@ -1,15 +1,16 @@
-import { ComponentImplementation, ComponentLifecycle } from '../ComponentImplementation'
+import { ComponentImplementation } from '../ComponentImplementation'
+import { ComponentLifecycle } from '../ComponentLifecycle'
 import { convertToElementIfPossible } from '../convertToElementIfPossible'
 import { GovernElementLike, MapProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { GovernElement } from '../Element'
+import { isValidElement } from '../Element'
 
-export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>, ToOut>, ComponentLifecycle<MapProps<FromOut, ToOut>, any, ToOut> {
+export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>, ToOut>, ComponentLifecycle<MapProps<FromOut, ToOut>, any, ToOut, ToOut> {
     element: GovernElementLike<any, any>
     governor: Governor<any, any>
-    impl: ComponentImplementation<MapProps<FromOut, ToOut>, any, ToOut>;
+    impl: ComponentImplementation<MapProps<FromOut, ToOut>, any, ToOut, ToOut>;
     
     constructor(props: MapProps<FromOut, ToOut>) {
         this.impl = new ComponentImplementation(this, props)
@@ -20,20 +21,20 @@ export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>,
         this.receiveProps(nextProps)
     }
 
-    componentWillBeDestroyed() {
-		this.governor.destroy()
+    componentWillBeDisposeed() {
+		this.governor.dispose()
 		delete this.governor
     }
 
     receiveProps(props: MapProps<FromOut, ToOut>) {
         let fromElement = convertToElementIfPossible(props.from)
-        if (!(fromElement instanceof GovernElement)) {
+        if (!isValidElement(fromElement)) {
             throw new Error(`The "from" prop of a Map element must be an element, object, or array.`)
         }
 
         if (!doNodesReconcile(this.element, fromElement)) {
             if (this.governor) {
-                this.governor.destroy()
+                this.governor.dispose()
             }
             this.element = fromElement
             this.governor = createGovernor(fromElement)
@@ -59,8 +60,12 @@ export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>,
         }
     }
 
-    render() {
+    compose() {
         return this.impl.props.to(this.impl.state.fromOut)
+    }
+
+    render() {
+        return this.impl.comp
     }
 
     createGovernor(): Governor<MapProps<FromOut, ToOut>, ToOut> {

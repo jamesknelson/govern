@@ -7,18 +7,22 @@ describe('Component', () => {
     let calledDidInstantiateWith = undefined as any
     let didCallDidUpdate = false
 
-		class TestComponent extends Component<{}, { a }> {
-			render() {
+		class TestComponent extends Component<{}> {
+			compose() {
 			  return shape({
 				  a: 1
 			  })
-			}
+      }
+
+      render() {
+        return this.comp
+      }
 		
 			componentDidInstantiate() {
-			  calledDidInstantiateWith = this.output
+			  calledDidInstantiateWith = this.comp
 			}
 		
-			componentDidUpdate(nextProps, nextState, nextOutput) {
+			componentDidUpdate(nextProps, nextState, nextComp) {
 			  didCallDidUpdate = true
 			}
     }
@@ -34,11 +38,15 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			render() {
+			compose() {
 			  return shape({
 				  a: this.state.a
 			  })
-			}
+      }
+      
+      render() {
+        return this.comp
+      }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
 			  didUpdateCallCount += 1
@@ -48,7 +56,7 @@ describe('Component', () => {
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(1)
-    expect(governor.get()).toEqual({ a: 1 })
+    expect(governor.getValue()).toEqual({ a: 1 })
   })
   
   it("setState within componentDidUpdate causes another componentDidUpdate", () => {
@@ -57,11 +65,15 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			render() {
+			compose() {
 			  return shape({
 				  a: this.state.a
 			  })
-			}
+      }
+      
+      render() {
+        return this.comp
+      }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
         if (this.state.a === 1) {
@@ -74,7 +86,7 @@ describe('Component', () => {
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(2)
-    expect(governor.get()).toEqual({ a: 2 })
+    expect(governor.getValue()).toEqual({ a: 2 })
   })
 
   it("children emitting values within componentDidUpdate causes another componentDidUpdate", () => {
@@ -82,23 +94,27 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      render() {
+      compose() {
 			  return shape({
-          a: sink(counter).map(counter => counter.count)
+          a: map(sink(counter), counter => counter.count)
         })
-			}
+      }
+      
+      render() {
+        return this.comp
+      }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
         didUpdateCallCount += 1
         if (nextOutput.a === 0) {
-          counter.get().increase()
+          counter.getValue().increase()
         }
 			}
     }
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
-    expect(governor.get()).toEqual({ a: 1 })
+    expect(governor.getValue()).toEqual({ a: 1 })
     expect(didUpdateCallCount).toBe(2)
   })
 
@@ -110,11 +126,15 @@ describe('Component', () => {
         this.setState({ a: 2 })
 			}
 
-			render() {
+			compose() {
 			  return shape({
 				  a: this.state.a
 			  })
-			}
+      }
+      
+      render() {
+        return this.comp
+      }
     }
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
@@ -124,6 +144,7 @@ describe('Component', () => {
       latest = value
       updateCount++
     })
+    expect(updateCount).toBe(1)
     governor.setProps({ updated: true })
     expect(updateCount).toBe(2)
     expect(latest).toEqual({ a: 2 })

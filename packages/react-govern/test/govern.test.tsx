@@ -64,6 +64,6 @@ test('injects subsequent outputs', () => {
     <DecoratedComponent defaultValue={1} />
   )
   expect(renderer.toJSON()).toEqual("1")
-  governor.get().change(2)
+  governor.getValue().change(2)
   expect(renderer.toJSON()).toEqual("2")
 })

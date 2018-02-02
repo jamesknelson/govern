@@ -7,7 +7,7 @@ describe('Map', () => {
     let element = map(createElement(Test, { a: 'test' }), output => ({ c: output.b }))
     let governor = createGovernor(element)
 
-    expect(governor.get()).toEqual({ c: 'test' })
+    expect(governor.getValue()).toEqual({ c: 'test' })
   })
 
   it("accepts changes to from element's props", () => {
@@ -17,12 +17,12 @@ describe('Map', () => {
         Double
     )
     let governor = createGovernor(element)
-    expect(governor.get()).toEqual({ x: 4 })
+    expect(governor.getValue()).toEqual({ x: 4 })
     governor.setProps({
         from: createElement(Double, { x: 2 }),
         to: Double
     })
-    expect(governor.get()).toEqual({ x: 8 })
+    expect(governor.getValue()).toEqual({ x: 8 })
   })
 
   it("accepts changes to map fn", () => {
@@ -32,11 +32,11 @@ describe('Map', () => {
         Double
     )
     let governor = createGovernor(element)
-    expect(governor.get()).toEqual({ x: 4 })
+    expect(governor.getValue()).toEqual({ x: 4 })
     governor.setProps({
         from: createElement(Double, { x: 1 }),
         to: ({ x }) => ({ x: x*4 })
     })
-    expect(governor.get()).toEqual({ x: 8 })
+    expect(governor.getValue()).toEqual({ x: 8 })
   })
 })

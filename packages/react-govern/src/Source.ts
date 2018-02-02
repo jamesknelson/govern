@@ -26,9 +26,7 @@ export class Source extends React.Component<SourceProps> {
     // `constructor`, as we can't rule out the possibility that
     // the controller will have some side effects on initialization.
     this.governor = Govern.createGovernor(
-      Govern.createElement('source', {
-        children: this.getSourceElement(this.props)
-      })
+      Govern.source(this.getSourceElement(this.props))
     )
   }
 
@@ -39,15 +37,15 @@ export class Source extends React.Component<SourceProps> {
   }
 
   componentDidCatch(error) {
-    this.governor.destroy()
+    this.governor.dispose()
     throw error
   }
 
   componentWillUnmount() {
-    this.governor.destroy()
+    this.governor.dispose()
   }
 
   render() {
-    return this.props.children(this.governor.get())
+    return this.props.children(this.governor.getValue())
   }
 }

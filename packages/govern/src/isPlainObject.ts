@@ -5,6 +5,8 @@
  * Released under the MIT License.
  */
 
+import { isValidElement } from './Element'
+
 function isObject(x) {
 	return typeof x === 'object' && x !== null;
 }
@@ -16,6 +18,8 @@ function isObjectObject(o) {
 
 export function isPlainObject(o) {
     let ctor, prot
+
+    if (isValidElement(o)) return false;
   
     if (isObjectObject(o) === false) return false;
   

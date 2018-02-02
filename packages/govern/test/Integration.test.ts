@@ -2,20 +2,19 @@ import * as Observable from 'zen-observable'
 import { map, source, sink, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 
 function createModelClass() {
-  class ModelPrimitive extends StrictComponent<{ defaultValue, validate }, any, { value }> {
+  class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
     static defaultProps = {
       validate: () => {},
     }
 
     constructor(props: { defaultValue, validate }) {
       super(props)
-      this.change = this.bindAction(this.change)
       this.state = {
         value: props.defaultValue
       }
     }
 
-    change(value) {
+    change = (value) => {
       this.setState({ value }) 
     }
 
@@ -28,31 +27,19 @@ function createModelClass() {
     }
   }
 
-  return class Model extends StrictComponent<{ defaultValue }> {
+  return class Model extends Component<{ defaultValue }> {
     static defaultProps = {
       defaultValue: {},
     }
 
-    constructor(props) {
-      super(props)
-      this.change = this.bindAction(this.change)
+    get comp() {
+      return this.getTypedComp(this)
     }
 
-    change(value) {
-      let output = this.getTypedOutput(this)
-
-      if (value.name) {
-        output.children.name.change(value.name)
-      }
-      if (value.email) {
-        output.children.email.change(value.email)
-      }
-    }
-
-    render() {
-      return map({
+    compose() {
+      return shape({
         name: createElement(ModelPrimitive, {
-          defaultValue: this.props.defaultValue.name,
+          defaultValue: this.props.defaultValue.name as string,
           validate: (value) => {
             if (!value) {
               return ["Please enter your name"]
@@ -67,20 +54,33 @@ function createModelClass() {
             }
           }
         }),
-      }, children => {
-        let error = {} as any
-        if (children.name.error) error.name = children.name.error
-        if (children.email.error) error.email = children.email.error
-        if (!Object.keys(error).length) error = undefined
+      })
+    }
 
-        return {
-          children: children,
-          value: {
-            name: children.name.value,
-            email: children.email.value,
-          },
-          error: error,
-          change: this.change,
+    render() {
+      let error = {} as any
+      if (this.comp.name.error) error.name = this.comp.name.error
+      if (this.comp.email.error) error.email = this.comp.email.error
+      if (!Object.keys(error).length) error = undefined
+
+      return {
+        children: this.comp,
+        value: {
+          name: this.comp.name.value,
+          email: this.comp.email.value,
+        },
+        error: error,
+        change: this.change,
+      }
+    }
+
+    change = (value) => {
+      this.transaction(() => {
+        if (value.name) {
+          this.comp.name.change(value.name)
+        }
+        if (value.email) {
+          this.comp.email.change(value.email)
         }
       })
     }
@@ -88,22 +88,29 @@ function createModelClass() {
 }
 
 function createDataSourceClass() {
-  return class DataSource extends StrictComponent<{}, { store }> {
+  return class DataSource extends Component<{}, { store }> {
     constructor(props) {
       super(props)
       this.state = { store: null }
-      this.receive = this.bindAction(this.receive)
     }
 
-    receive(store) {
+    get comp() {
+      return this.getTypedComp(this)
+    }
+
+    receive = (store) => {
       this.setState({ store })
     }
 
+    compose() {
+      return source(shape(this.state.store))
+    }
+
     render() {
-      return shape({
+      return {
         receive: this.receive,
-        observable: source(shape(this.state.store))
-      })
+        observable: this.comp
+      }
     }
   }
 }
@@ -114,25 +121,35 @@ function createFormControllerClass() {
   return class FormController extends StrictComponent<{ data }> {
     awaitingData: boolean = true
 
-    render() {
+    get comp() {
+      return this.getTypedComp(this)
+    }
+
+    compose() {
       return shape({
         data: sink(this.props.data),
         model: createElement(Model, null)
       })
     }
 
-    componentDidInstantiate() {
-      this.receiveDataIfAvailable(this.output)
+    render() {
+      return this.comp
     }
 
-    componentDidUpdate(nextProps, nextState, nextOutput) {
-      this.receiveDataIfAvailable(nextOutput)
+    componentDidInstantiate() {
+      this.receiveDataIfAvailable(this.comp.data)
+    }
+
+    componentDidUpdate(prevProps, prevState, prevComp) {
+      this.receiveDataIfAvailable(prevComp.data)
     }
 
     receiveDataIfAvailable(output) {
-      if (this.awaitingData && output && output.data && Object.keys(output.data).length > 0) {
-        this.awaitingData = false
-        this.output.model.change(output.data)
+      if (this.awaitingData && output && Object.keys(output).length > 0) {
+        this.transaction(() => {
+          this.awaitingData = false
+          this.comp.model.change(output)
+        })
       }
     }
   }
@@ -150,7 +167,7 @@ describe("Model", () => {
         }
       })
     )
-    let output = governor.get()
+    let output = governor.getValue()
     expect(output.value).toEqual({
       name: 'James',
       email: 'james',
@@ -171,7 +188,7 @@ describe("Model", () => {
     governor.subscribe(value => {
       latest = value
     })
-    governor.get().change({
+    governor.getValue().change({
       email: 'james@jamesknelson.com'
     })
     expect(latest.error).toBeFalsy()
@@ -192,13 +209,13 @@ describe("FormController", () => {
     let governor = createGovernor(
       createElement(FormController, { data })
     )
-    let output = governor.get()
+    let output = governor.getValue()
     expect(output.data).toBe(null)
     expect(output.model.error.email).toBeTruthy()
   })
 
   it('emits a new model when initial data is received', () => {
-    let dataSource = createGovernor(createElement(DataSource, {})).get()
+    let dataSource = createGovernor(createElement(DataSource, {})).getValue()
     let governor = createGovernor(
       createElement(FormController, { data: dataSource.observable })
     )

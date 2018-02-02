@@ -24,7 +24,7 @@ SOFTWARE.
 
 import { GovernableClass } from './Governable'
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, SourceProps } from './Core'
-import { GovernObservable, Observable } from './Observable'
+import { Outlet, Observable } from './Observable'
 
 const RESERVED_PROPS = {
     key: true,
@@ -34,77 +34,85 @@ const RESERVED_PROPS = {
     ref: true,
 }
 
+// The Symbol used to tag the ReactElement-like types. If there is no native Symbol
+// nor polyfill, then a plain number is used for performance.
+const hasSymbol = typeof Symbol === 'function' && Symbol.for;
+
+const GOVERN_ELEMENT_TYPE = hasSymbol ? Symbol.for('govern.element') : '_GOVERN_ELEMENT'
+
 function hasValidKey(config) {
     return config.key !== undefined
-  }
+}
 
-export class GovernElement<P, O> {
+
+/**
+ * Verifies the object is a ReactElement.
+ */
+export function isValidElement(object) {
+    return (
+        typeof object === 'object' &&
+        object !== null &&
+        object.$$typeof === GOVERN_ELEMENT_TYPE
+    )
+}
+
+
+export interface GovernElement<P, O> {
     type: string | GovernableClass<P, O> | SFC<P, O>;
     props: P;
     key: Key | null;
 
-    constructor(type: string | GovernableClass<P, O> | SFC<P, O>, props: P, key: Key) {
-        this.type = type
-        this.props = props
-        this.key = key
-    }
+    $$typeof: any;
 
     // This isn't ever actually set, as it doesn't make sense for an element
     // to have an output. However, it can be used to access the type of the
     // element's output in TypeScript types.
     output: O;
-
-    // TODO:
-    // - Do we need this? Using the `Govern.map` factory should usually do,
-    //   the trick, the only issue is it ends up in ugly pyramids
-    map<MappedOutput>(mapper: SFC<O, MappedOutput>): GovernElement<any, MappedOutput> {
-        return createElement('map', { from: this, to: mapper })
-    }
 }
-export class SFCElement<P, O> extends GovernElement<P, O> {
+export interface SFCElement<P, O> extends GovernElement<P, O> {
     type: SFC<P, O>;
 }
-export class ComponentElement<P, O> extends GovernElement<P, O> {
+export interface ComponentElement<P, O> extends GovernElement<P, O> {
     type: GovernableClass<P, O>;
 }
 
 export function createElement<FromOut, ToOut>(
     type: 'map',
-    props: Attributes & MapProps<FromOut, ToOut>
+    props?: Attributes & MapProps<FromOut, ToOut>
 ): GovernElement<MapProps<FromOut, ToOut>, ToOut>
 export function createElement<T>(
     type: 'sink',
-    props: Attributes & SinkProps<T>
+    props?: Attributes & SinkProps<T>
 ): GovernElement<SinkProps<T>, T>
 
 export function createElement<O>(
     type: 'source',
-    props: Attributes & SourceProps<O> | null,
+    props?: Attributes & SourceProps<O> | null,
     children?: GovernElementLike<any, O>
-): GovernElement<SourceProps<O>, GovernObservable<O>>
+): GovernElement<SourceProps<O>, Outlet<O>>
 
 export function createElement<O>(
     type: 'shape',
-    props: Attributes & ShapeProps<O> | null,
+    props?: Attributes & ShapeProps<O> | null,
     children?: ShapeChildren<keyof O, O>
 ): GovernElement<ShapeProps<O>, O>
 
 // Custom components
 export function createElement<P, O>(
     type: SFC<P, O>,
-    props: Attributes & P | null,
+    props?: Attributes & P | null,
     ...children: GovernNode[]): SFCElement<P, O>;
 export function createElement<P, O>(
     type:
         (new (props: P) => { props: P }) &
         (new (props: P) => {
-            render(): GovernNode<any, O> | null;
+            render(): O;
         }),
-    props: Attributes & P | null,
+    props?: Attributes & P | null,
     ...children: GovernNode[]): ComponentElement<P, O>;
 export function createElement<P, O>(
     type: any,
-    config: Attributes & P | null,
+    config?: Attributes & P | null,
     ...children: GovernNode[]
 ): GovernElement<P, O> {
     let propName
@@ -150,5 +158,11 @@ export function createElement<P, O>(
         }
     }
 
-    return new GovernElement(type, props as P, key)
+    return {
+        type,
+        props: props as P,
+        key,
+        $$typeof: GOVERN_ELEMENT_TYPE,
+        output: <any>undefined,
+    }
 }

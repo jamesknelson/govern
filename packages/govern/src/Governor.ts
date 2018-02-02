@@ -1,7 +1,7 @@
 import { Component } from './Component'
-import { GovernElement } from './Element'
+import { GovernElement, isValidElement } from './Element'
 import { Governable } from './Governable'
-import { GovernObservable } from './Observable'
+import { Outlet } from './Observable'
 import { Sink } from './builtins/Sink'
 import { Source } from './builtins/Source'
 import { Map } from './builtins/Map'
@@ -15,16 +15,16 @@ const BuiltInComponents = {
     shape: Shape,
 }
 
-export interface Governor<P, O> extends GovernObservable<O> {
-    getObservable(): GovernObservable<O>;
+export interface Governor<P, O> extends Outlet<O> {
+    getOutlet(): Outlet<O>;
     setProps(props: P): void;
-    destroy(): void;
+    dispose(): void;
 }
 
 export function createGovernor<P, O>(element: GovernElement<P, O>): Governor<P, O> {
     let instance: Governable<P, O>
 
-    if (!(element instanceof GovernElement)) {
+    if (!isValidElement(element)) {
         throw new Error(`createGovernor received unexpected input "${String(element)}".`)
     }
 
@@ -46,8 +46,12 @@ export function createGovernor<P, O>(element: GovernElement<P, O>): Governor<P, 
         // an anonymous Component class.
         let sfc = element.type as any
         let constructor = class extends Component<any, any> {
-            render() {
+            compose() {
                 return sfc(this.props)
+            }
+
+            render() {
+                return this.comp
             }
         }
         instance = new constructor(element.props)

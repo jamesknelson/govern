@@ -17,7 +17,7 @@ describe('createGovernor', () => {
 
     let element = createElement(TestComponent, { c: 3 })
     let governor = createGovernor(element)
-    let output = governor.get()
+    let output = governor.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
 
@@ -38,7 +38,7 @@ describe('createGovernor', () => {
 
     let element = createElement(TestComponent, { c: 3 })
     let governor = createGovernor(element)
-    let output = governor.get()
+    let output = governor.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
 })

@@ -5,7 +5,7 @@ import { map, source, sink, shape, createElement, createGovernor, Component, SFC
 describe('Shape', () => {
   it("outputs plain objects", () => {
     let governor = createGovernor(shape({ a: 1, b: 2 }))
-    expect(governor.get()).toEqual({ a: 1, b: 2 })
+    expect(governor.getValue()).toEqual({ a: 1, b: 2 })
   })
 
   it("outputs embedded elements", () => {
@@ -14,7 +14,7 @@ describe('Shape', () => {
         a: createElement(Counter, null),
         b: 2
     }))
-    expect(governor.get().a.count).toEqual(0)
+    expect(governor.getValue().a.count).toEqual(0)
   })
 
   it("handles addition and removal of elements", () => {
@@ -27,8 +27,8 @@ describe('Shape', () => {
             b: createElement(Counter, null)
         }
     })
-    expect(governor.get().a).toEqual(undefined)
-    expect(governor.get().b.count).toEqual(0)
+    expect(governor.getValue().a).toEqual(undefined)
+    expect(governor.getValue().b.count).toEqual(0)
   })
 
   it("handles changing of child props", () => {
@@ -37,12 +37,12 @@ describe('Shape', () => {
     let governor = createGovernor<any, any>(shape({
         doubled: createElement(Double, { x: 2 }),
     }))
-    expect(governor.get()).toEqual({ doubled: 4 })
+    expect(governor.getValue()).toEqual({ doubled: 4 })
     governor.setProps({
         children: {
             doubled: createElement(Double, { x: 4 }),
         }
     })
-    expect(governor.get()).toEqual({ doubled: 8 })
+    expect(governor.getValue()).toEqual({ doubled: 8 })
   })
 })

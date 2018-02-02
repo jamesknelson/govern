@@ -4,7 +4,7 @@ import { Source } from './Source'
 import { Connect } from './Connect'
 
 /**
- * A HoC to create and destroy a Govern Component of the given type with the
+ * A HoC to create and dispose a Govern Component of the given type with the
  * wrapped component.
  *
  * The props for the returned component are fed to the Govern Component, with
@@ -21,8 +21,8 @@ export function govern(
   mergeProps = (output, ownProps) => Object.assign({}, ownProps, output)
 ) {
   let mapFn = mapPropsToElement as (props) => Govern.GovernElement<any, any>
-  if (mapPropsToElement instanceof Govern.GovernElement) {
-    mapFn = () => mapPropsToElement
+  if (Govern.isValidElement(mapPropsToElement)) {
+    mapFn = (() => mapPropsToElement) as any
   }
   else if (mapPropsToElement instanceof Govern.Component.constructor) {
     mapFn = (props) => Govern.createElement(mapPropsToElement as any, props)

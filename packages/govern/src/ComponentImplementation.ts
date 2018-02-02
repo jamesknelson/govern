@@ -1,14 +1,15 @@
 import { isPlainObject } from './isPlainObject'
 import { getDisplayName } from './Component'
+import { ComponentLifecycle } from './ComponentLifecycle'
 import { convertToElementIfPossible } from './convertToElementIfPossible'
 import { doNodesReconcile } from './doNodesReconcile'
 import { Governable, GovernableClass } from './Governable'
 import { createGovernor, Governor } from './Governor'
-import { Observable, Observer, Subscription } from './Observable'
+import { TransactionalObservable, TransactionalObserver, Outlet, Subscription } from './Observable'
 import { GovernNode } from './Core'
-import { GovernElement } from './Element'
+import { isValidElement } from './Element'
 
-type Batch<P, S, O> = {
+type Batch<P, S> = {
     setProps?: P,
     updaters?: ((prevState: Readonly<S>, props: P) => any)[],
     changes?: [string, any][],
@@ -19,24 +20,13 @@ type Batch<P, S, O> = {
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export interface ComponentLifecycle<P, S, O> {
-    componentWillReceiveProps?(nextProps: P);
-    componentWillBeDestroyed?();
-    componentDidInstantiate?();
-    componentDidUpdate?(prevProps: P, prevState: S, prevOutput: O);
-
-    shouldComponentEmit?(prevProps: P, prevState: S, prevOutput: O);
-
-    render(): GovernNode<any, O> | null;
-}
-
-export class ComponentImplementation<P, S, O> {
+export class ComponentImplementation<P, S, C, O> {
     props: Readonly<P>;
-    output: Readonly<O>;
+    comp: Readonly<C>;
     state: Readonly<S>;
 
     callbacks: Function[];
-    canDirectlySetOutput: boolean
+    canDirectlySetComp: boolean
     children: {
         [name: string]: {
             node: any,
@@ -50,29 +40,28 @@ export class ComponentImplementation<P, S, O> {
     // These are stored separately to children, as they may contain a symbol,
     // which doesn't appear in the result of Object.keys()
     childrenKeys: any[]
+    currentBatch?: Batch<P, S>;
     governor?: Governor<P, O>
-    isDestroyed: boolean
-    isRendering: boolean
+    isDisposed: boolean
+    isComposing: boolean
     isStrict: boolean
-    lifecycle: ComponentLifecycle<P, S, O>
-    nextOutput: any
-    observers: Observer<O>[]
-    queue: Batch<P, S, O>[]
-    subscriptions: WeakMap<Observer<any>, Subscription>
-    transactionInitialProps: P;
-    transactionInitialOutput: O;
-    transactionInitialState: S;
+    lifecycle: ComponentLifecycle<P, S, C, O>
+    nextComp: any
+    observers: TransactionalObserver<O>[]
+    output: O;
+    queue: Batch<P, S>[]
+    subscriptions: WeakMap<TransactionalObserver<any>, Subscription>
     transactionLevel: number;
 
-    constructor(lifecycle: ComponentLifecycle<P, S, O>, props: P, isStrict = false) {
+    constructor(lifecycle: ComponentLifecycle<P, S, C, O>, props: P, isStrict = false) {
         this.transactionLevel = 0
         this.callbacks = []
-        this.canDirectlySetOutput = false
+        this.canDirectlySetComp = false
         this.children = {}
         this.childrenKeys = []
         this.governor = undefined
-        this.isDestroyed = false
-        this.isRendering = false
+        this.isDisposed = false
+        this.isComposing = false
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.observers = []
@@ -87,7 +76,7 @@ export class ComponentImplementation<P, S, O> {
         }
 
         this.increaseTransactionLevel()
-        let batch = this.queue[0]
+        let batch = (this.currentBatch && this.currentBatch.setProps) ? this.currentBatch : this.queue[0]
         if (!batch) {
             batch = { updaters: [] }
             this.queue.push(batch)
@@ -102,11 +91,11 @@ export class ComponentImplementation<P, S, O> {
         this.decreaseTransactionLevel()
     }
 
-    destroy = () => {
-        if (this.isDestroyed) {
-            throw new Error(`You cannot call "destroy" on a governor that has been already destroyed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+    dispose = () => {
+        if (this.isDisposed) {
+            throw new Error(`You cannot call "dispose" on a governor that has been already disposeed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
-        this.isDestroyed = true
+        this.isDisposed = true
         if (!this.transactionLevel) {
             this.increaseTransactionLevel()
             this.decreaseTransactionLevel()
@@ -114,8 +103,8 @@ export class ComponentImplementation<P, S, O> {
     }
 
     setProps = (props: P): void => {
-        if (this.isDestroyed) {
-            throw new Error(`You cannot call "setProps" on a governor that has been already destroyed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+        if (this.isDisposed) {
+            throw new Error(`You cannot call "setProps" on a governor that has been already disposeed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         this.increaseTransactionLevel()
         this.queue.push({
@@ -129,32 +118,33 @@ export class ComponentImplementation<P, S, O> {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
-        // Need to cache the output in case `get` is called before any
+        // Need to cache the comp in case `get` is called before any
         // other changes occur.
-        this.performRender()
-        this.output = this.nextOutput
+        this.performCompose()
+        this.comp = this.nextComp
+        this.output = this.lifecycle.render()
 
         if (this.lifecycle.componentDidInstantiate) {
             this.lifecycle.componentDidInstantiate()
         }
 
+        let self = this
         this.governor = {
-            get: this.shallowCloneOutput,
-
-            getObservable: () => ({
+            getValue: this.getValue,
+            getOutlet: () => ({
                 subscribe: this.subscribe,
-                get: this.shallowCloneOutput,
+                getValue: this.getValue,
             }),
 
             setProps: this.setProps,
-            destroy: this.destroy,
+            dispose: this.dispose,
             subscribe: this.subscribe,
         }
 
         return this.governor
     }
 
-    shallowCloneOutput = () => {
+    getValue = () => {
         // Return a shallow clone, to prevent accidental mutations
         // of internal state.
         if (Array.isArray(this.output)) {
@@ -168,128 +158,130 @@ export class ComponentImplementation<P, S, O> {
         }
     }
 
-    performRender() {
-        this.canDirectlySetOutput = true
-        this.isRendering = true
-        let rendered = this.lifecycle.render()
-        if (rendered === undefined) {
-            console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its render method. If you really want to return an empty value, return "null" instead.`)
-        }
+    performCompose() {
+        if (this.lifecycle.compose) {
+            this.canDirectlySetComp = true
+            this.isComposing = true
+            let composed = this.lifecycle.compose()
+            if (composed === undefined) {
+                console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its compose method. If you really want to return an empty value, return "null" instead.`)
+            }
 
-        let nextChildrenKeys: string[]
-        let nextChildNodes
-        if (Array.isArray(rendered)) {
-            this.nextOutput = []
-            nextChildNodes = rendered
-            nextChildrenKeys = Object.keys(rendered)
-        }
-        else if (isPlainObject(rendered)) {
-            this.nextOutput = {}
-            nextChildNodes = rendered
-            nextChildrenKeys = Object.keys(rendered!)
-        }
-        else {
-            nextChildNodes = { [Root]: rendered }
-            nextChildrenKeys = [Root]
-        }
-
-        let keysToRemove = new Set(this.childrenKeys)
-        let nextChildren = {}
-        for (let i = 0; i < nextChildrenKeys.length; i++) {
-            let key = nextChildrenKeys[i]
-            let prevChild = this.children[key]
-            let nextChildNode = convertToElementIfPossible(nextChildNodes[key])
-            keysToRemove.delete(key)
-            nextChildren[key] = this.children[key]
-            if (nextChildNode instanceof GovernElement) {
-                if (!doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
-                    if (prevChild) {
-                        // The old element is out of date, so we'll need to clean
-                        // up the old child.
-                        keysToRemove.add(key)
-                    }
-
-                    let governor: Governor<any, any> | undefined
-                    let observable: Observable<any>
-                    if (nextChildNode.type === 'sink') {
-                        observable = nextChildNode.props.observable
-                    }
-                    else {
-                        governor = createGovernor(nextChildNode)
-                        observable = governor
-                    }
-
-                    // Govern components will immediately emit their current value
-                    // on subscription, ensuring that output is updated.
-                    let subscription = observable.subscribe(
-                        value => this.handleChildChange(key, value),
-                        this.handleChildError,
-                        this.handleChildComplete,
-                        this.increaseTransactionLevel,
-                        this.decreaseTransactionLevel,
-                    )
-
-                    nextChildren[key] = {
-                        node: nextChildNode,
-                        subscription: subscription,
-                        governor: governor,
-                    }
-                }
-                else if (nextChildNode.type !== 'sink') {
-                    // If `setProps` causes a change in output, it will
-                    // immediately be emitted to the observer.
-                    prevChild.governor!.setProps(nextChildNode.props)
-                }
-                else {
-                    // Sinks won't emit a new value, so we need to manually 
-                    // carry over the previous value to the next.
-                    if (key === Root) {
-                        this.nextOutput = this.output
-                    }
-                    else {
-                        this.nextOutput[key] = this.output[key]
-                    }
-                }
+            let nextChildrenKeys: string[]
+            let nextChildNodes
+            if (Array.isArray(composed)) {
+                this.nextComp = []
+                nextChildNodes = composed
+                nextChildrenKeys = Object.keys(composed)
+            }
+            else if (isPlainObject(composed)) {
+                this.nextComp = {}
+                nextChildNodes = composed
+                nextChildrenKeys = Object.keys(composed!)
             }
             else {
-                keysToRemove.add(key)
-                delete nextChildren[key]
-                this.setOutput(key, nextChildNode)
+                nextChildNodes = { [Root]: composed }
+                nextChildrenKeys = [Root]
             }
-        }
 
-        // Clean up after any previous children that are no longer being
-        // rendered.
-        let keysToRemoveArray = Array.from(keysToRemove)
-        for (let i = 0; i < keysToRemoveArray.length; i++) {
-            let key = keysToRemoveArray[i]
-            let prevChild = this.children[key]
-            if (prevChild) {
-                prevChild.subscription.unsubscribe()
-                if (prevChild.governor) {
-                    prevChild.governor.destroy()
+            let keysToRemove = new Set(this.childrenKeys)
+            let nextChildren = {}
+            for (let i = 0; i < nextChildrenKeys.length; i++) {
+                let key = nextChildrenKeys[i]
+                let prevChild = this.children[key]
+                let nextChildNode = convertToElementIfPossible(nextChildNodes[key])
+                keysToRemove.delete(key)
+                nextChildren[key] = this.children[key]
+                if (isValidElement(nextChildNode)) {
+                    if (!doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
+                        if (prevChild) {
+                            // The old element is out of date, so we'll need to clean
+                            // up the old child.
+                            keysToRemove.add(key)
+                        }
+
+                        let governor: Governor<any, any> | undefined
+                        let observable: TransactionalObservable<any>
+                        if (nextChildNode.type === 'sink') {
+                            observable = nextChildNode.props.from
+                        }
+                        else {
+                            governor = createGovernor(nextChildNode)
+                            observable = governor
+                        }
+
+                        // Govern components will immediately emit their current value
+                        // on subscription, ensuring that comp is updated.
+                        let subscription = observable.subscribe(
+                            value => this.handleChildChange(key, value),
+                            this.handleChildError,
+                            this.handleChildComplete,
+                            this.increaseTransactionLevel,
+                            this.decreaseTransactionLevel,
+                        )
+
+                        nextChildren[key] = {
+                            node: nextChildNode,
+                            subscription: subscription,
+                            governor: governor,
+                        }
+                    }
+                    else if (nextChildNode.type !== 'sink') {
+                        // If `setProps` causes a change in comp, it will
+                        // immediately be emitted to the observer.
+                        prevChild.governor!.setProps(nextChildNode.props)
+                    }
+                    else {
+                        // Sinks won't emit a new value, so we need to manually 
+                        // carry over the previous value to the next.
+                        if (key === Root) {
+                            this.nextComp = this.comp
+                        }
+                        else {
+                            this.nextComp[key] = this.comp[key]
+                        }
+                    }
+                }
+                else {
+                    keysToRemove.add(key)
+                    delete nextChildren[key]
+                    this.setComp(key, nextChildNode)
                 }
             }
-            delete this.children[key]
-        }
 
-        this.children = nextChildren
-        this.childrenKeys = nextChildrenKeys
-        this.canDirectlySetOutput = false
-        this.isRendering = false
+            // Clean up after any previous children that are no longer being
+            // composed.
+            let keysToRemoveArray = Array.from(keysToRemove)
+            for (let i = 0; i < keysToRemoveArray.length; i++) {
+                let key = keysToRemoveArray[i]
+                let prevChild = this.children[key]
+                if (prevChild) {
+                    prevChild.subscription.unsubscribe()
+                    if (prevChild.governor) {
+                        prevChild.governor.dispose()
+                    }
+                }
+                delete this.children[key]
+            }
+
+            this.children = nextChildren
+            this.childrenKeys = nextChildrenKeys
+            this.canDirectlySetComp = false
+            this.isComposing = false
+        }
     }
 
-    setOutput(key: string | Symbol, value: any) {
+    setComp(key: string | Symbol, value: any) {
         if (key === Root) {
-            this.nextOutput = value
+            this.nextComp = value
         }
         else {
-            this.nextOutput[key as any] = value
+            this.nextComp[key as any] = value
         }
     }
 
     subscribe = (
-        onNextOrObserver: Observer<O> | ((value: O) => void),
+        onNextOrObserver: TransactionalObserver<O> | ((value: O) => void),
         onError?: (error: any) => void,
         onComplete?: () => void,
         onTransactionStart?: () => void,
@@ -308,7 +300,7 @@ export class ComponentImplementation<P, S, O> {
             closed: false
         }
 
-        let observer: Observer<O> =
+        let observer: TransactionalObserver<O> =
             typeof onNextOrObserver !== 'function'
                 ? onNextOrObserver
                 : { next: onNextOrObserver,
@@ -328,10 +320,6 @@ export class ComponentImplementation<P, S, O> {
     
     increaseTransactionLevel = () => {
         if (++this.transactionLevel === 1) {
-            this.transactionInitialProps = this.props
-            this.transactionInitialOutput = this.output
-            this.transactionInitialState = this.state
-
             for (let i = 0; i < this.observers.length; i++) {
                 let observer = this.observers[i]
                 if (observer.transactionStart) {
@@ -345,7 +333,7 @@ export class ComponentImplementation<P, S, O> {
         if (this.transactionLevel === 1) {
             this.processQueue()
             
-            if (this.isDestroyed) {
+            if (this.isDisposed) {
                 for (let i = 0; i < this.childrenKeys.length; i++) {
                     let key = this.childrenKeys[i]
                     let child = this.children[key]
@@ -353,14 +341,14 @@ export class ComponentImplementation<P, S, O> {
                     if (child) {
                         child.subscription.unsubscribe()
                         if (child.governor) {
-                            child.governor.destroy()
+                            child.governor.dispose()
                         }
                         delete this.children[key]
                     }
                 }
 
-                if (this.lifecycle.componentWillBeDestroyed) {
-                    this.lifecycle.componentWillBeDestroyed()
+                if (this.lifecycle.componentWillBeDisposed) {
+                    this.lifecycle.componentWillBeDisposed()
                 }
 
                 for (let i = 0; i < this.observers.length; i++) {
@@ -378,55 +366,63 @@ export class ComponentImplementation<P, S, O> {
     }
 
     processQueue() {
-        let batch: Batch<P, S, O> | undefined = this.queue.shift()
-        let queueIsEmpty = !batch
+        let batch: Batch<P, S> | undefined = this.queue.shift()
         while (batch) {
             let prevProps = this.props
             let prevState = this.state
-            let prevOutput = this.output
+            let prevComp = this.comp
 
+            this.currentBatch = batch
+            
             if (batch.updaters || batch.setProps) {
                 if (batch.setProps && this.lifecycle.componentWillReceiveProps) {
-                    this.canDirectlySetOutput = true
+                    this.canDirectlySetComp = true
                     this.lifecycle.componentWillReceiveProps(batch.setProps)
-                    this.canDirectlySetOutput = false
+                    this.canDirectlySetComp = false
                 }
+
+                if (batch.setProps) {
+                    this.props = batch.setProps
+
+                    // enqueueSetState checks for existence of `setProps` to
+                    // see whether it is allowed to add state updates to the
+                    // current batch.
+                    delete batch.setProps
+                }
+
                 let updaters = batch.updaters || []
                 for (let i = 0; i < updaters.length; i++) {
                     let updater = updaters[i]
                     Object.assign(this.state, updater(this.state, this.props))
                 }
 
-                if (batch.setProps) {
-                    this.props = batch.setProps
-                }
-
-                this.performRender()
+                this.performCompose()
             }
             else if (batch.changes) {
                 // The batch was triggered by an update from a child, so
-                // we don't need to re-render the whole thing.
+                // we don't need to re-compose the whole thing.
                 for (let i = 0; i < batch.changes.length; i++) {
-                    let [key, output] = batch.changes[i]
-                    this.setOutput(key, output)
+                    let [key, comp] = batch.changes[i]
+                    this.setComp(key, comp)
                 }
             }
-            this.output = this.nextOutput
+            this.comp = this.nextComp
+
+            if (!this.lifecycle.shouldComponentUpdate ||
+                this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevComp)) {
+               this.output = this.lifecycle.render()
+               for (let i = 0; i < this.observers.length; i++) {
+                   this.observers[i].next(this.output)
+               }
+            }
 
             if (this.lifecycle.componentDidUpdate) {
-                this.lifecycle.componentDidUpdate(prevProps, prevState, prevOutput)
+                this.lifecycle.componentDidUpdate(prevProps, prevState, prevComp)
             }
 
             batch = this.queue.shift()
         }
-
-        if (!queueIsEmpty &&
-            (!this.lifecycle.shouldComponentEmit ||
-                this.lifecycle.shouldComponentEmit(this.transactionInitialProps, this.transactionInitialState, this.transactionInitialOutput))) {
-            for (let i = 0; i < this.observers.length; i++) {
-                this.observers[i].next(this.output)
-            }
-        }
+        delete this.currentBatch
 
         for (let i = 0; i < this.observers.length; i++) {
             let observer = this.observers[i]
@@ -445,13 +441,13 @@ export class ComponentImplementation<P, S, O> {
         }
     }
     
-    handleChildChange(key: string, output) {
-        if (this.canDirectlySetOutput) {
-            // If we're currently rendering, or within
-            // componentWillReceiveProps, then we know that the output will
-            // be updated immediately after the render is complete, so we don't
+    handleChildChange(key: string, value) {
+        if (this.canDirectlySetComp) {
+            // If we're currently composing, or within
+            // componentWillReceiveProps, then we know that the comp will
+            // be updated immediately after the compose is complete, so we don't
             // need to use the queue.
-            this.setOutput(key, output)
+            this.setComp(key, value)
         }
         else {
             // If we're dealing with sinked observables from other libraries,
@@ -463,7 +459,7 @@ export class ComponentImplementation<P, S, O> {
 
             if (this.queue.length === 0) {
                 this.queue.push({
-                    changes: [[key, output]]
+                    changes: [[key, value]]
                 })
             }
             else {
@@ -471,7 +467,7 @@ export class ComponentImplementation<P, S, O> {
                 if (!changes) {
                     this.queue[0].changes = changes = []
                 }
-                changes.push([key, output])
+                changes.push([key, value])
             }
 
             if (isIndividualChange) {

@@ -6,7 +6,7 @@ export function createCounter() {
 }
 
 export function createCounterClass() {
-    return class Counter extends Component<{}, { count: number, increase: Function }, any> {
+    return class Counter extends Component<{}, any> {
         state = { count: 0 }
 
         increase = () => {
