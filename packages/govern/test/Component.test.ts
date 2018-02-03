@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 import { createCounter } from './utils/createCounter'
 
 describe('Component', () => {
@@ -9,7 +9,7 @@ describe('Component', () => {
 
 		class TestComponent extends Component<{}> {
 			compose() {
-			  return shape({
+			  return combine({
 				  a: 1
 			  })
       }
@@ -39,7 +39,7 @@ describe('Component', () => {
       state = { a: 1 }
 
 			compose() {
-			  return shape({
+			  return combine({
 				  a: this.state.a
 			  })
       }
@@ -66,7 +66,7 @@ describe('Component', () => {
       state = { a: 1 }
 
 			compose() {
-			  return shape({
+			  return combine({
 				  a: this.state.a
 			  })
       }
@@ -95,7 +95,7 @@ describe('Component', () => {
 
 		class TestComponent extends Component<{ updated }, { a }> {
       compose() {
-			  return shape({
+			  return combine({
           a: map(subscribe(counter), counter => counter.count)
         })
       }
@@ -127,7 +127,7 @@ describe('Component', () => {
 			}
 
 			compose() {
-			  return shape({
+			  return combine({
 				  a: this.state.a
 			  })
       }

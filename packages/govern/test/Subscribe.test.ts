@@ -1,6 +1,6 @@
 import * as Observable from 'zen-observable'
 import { createCounter } from './utils/createCounter'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC } from '../src'
 
 describe("Subscribe", () => {
     it("outputs intial observable", () => {

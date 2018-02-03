@@ -5,14 +5,14 @@ import { Outlet } from './Observable'
 import { Subscribe } from './builtins/Subscribe'
 import { OutletSource } from './builtins/OutletSource'
 import { Map } from './builtins/Map'
-import { Shape } from './builtins/Shape'
+import { Combine } from './builtins/Combine'
 
 
 const BuiltInComponents = {
     map: Map,
     subscribe: Subscribe,
     outlet: OutletSource,
-    shape: Shape,
+    combine: Combine,
 }
 
 export interface Governor<P, O> extends Outlet<O> {

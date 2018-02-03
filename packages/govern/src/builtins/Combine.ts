@@ -1,12 +1,12 @@
 import { ComponentImplementation } from '../ComponentImplementation'
 import { ComponentLifecycle } from '../ComponentLifecycle'
-import { ShapeChildren, ShapeProps } from '../Core'
+import { CombineChildren, CombineProps } from '../Core'
 import { Governable } from '../Governable'
 
-export class Shape<O> implements Governable<ShapeProps<O>, O>, ComponentLifecycle<ShapeProps<O>, {}, O, O> {
-    impl: ComponentImplementation<ShapeProps<O>, {}, O, O>;
+export class Combine<O> implements Governable<CombineProps<O>, O>, ComponentLifecycle<CombineProps<O>, {}, O, O> {
+    impl: ComponentImplementation<CombineProps<O>, {}, O, O>;
     
-    constructor(props: ShapeProps<O>) {
+    constructor(props: CombineProps<O>) {
         this.impl = new ComponentImplementation(this, props)
     }
 

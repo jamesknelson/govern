@@ -1,4 +1,4 @@
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SubscribeProps, OutletSourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { Outlet, TransactionalObservable } from './Observable'
@@ -38,9 +38,9 @@ export function outlet<O = any>(
     return createElement('outlet', { children: element, key })
 }
 
-export function shape<O>(
-    children: ShapeChildren<keyof O, O>,
+export function combine<O>(
+    children: CombineChildren<keyof O, O>,
     key?: Key
-): GovernElement<ShapeProps<O>, O> {
-    return createElement('shape', { children, key })
+): GovernElement<CombineProps<O>, O> {
+    return createElement('combine', { children, key })
 }

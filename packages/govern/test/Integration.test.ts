@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 
 function createModelClass() {
   class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
@@ -37,7 +37,7 @@ function createModelClass() {
     }
 
     compose() {
-      return shape({
+      return combine({
         name: createElement(ModelPrimitive, {
           defaultValue: this.props.defaultValue.name as string,
           validate: (value) => {
@@ -103,7 +103,7 @@ function createDataSourceClass() {
     }
 
     compose() {
-      return outlet(shape(this.state.store))
+      return outlet(combine(this.state.store))
     }
 
     render() {
@@ -126,7 +126,7 @@ function createFormControllerClass() {
     }
 
     compose() {
-      return shape({
+      return combine({
         data: subscribe(this.props.data),
         model: createElement(Model, null)
       })

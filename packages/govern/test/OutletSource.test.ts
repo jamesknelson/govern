@@ -1,6 +1,6 @@
 import * as Observable from 'zen-observable'
 import { createCounter } from './utils/createCounter'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC } from '../src'
 
 describe('OutletSource', () => {
   it("outputs its initial value", () => {
@@ -10,7 +10,7 @@ describe('OutletSource', () => {
   })
 
   it("outputs subsequent values", () => {
-    let governor = createGovernor(outlet(shape({ a: 1, b: 2 })))
+    let governor = createGovernor(outlet(combine({ a: 1, b: 2 })))
     let observable = governor.getValue()
 
     let test = Observable.of("red", "green", "blue")

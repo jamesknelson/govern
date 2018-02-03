@@ -1,10 +1,10 @@
 import { of as observableOf } from 'zen-observable'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../src'
 import { createModelClass } from './utils/createModelClass'
 
 describe('Batch', () => {
   function SplitObservable({ userObservable }: { userObservable: Observable<{ firstName: string, lastName: string }> }) {
-    return shape({
+    return combine({
       firstName: outlet(map(subscribe(userObservable), user => user.firstName)),
       lastName: outlet(map(subscribe(userObservable), user => user.lastName)),
     })
@@ -12,7 +12,7 @@ describe('Batch', () => {
 
   function JoinedObservables({ firstName, lastName }: { firstName: Observable<string>, lastName: Observable<string> }) {
     return map(
-      shape({
+      combine({
         firstName: subscribe(firstName),
         lastName: subscribe(lastName),
       }),
@@ -50,7 +50,7 @@ describe('Batch', () => {
       map(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } }),
         ({ value, change }) =>
-          shape({
+          combine({
             // Convert the output of the model into an observable.
             valueObservable: outlet(value),
             change: change,

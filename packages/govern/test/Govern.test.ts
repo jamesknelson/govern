@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 
 describe('createGovernor', () => {
   it("creates stateless functional components", () => {

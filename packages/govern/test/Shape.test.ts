@@ -1,16 +1,16 @@
 import * as Observable from 'zen-observable'
 import { createCounter, createCounterClass } from './utils/createCounter'
-import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC } from '../src'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC } from '../src'
 
-describe('Shape', () => {
+describe('Combine', () => {
   it("outputs plain objects", () => {
-    let governor = createGovernor(shape({ a: 1, b: 2 }))
+    let governor = createGovernor(combine({ a: 1, b: 2 }))
     expect(governor.getValue()).toEqual({ a: 1, b: 2 })
   })
 
   it("outputs embedded elements", () => {
     let Counter = createCounterClass()
-    let governor = createGovernor(shape({
+    let governor = createGovernor(combine({
         a: createElement(Counter, null),
         b: 2
     }))
@@ -19,7 +19,7 @@ describe('Shape', () => {
 
   it("handles addition and removal of elements", () => {
     let Counter = createCounterClass()
-    let governor = createGovernor<any, any>(shape({
+    let governor = createGovernor<any, any>(combine({
         a: createElement(Counter, null),
     }))
     governor.setProps({
@@ -34,7 +34,7 @@ describe('Shape', () => {
   it("handles changing of child props", () => {
     let Double = ({ x }: { x: number }) => x * 2
 
-    let governor = createGovernor<any, any>(shape({
+    let governor = createGovernor<any, any>(combine({
         doubled: createElement(Double, { x: 2 }),
     }))
     expect(governor.getValue()).toEqual({ doubled: 4 })
