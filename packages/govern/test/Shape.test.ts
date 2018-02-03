@@ -32,7 +32,11 @@ describe('Combine', () => {
   })
 
   it("handles changing of child props", () => {
-    let Double = ({ x }: { x: number }) => x * 2
+    class Double extends Component<{x: number}> {
+        getValue() {
+            return this.props.x*2
+        }
+    }
 
     let governor = createGovernor<any, any>(combine({
         doubled: createElement(Double, { x: 2 }),

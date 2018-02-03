@@ -1,14 +1,12 @@
-import { ComponentImplementation } from '../ComponentImplementation'
-import { ComponentLifecycle } from '../ComponentLifecycle'
-import { convertToElementIfPossible } from '../convertToElementIfPossible'
-import { GovernElementLike, MapProps } from '../Core'
+import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
+import { MapProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { isValidElement } from '../Element'
+import { GovernElement, isValidElement } from '../Element'
 
-export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
-    element: GovernElementLike<any, any>
+export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
+    element: GovernElement<any, any>
     governor: Governor<any, any>
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, any, ToValue, ToValue>;
     
@@ -27,7 +25,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
     }
 
     receiveProps(props: MapProps<FromValue, ToValue>) {
-        let fromElement = convertToElementIfPossible(props.from)
+        let fromElement = props.from
         if (!isValidElement(fromElement)) {
             throw new Error(`The "from" prop of a Map element must be an element, object, or array.`)
         }

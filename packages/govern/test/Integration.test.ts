@@ -120,7 +120,7 @@ function createDataSourceClass() {
 function createFormControllerClass() {
   const Model = createModelClass()
 
-  return class FormController extends StrictComponent<{ data }> {
+  return class FormController extends Component<{ data }> {
     awaitingData: boolean = true
 
     get subs() {
@@ -142,8 +142,8 @@ function createFormControllerClass() {
       this.receiveDataIfAvailable(this.subs.data)
     }
 
-    componentDidUpdate(prevProps, prevState, prevComp) {
-      this.receiveDataIfAvailable(prevComp.data)
+    componentDidUpdate(prevProps, prevState, prevSubs) {
+      this.receiveDataIfAvailable(prevSubs.data)
     }
 
     receiveDataIfAvailable(output) {

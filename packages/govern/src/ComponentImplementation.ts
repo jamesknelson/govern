@@ -1,13 +1,13 @@
 import { isPlainObject } from './isPlainObject'
-import { getDisplayName } from './Component'
-import { ComponentLifecycle } from './ComponentLifecycle'
-import { convertToElementIfPossible } from './convertToElementIfPossible'
+import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
+import { isValidElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
 import { createGovernor, Governor } from './Governor'
-import { TransactionalObservable, TransactionalObserver, Outlet, Subscription } from './Observable'
-import { GovernNode } from './Core'
-import { isValidElement } from './Element'
+import { Outlet } from './Outlet'
+import { OutletSubject } from './OutletSubject'
+import { Subscription } from './Subscription'
+import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
 
 type Batch<Props, State> = {
     setProps?: Props,
@@ -20,13 +20,23 @@ type Batch<Props, State> = {
 // on symbols.
 const Root: string = Symbol('root') as any
 
+export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Subs=any> {
+    componentDidInstantiate?();
+    componentWillReceiveProps?(nextProps: Props);
+    subscribe?(): any;
+    shouldComponentUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
+    getValue(): Value;
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
+    componentWillBeDisposed?();
+}
+
 export class ComponentImplementation<Props, State, Value, Subs> {
     props: Readonly<Props>;
     state: Readonly<State>;
     subs: Readonly<Subs>;
 
     callbacks: Function[];
-    canDirectlySetComp: boolean
+    canDirectlySetSubs: boolean
     children: {
         [name: string]: {
             node: any,
@@ -45,18 +55,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     isDisposed: boolean
     isPerformingSubscribe: boolean
     isStrict: boolean
-    lifecycle: ComponentLifecycle<Props, State, Value, Subs>
+    lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
     nextSubs: any
-    observers: TransactionalObserver<Value>[]
-    value: Value;
     queue: Batch<Props, State>[]
-    subscriptions: WeakMap<TransactionalObserver<any>, Subscription>
+    subject: OutletSubject<Value>;
     transactionLevel: number;
 
-    constructor(lifecycle: ComponentLifecycle<Props, State, Value, Subs>, props: Props, isStrict = false) {
+    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props, isStrict = false) {
         this.transactionLevel = 0
         this.callbacks = []
-        this.canDirectlySetComp = false
+        this.canDirectlySetSubs = false
         this.children = {}
         this.childrenKeys = []
         this.governor = undefined
@@ -64,10 +72,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.isPerformingSubscribe = false
         this.isStrict = isStrict
         this.lifecycle = lifecycle
-        this.observers = []
         this.props = props
         this.queue = []
-        this.subscriptions = new WeakMap()
     }
 
     enqueueSetState(updater: (prevState: Readonly<State>, props: Props) => any, callback?: Function) {
@@ -122,65 +128,54 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         // other changes occur.
         this.performSubscribe()
         this.subs = this.nextSubs
-        this.value = this.lifecycle.getValue()
+        this.subject = new OutletSubject(this.lifecycle.getValue())
 
-        if (this.lifecycle.componentDidInstantiate) {
-            this.lifecycle.componentDidInstantiate()
-        }
-
-        let self = this
-        this.governor = {
-            getValue: this.getValue,
-            getOutlet: () => ({
-                subscribe: this.subscribe,
-                getValue: this.getValue,
-            }),
-
+        let outlet = new Outlet(this.subject)
+        this.governor = Object.assign(outlet, {
+            getOutlet: () => new Outlet(this.subject),
             setProps: this.setProps,
             dispose: this.dispose,
-            subscribe: this.subscribe,
+        })
+        
+        if (this.lifecycle.componentDidInstantiate) {
+            this.lifecycle.componentDidInstantiate()
         }
 
         return this.governor
     }
 
-    getValue = () => {
-        // Return a shallow clone, to prevent accidental mutations
-        // of internal state.
-        if (Array.isArray(this.value)) {
-            return this.value.slice(0) as any
-        }
-        else if (isPlainObject(this.value)) {
-            return Object.assign({}, this.value)
-        }
-        else {
-            return this.value
-        }
-    }
-
     performSubscribe() {
         if (this.lifecycle.subscribe) {
-            this.canDirectlySetComp = true
+            this.canDirectlySetSubs = true
             this.isPerformingSubscribe = true
-            let subscribed = this.lifecycle.subscribe()
-            if (subscribed === undefined) {
+            let element = this.lifecycle.subscribe()
+            if (element === undefined) {
                 console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
+            }
+            else if (this.lifecycle instanceof Component && element !== null && !isValidElement(element)) {
+                throw new Error(`You must return an element from "subscribe", but instead received a "${typeof element}". See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
 
             let nextChildrenKeys: string[]
             let nextChildNodes
-            if (Array.isArray(subscribed)) {
-                this.nextSubs = []
-                nextChildNodes = subscribed
-                nextChildrenKeys = Object.keys(subscribed)
-            }
-            else if (isPlainObject(subscribed)) {
-                this.nextSubs = {}
-                nextChildNodes = subscribed
-                nextChildrenKeys = Object.keys(subscribed!)
+            if (isValidElement(element) && element!.type === "combine") {
+                if (Array.isArray(element.props.children)) {
+                    this.nextSubs = []
+                    nextChildNodes = element.props.children
+                    nextChildrenKeys = Object.keys(element.props.children)
+                }
+                else if (isPlainObject(element.props.children)) {
+                    this.nextSubs = {}
+                    nextChildNodes = element.props.children
+                    nextChildrenKeys = Object.keys(element.props.children)
+                }
+                else {
+                    nextChildNodes = { [Root]: element.props.children }
+                    nextChildrenKeys = [Root]
+                }
             }
             else {
-                nextChildNodes = { [Root]: subscribed }
+                nextChildNodes = { [Root]: element }
                 nextChildrenKeys = [Root]
             }
 
@@ -189,7 +184,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             for (let i = 0; i < nextChildrenKeys.length; i++) {
                 let key = nextChildrenKeys[i]
                 let prevChild = this.children[key]
-                let nextChildNode = convertToElementIfPossible(nextChildNodes[key])
+                let nextChildNode = nextChildNodes[key]
                 keysToRemove.delete(key)
                 nextChildren[key] = this.children[key]
                 if (isValidElement(nextChildNode)) {
@@ -266,7 +261,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
             this.children = nextChildren
             this.childrenKeys = nextChildrenKeys
-            this.canDirectlySetComp = false
+            this.canDirectlySetSubs = false
             this.isPerformingSubscribe = false
         }
     }
@@ -279,53 +274,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             this.nextSubs[key as any] = value
         }
     }
-
-    subscribe = (
-        onNextOrObserver: TransactionalObserver<Value> | ((value: Value) => void),
-        onError?: (error: any) => void,
-        onComplete?: () => void,
-        onTransactionStart?: () => void,
-        onTransactionEnd?: () => void
-    ): Subscription => {
-        let unsubscribe = () => {
-            let index = this.observers.indexOf(observer)
-            if (index !== -1) {
-                this.observers.splice(index, 1)
-            }
-            subscription.closed = true
-        }
-
-        let subscription = {
-            unsubscribe,
-            closed: false
-        }
-
-        let observer: TransactionalObserver<Value> =
-            typeof onNextOrObserver !== 'function'
-                ? onNextOrObserver
-                : { next: onNextOrObserver,
-                    error: onError,
-                    complete: onComplete,
-                    transactionStart: onTransactionStart, 
-                    transactionEnd: onTransactionEnd }
-                    
-        this.observers.push(observer)
-        this.subscriptions.set(observer, subscription)
-        
-        // Emit the current value on subscription, without emitting a transaction
-        observer.next(this.value)
-
-        return subscription
-    }
     
     increaseTransactionLevel = () => {
         if (++this.transactionLevel === 1) {
-            for (let i = 0; i < this.observers.length; i++) {
-                let observer = this.observers[i]
-                if (observer.transactionStart) {
-                    observer.transactionStart()
-                }
-            }
+            this.subject.transactionStart()
         }
     }
     
@@ -351,14 +303,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                     this.lifecycle.componentWillBeDisposed()
                 }
 
-                for (let i = 0; i < this.observers.length; i++) {
-                    let observer = this.observers[i]
-                    if (observer.complete) {
-                        observer.complete()
-                    }
-                }
-
-                this.observers.length = 0
+                this.subject.complete()
                 this.state = {} as any
             }
         }
@@ -376,9 +321,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             
             if (batch.updaters || batch.setProps) {
                 if (batch.setProps && this.lifecycle.componentWillReceiveProps) {
-                    this.canDirectlySetComp = true
+                    this.canDirectlySetSubs = true
                     this.lifecycle.componentWillReceiveProps(batch.setProps)
-                    this.canDirectlySetComp = false
+                    this.canDirectlySetSubs = false
                 }
 
                 if (batch.setProps) {
@@ -409,27 +354,19 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             this.subs = this.nextSubs
 
             if (!this.lifecycle.shouldComponentUpdate ||
-                this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevSubs)) {
-               this.value = this.lifecycle.getValue()
-               for (let i = 0; i < this.observers.length; i++) {
-                   this.observers[i].next(this.value)
-               }
-            }
-
-            if (this.lifecycle.componentDidUpdate) {
-                this.lifecycle.componentDidUpdate(prevProps, prevState, prevSubs)
+                this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevSubs)
+            ) {
+                this.subject.next(this.lifecycle.getValue())
+                if (this.lifecycle.componentDidUpdate) {
+                    this.lifecycle.componentDidUpdate(prevProps, prevState, prevSubs)
+                }
             }
 
             batch = this.queue.shift()
         }
         delete this.currentBatch
 
-        for (let i = 0; i < this.observers.length; i++) {
-            let observer = this.observers[i]
-            if (observer.transactionEnd) {
-                observer.transactionEnd()
-            }
-        }
+        this.subject.transactionEnd()
 
         while (this.callbacks.length) {
             let callback = this.callbacks.shift() as Function
@@ -442,7 +379,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
     
     handleChildChange(key: string, value) {
-        if (this.canDirectlySetComp) {
+        if (this.canDirectlySetSubs) {
             // If we're currently performing a `subscribe`, or within
             // componentWillReceiveProps, then we know that the subs will
             // be updated immediately after the subscribe is complete, so we don't
@@ -477,19 +414,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     handleChildError = (error) => {
-        // TODO: componentDidCatch
-        let wasErrorHandled = false
-        for (let i = 0; i < this.observers.length; i++) {
-            let observer = this.observers[i]
-            if (observer.error) {
-                wasErrorHandled = true
-                observer.error(error)
-            }
-        }
-        if (!wasErrorHandled) {
-            console.error(`An unhandled error was caught within component "${getDisplayName(this.lifecycle.constructor)}".`)
-            throw error
-        }
+        this.subject.error(error)
     }
 
     handleChildComplete() {

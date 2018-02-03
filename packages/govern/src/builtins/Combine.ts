@@ -1,9 +1,9 @@
-import { ComponentImplementation } from '../ComponentImplementation'
-import { ComponentLifecycle } from '../ComponentLifecycle'
+import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { CombineChildren, CombineProps } from '../Core'
+import { createElement } from '../Element'
 import { Governable } from '../Governable'
 
-export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
+export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
     impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
     
     constructor(props: CombineProps<CombinedValue>) {
@@ -14,7 +14,7 @@ export class Combine<CombinedValue> implements Governable<CombineProps<CombinedV
         // As stateless functional components are implemented using the standard
         // Component implementation, we can just return the children as-is, and
         // they'll be handled properly.
-        return this.impl.props.children
+        return createElement('combine', this.impl.props)
     }
 
     getValue() {

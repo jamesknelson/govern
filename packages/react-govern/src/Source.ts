@@ -18,7 +18,7 @@ export class Source extends React.Component<SourceProps> {
   governor: Govern.Governor<any, any>
 
   getSourceElement(props: SourceProps) {
-    return props.element || Govern.createElement('shape', { children: {} })
+    return props.element || Govern.createElement('combine', { children: {} })
   }
 
   componentWillMount() {
@@ -26,7 +26,7 @@ export class Source extends React.Component<SourceProps> {
     // `constructor`, as we can't rule out the possibility that
     // the controller will have some side effects on initialization.
     this.governor = Govern.createGovernor(
-      Govern.source(this.getSourceElement(this.props))
+      Govern.outlet(this.getSourceElement(this.props))
     )
   }
 

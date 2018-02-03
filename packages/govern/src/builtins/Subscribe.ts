@@ -1,10 +1,9 @@
-import { ComponentImplementation } from '../ComponentImplementation'
-import { ComponentLifecycle } from '../ComponentLifecycle'
+import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { SubscribeProps } from '../Core'
 import { createElement } from '../Element'
 import { Governable } from '../Governable'
 
-export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, ComponentLifecycle<SubscribeProps<T>, {}, T, T> {
+export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, ComponentImplementationLifecycle<SubscribeProps<T>, {}, T, T> {
     impl: ComponentImplementation<SubscribeProps<T>, {}, T, T>;
     
     constructor(props: SubscribeProps<T>) {

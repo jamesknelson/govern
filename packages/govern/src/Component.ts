@@ -1,12 +1,19 @@
 import { Governable, GovernableClass } from './Governable'
-import { ComponentState, GovernNode } from './Core'
-import { ComponentImplementation } from './ComponentImplementation'
-import { ComponentLifecycle } from './ComponentLifecycle'
+import { ComponentState } from './Core'
+import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
+import { GovernElement } from './Element'
 
 export interface ComponentClass<Props, Value=any> extends GovernableClass<Props, Value> {
     new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
+}
+
+export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> extends ComponentImplementationLifecycle<Props, State, Value, Subs> {
+    // While `ComponentImplementation` allows us to "subscribe" to any value,
+    // it only makes sense for components to subscribe to elements (as other
+    // values are treated as constants.)
+    subscribe?(): GovernElement<any, Subs> | null;
 }
 
 export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
@@ -91,12 +98,12 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     // TypeScript isn't able to infer the output of the subclass's `getValue`
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
-    getTypedSubs<Subs>(component: { subscribe?: () => GovernNode<any, Subs> | null }): Subs {
+    getTypedSubs<Subs>(component: { subscribe?: () => GovernElement<any, Subs> | null }): Subs {
         return this.impl.subs as any
     }
 
     getTypedValue<Value>(component: { getValue: () => Value }): Value {
-        return this.impl.value as any
+        return this.impl.subject.getValue() as any
     }
 }
 

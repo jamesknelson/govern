@@ -8,7 +8,7 @@ import { govern } from '../src/govern'
 class TestController extends Govern.Component<any, any> {
   state = { value: this.props.defaultValue }
 
-  render() {
+  getValue() {
     return {
       value: this.state.value,
       change: (value) => this.setState({ value })
@@ -58,7 +58,7 @@ test('injects subsequent outputs', () => {
   let governor = Govern.createGovernor(
     Govern.createElement(TestController, { defaultValue: 1 }),
   )
-  let decorator = govern(props => Govern.sink(governor))
+  let decorator = govern(props => Govern.subscribe(governor))
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />

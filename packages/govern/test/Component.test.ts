@@ -94,28 +94,35 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
+      get subs() {
+        return this.getTypedSubs(this)
+      }
+
       subscribe() {
 			  return combine({
-          a: map(subscribe(counter), counter => counter.count)
+          a: subscribe(counter)
         })
       }
       
       getValue() {
-        return this.subs
+        return {
+          a: this.subs.a.count
+        }
       }
 		
-			componentDidUpdate(nextProps, nextState, nextOutput) {
+			componentDidUpdate(nextProps, nextState, nextSubs) {
         didUpdateCallCount += 1
-        if (nextOutput.a === 0) {
+        if (nextSubs.a.count === 0) {
           counter.getValue().increase()
         }
 			}
     }
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    expect(didUpdateCallCount).toBe(0)
     governor.setProps({ updated: true })
-    expect(governor.getValue()).toEqual({ a: 1 })
     expect(didUpdateCallCount).toBe(2)
+    expect(governor.getValue()).toEqual({ a: 1 })
   })
 
   it("setState within componentWillReceiveProps is reflected within the output", () => {
@@ -148,6 +155,47 @@ describe('Component', () => {
     governor.setProps({ updated: true })
     expect(updateCount).toBe(2)
     expect(latest).toEqual({ a: 2 })
+  })
+
+  it("shouldComponentUpdate can prevent updates", () => {
+    class TestComponent extends Component<{ updated }> {
+      shouldComponentUpdate() {
+        return false
+      }
+      
+      getValue() {
+        return this.subs
+      }
+    }
+    
+    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let latest
+    let updateCount = 0
+    governor.subscribe(value => {
+      latest = value
+      updateCount++
+    })
+    expect(updateCount).toBe(1)
+    governor.setProps({ updated: true })
+    expect(updateCount).toBe(1)
+  })
+
+  it("throws if 'subscribe' returns a non-node object", () => {
+    expect(() => {
+      class TestComponent extends Component<{}> {
+        subscribe() {
+          return {
+            a: 1
+          }
+        }
+        
+        getValue() {
+          return this.subs
+        }
+      }
+
+      createGovernor(createElement(TestComponent))
+    }).toThrow()
   })
 })
   

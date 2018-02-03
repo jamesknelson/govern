@@ -3,23 +3,41 @@ import { map, outlet, subscribe, combine, createElement, createGovernor, Compone
 import { createModelClass } from './utils/createModelClass'
 
 describe('Batch', () => {
-  function SplitObservable({ userObservable }: { userObservable: Observable<{ firstName: string, lastName: string }> }) {
-    return combine({
-      firstName: outlet(map(subscribe(userObservable), user => user.firstName)),
-      lastName: outlet(map(subscribe(userObservable), user => user.lastName)),
-    })
+  class SplitObservable extends Component<{ userObservable: Observable<{ firstName: string, lastName: string }> }> {
+    subscribe() {
+      let { userObservable } = this.props
+      return combine({
+        firstName: outlet(map(subscribe(userObservable), user => user.firstName)),
+        lastName: outlet(map(subscribe(userObservable), user => user.lastName)),
+      })
+    }
+    get subs() {
+      return this.getTypedSubs(this)
+    }
+    getValue() {
+      return this.subs
+    }
   }
 
-  function JoinedObservables({ firstName, lastName }: { firstName: Observable<string>, lastName: Observable<string> }) {
-    return map(
-      combine({
-        firstName: subscribe(firstName),
-        lastName: subscribe(lastName),
-      }),
-      ({ firstName, lastName }) => {
-        return firstName + ' ' + lastName
-      }
-    )
+  class JoinedObservables extends Component<{ firstName: Observable<string>, lastName: Observable<string> }> {
+    subscribe() {
+      let { firstName, lastName } = this.props
+      return map(
+        combine({
+          firstName: subscribe(firstName),
+          lastName: subscribe(lastName),
+        }),
+        ({ firstName, lastName }) => {
+          return firstName + ' ' + lastName
+        }
+      )
+    }
+    get subs() {
+      return this.getTypedSubs(this)
+    }
+    getValue() {
+      return this.subs
+    }
   }
 
   it("doesn't batch multiple events from the same raw observable", () => {

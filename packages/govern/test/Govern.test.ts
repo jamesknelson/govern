@@ -4,11 +4,11 @@ import { map, outlet, subscribe, combine, createElement, createGovernor, Compone
 describe('createGovernor', () => {
   it("creates stateless functional components", () => {
     const TestComponent: SFC<any, { a: number, b: number, c: number }> = ({ a, c }) => {
-      return {
+      return combine({
         a,
         b: 2,
         c,
-      }
+      })
     }
 
     TestComponent.defaultProps = {

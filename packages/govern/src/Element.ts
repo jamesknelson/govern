@@ -24,7 +24,8 @@ SOFTWARE.
 
 import { GovernableClass } from './Governable'
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
-import { Outlet, Observable } from './Observable'
+import { Observable } from './Observable'
+import { Outlet } from './Outlet'
 
 const RESERVED_PROPS = {
     key: true,
@@ -34,25 +35,40 @@ const RESERVED_PROPS = {
     ref: true,
 }
 
-// The Symbol used to tag the ReactElement-like types. If there is no native Symbol
+// The Symbol used to tag the GovernElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
 
-const GOVERN_ELEMENT_TYPE = hasSymbol ? Symbol.for('govern.element') : '_GOVERN_ELEMENT'
+const GOVERN_ELEMENT_TYPE = hasSymbol ? Symbol.for('govern.element') : '__GOVERN_ELEMENT__'
 
 function hasValidKey(config) {
     return config.key !== undefined
 }
 
+const BUILT_IN_TYPES = [
+    'combine',
+    'map',
+    'outlet',
+    'subscribe',
+]
 
 /**
- * Verifies the object is a ReactElement.
+ * Checks if an object is a GovernElement. I'm using duck typing here instead
+ * of checking checking the value of `$$typeof`, as I want to be able to work
+ * with elements created with `React.createElement` as well.
+ * TODO: In dev mode, for functions, check that a `getValue` exists on the
+ * prototype, if one exists.
  */
 export function isValidElement(object) {
     return (
         typeof object === 'object' &&
         object !== null &&
-        object.$$typeof === GOVERN_ELEMENT_TYPE
+        object.type &&
+        ((typeof object.type === 'function') ||
+         (typeof object.type === 'string' && BUILT_IN_TYPES.indexOf(object.type) !== -1)) &&
+        ('props' in object) &&
+        ('key' in object) &&
+        ('$$typeof' in object)
     )
 }
 

@@ -1,14 +1,13 @@
-import { ComponentImplementation } from '../ComponentImplementation'
-import { ComponentLifecycle } from '../ComponentLifecycle'
-import { GovernElementLike, OutletSourceProps } from '../Core'
+import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
+import { GovernElementLike, GovernNode, OutletSourceProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
-import { convertToElementIfPossible } from '../convertToElementIfPossible'
+import { createElement, GovernElement, isValidElement } from '../Element'
+import { isPlainObject } from '../isPlainObject'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { Outlet, Subscription } from '../Observable'
-import { GovernElement, isValidElement } from '../Element'
+import { Outlet } from '../Outlet'
 
-export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentLifecycle<OutletSourceProps<T>, {}, Outlet<T>, void> {
+export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentImplementationLifecycle<OutletSourceProps<T>, {}, Outlet<T>, void> {
 	childGovernor: Governor<any, any>
 	childElement: GovernElement<any, any>
 	impl: ComponentImplementation<OutletSourceProps<T>, any, Outlet<T>, void>
@@ -83,5 +82,16 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
 		this.outputGovernor = this.outputImpl.createGovernor()
 		this.outputObservable = this.outputGovernor.getOutlet()
 		return this.impl.createGovernor()
+    }
+}
+
+function convertToElementIfPossible(node: GovernNode): GovernNode {
+    // Plain objects and arrays are treated as elements with type `combine`,
+    // with the object or array being the element's children.
+    if (isPlainObject(node) || Array.isArray(node)) {
+        return createElement('combine', { children: node })
+    }
+    else {
+        return node
     }
 }

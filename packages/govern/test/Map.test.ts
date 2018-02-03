@@ -3,39 +3,54 @@ import { map, outlet, subscribe, combine, createElement, createGovernor, Compone
 
 describe('Map', () => {
   it("maps initial value", () => {
-    const Test = ({ a }: { a: string }) => ({ b: a })
-    let element = map(createElement(Test, { a: 'test' }), output => ({ c: output.b }))
+    class Test extends Component<{a: string}> {
+      getValue() {
+          return { b: this.props.a }
+      }
+    }
+
+    let element = map(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
     let governor = createGovernor(element)
 
     expect(governor.getValue()).toEqual({ c: 'test' })
   })
 
   it("accepts changes to from element's props", () => {
-    const Double = ({ x }: { x: number }) => ({ x: x*2 })
+    class Double extends Component<{x: number}> {
+      getValue() {
+          return this.props.x*2
+      }
+    }
+
     let element = map(
         createElement(Double, { x: 1 }),
-        Double
+        x => combine({ x: createElement(Double, { x }) })
     )
     let governor = createGovernor(element)
     expect(governor.getValue()).toEqual({ x: 4 })
     governor.setProps({
         from: createElement(Double, { x: 2 }),
-        to: Double
+        to: x => combine({ x: createElement(Double, { x }) })
     })
     expect(governor.getValue()).toEqual({ x: 8 })
   })
 
   it("accepts changes to map fn", () => {
-    const Double = ({ x }: { x: number }) => ({ x: x*2 })
+    class Double extends Component<{x: number}> {
+      getValue() {
+          return this.props.x*2
+      }
+    }
+
     let element = map(
         createElement(Double, { x: 1 }),
-        Double
+        output => combine({ x: createElement(Double, { x: output }) }),
     )
     let governor = createGovernor(element)
     expect(governor.getValue()).toEqual({ x: 4 })
     governor.setProps({
         from: createElement(Double, { x: 1 }),
-        to: ({ x }) => ({ x: x*4 })
+        to: output => combine({ x: createElement(Double, { x: output*2 }) }),
     })
     expect(governor.getValue()).toEqual({ x: 8 })
   })

@@ -1,7 +1,7 @@
 import { Component } from './Component'
 import { GovernElement, isValidElement } from './Element'
 import { Governable } from './Governable'
-import { Outlet } from './Observable'
+import { Outlet } from './Outlet'
 import { Subscribe } from './builtins/Subscribe'
 import { OutletSource } from './builtins/OutletSource'
 import { Map } from './builtins/Map'

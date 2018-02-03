@@ -1,7 +1,8 @@
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
-import { Outlet, TransactionalObservable } from './Observable'
+import { Outlet } from './Outlet'
+import { TransactionalObservable } from './TransactionalObservable'
 
 type Factory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, Value>;
 
@@ -24,7 +25,7 @@ export function subscribe<Value>(
 }
 
 export function map<FromValue, ToValue>(
-    from: GovernElementLike<any, FromValue>,
+    from: GovernElement<any, FromValue>,
     to: SFC<FromValue, ToValue>,
     key?: Key
 ): GovernElement<MapProps<FromValue, ToValue>, ToValue> {
