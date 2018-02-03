@@ -60,12 +60,12 @@ export class Map<FromOut, ToOut> implements Governable<MapProps<FromOut, ToOut>,
         }
     }
 
-    compose() {
+    subscribe() {
         return this.impl.props.to(this.impl.state.fromOut)
     }
 
     render() {
-        return this.impl.comp
+        return this.impl.subs
     }
 
     createGovernor(): Governor<MapProps<FromOut, ToOut>, ToOut> {

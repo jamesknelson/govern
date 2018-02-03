@@ -8,7 +8,7 @@ export abstract class StrictComponent<P, S={}, C=any, O=any> extends Component<P
         super(props, { strict: true })
     }
 
-    shouldComponentUpdate(prevProps: P, prevState: S, prevComp: C) {
-        return !shallowCompare(prevProps, this.props) || !shallowCompare(prevState, this.state) || !shallowCompare(prevComp, this.comp)
+    shouldComponentUpdate(prevProps: P, prevState: S, prevSubs: C) {
+        return !shallowCompare(prevProps, this.props) || !shallowCompare(prevState, this.state) || !shallowCompare(prevSubs, this.subs)
     }
 }

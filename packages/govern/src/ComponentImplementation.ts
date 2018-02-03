@@ -22,8 +22,8 @@ const Root: string = Symbol('root') as any
 
 export class ComponentImplementation<P, S, C, O> {
     props: Readonly<P>;
-    comp: Readonly<C>;
     state: Readonly<S>;
+    subs: Readonly<C>;
 
     callbacks: Function[];
     canDirectlySetComp: boolean
@@ -43,12 +43,12 @@ export class ComponentImplementation<P, S, C, O> {
     currentBatch?: Batch<P, S>;
     governor?: Governor<P, O>
     isDisposed: boolean
-    isComposing: boolean
+    isPerformingSubscribe: boolean
     isStrict: boolean
     lifecycle: ComponentLifecycle<P, S, C, O>
-    nextComp: any
+    nextSubs: any
     observers: TransactionalObserver<O>[]
-    output: O;
+    value: O;
     queue: Batch<P, S>[]
     subscriptions: WeakMap<TransactionalObserver<any>, Subscription>
     transactionLevel: number;
@@ -61,7 +61,7 @@ export class ComponentImplementation<P, S, C, O> {
         this.childrenKeys = []
         this.governor = undefined
         this.isDisposed = false
-        this.isComposing = false
+        this.isPerformingSubscribe = false
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.observers = []
@@ -118,11 +118,11 @@ export class ComponentImplementation<P, S, C, O> {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
-        // Need to cache the comp in case `get` is called before any
+        // Need to cache the value in case `get` is called before any
         // other changes occur.
-        this.performCompose()
-        this.comp = this.nextComp
-        this.output = this.lifecycle.render()
+        this.performSubscribe()
+        this.subs = this.nextSubs
+        this.value = this.lifecycle.render()
 
         if (this.lifecycle.componentDidInstantiate) {
             this.lifecycle.componentDidInstantiate()
@@ -147,40 +147,40 @@ export class ComponentImplementation<P, S, C, O> {
     getValue = () => {
         // Return a shallow clone, to prevent accidental mutations
         // of internal state.
-        if (Array.isArray(this.output)) {
-            return this.output.slice(0) as any
+        if (Array.isArray(this.value)) {
+            return this.value.slice(0) as any
         }
-        else if (isPlainObject(this.output)) {
-            return Object.assign({}, this.output)
+        else if (isPlainObject(this.value)) {
+            return Object.assign({}, this.value)
         }
         else {
-            return this.output
+            return this.value
         }
     }
 
-    performCompose() {
-        if (this.lifecycle.compose) {
+    performSubscribe() {
+        if (this.lifecycle.subscribe) {
             this.canDirectlySetComp = true
-            this.isComposing = true
-            let composed = this.lifecycle.compose()
-            if (composed === undefined) {
-                console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its compose method. If you really want to return an empty value, return "null" instead.`)
+            this.isPerformingSubscribe = true
+            let subscribed = this.lifecycle.subscribe()
+            if (subscribed === undefined) {
+                console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
             }
 
             let nextChildrenKeys: string[]
             let nextChildNodes
-            if (Array.isArray(composed)) {
-                this.nextComp = []
-                nextChildNodes = composed
-                nextChildrenKeys = Object.keys(composed)
+            if (Array.isArray(subscribed)) {
+                this.nextSubs = []
+                nextChildNodes = subscribed
+                nextChildrenKeys = Object.keys(subscribed)
             }
-            else if (isPlainObject(composed)) {
-                this.nextComp = {}
-                nextChildNodes = composed
-                nextChildrenKeys = Object.keys(composed!)
+            else if (isPlainObject(subscribed)) {
+                this.nextSubs = {}
+                nextChildNodes = subscribed
+                nextChildrenKeys = Object.keys(subscribed!)
             }
             else {
-                nextChildNodes = { [Root]: composed }
+                nextChildNodes = { [Root]: subscribed }
                 nextChildrenKeys = [Root]
             }
 
@@ -211,7 +211,7 @@ export class ComponentImplementation<P, S, C, O> {
                         }
 
                         // Govern components will immediately emit their current value
-                        // on subscription, ensuring that comp is updated.
+                        // on subscription, ensuring that subs is updated.
                         let subscription = observable.subscribe(
                             value => this.handleChildChange(key, value),
                             this.handleChildError,
@@ -227,7 +227,7 @@ export class ComponentImplementation<P, S, C, O> {
                         }
                     }
                     else if (nextChildNode.type !== 'subscribe') {
-                        // If `setProps` causes a change in comp, it will
+                        // If `setProps` causes a change in subs, it will
                         // immediately be emitted to the observer.
                         prevChild.governor!.setProps(nextChildNode.props)
                     }
@@ -235,22 +235,22 @@ export class ComponentImplementation<P, S, C, O> {
                         // Subscribes won't emit a new value, so we need to manually 
                         // carry over the previous value to the next.
                         if (key === Root) {
-                            this.nextComp = this.comp
+                            this.nextSubs = this.subs
                         }
                         else {
-                            this.nextComp[key] = this.comp[key]
+                            this.nextSubs[key] = this.subs[key]
                         }
                     }
                 }
                 else {
                     keysToRemove.add(key)
                     delete nextChildren[key]
-                    this.setComp(key, nextChildNode)
+                    this.setSubs(key, nextChildNode)
                 }
             }
 
             // Clean up after any previous children that are no longer being
-            // composed.
+            // subscribed.
             let keysToRemoveArray = Array.from(keysToRemove)
             for (let i = 0; i < keysToRemoveArray.length; i++) {
                 let key = keysToRemoveArray[i]
@@ -267,16 +267,16 @@ export class ComponentImplementation<P, S, C, O> {
             this.children = nextChildren
             this.childrenKeys = nextChildrenKeys
             this.canDirectlySetComp = false
-            this.isComposing = false
+            this.isPerformingSubscribe = false
         }
     }
 
-    setComp(key: string | Symbol, value: any) {
+    setSubs(key: string | Symbol, value: any) {
         if (key === Root) {
-            this.nextComp = value
+            this.nextSubs = value
         }
         else {
-            this.nextComp[key as any] = value
+            this.nextSubs[key as any] = value
         }
     }
 
@@ -313,7 +313,7 @@ export class ComponentImplementation<P, S, C, O> {
         this.subscriptions.set(observer, subscription)
         
         // Emit the current value on subscription, without emitting a transaction
-        observer.next(this.output)
+        observer.next(this.value)
 
         return subscription
     }
@@ -370,7 +370,7 @@ export class ComponentImplementation<P, S, C, O> {
         while (batch) {
             let prevProps = this.props
             let prevState = this.state
-            let prevComp = this.comp
+            let prevSubs = this.subs
 
             this.currentBatch = batch
             
@@ -396,28 +396,28 @@ export class ComponentImplementation<P, S, C, O> {
                     Object.assign(this.state, updater(this.state, this.props))
                 }
 
-                this.performCompose()
+                this.performSubscribe()
             }
             else if (batch.changes) {
                 // The batch was triggered by an update from a child, so
-                // we don't need to re-compose the whole thing.
+                // we don't need to re-subscribe the whole thing.
                 for (let i = 0; i < batch.changes.length; i++) {
-                    let [key, comp] = batch.changes[i]
-                    this.setComp(key, comp)
+                    let [key, subs] = batch.changes[i]
+                    this.setSubs(key, subs)
                 }
             }
-            this.comp = this.nextComp
+            this.subs = this.nextSubs
 
             if (!this.lifecycle.shouldComponentUpdate ||
-                this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevComp)) {
-               this.output = this.lifecycle.render()
+                this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevSubs)) {
+               this.value = this.lifecycle.render()
                for (let i = 0; i < this.observers.length; i++) {
-                   this.observers[i].next(this.output)
+                   this.observers[i].next(this.value)
                }
             }
 
             if (this.lifecycle.componentDidUpdate) {
-                this.lifecycle.componentDidUpdate(prevProps, prevState, prevComp)
+                this.lifecycle.componentDidUpdate(prevProps, prevState, prevSubs)
             }
 
             batch = this.queue.shift()
@@ -443,11 +443,11 @@ export class ComponentImplementation<P, S, C, O> {
     
     handleChildChange(key: string, value) {
         if (this.canDirectlySetComp) {
-            // If we're currently composing, or within
-            // componentWillReceiveProps, then we know that the comp will
-            // be updated immediately after the compose is complete, so we don't
+            // If we're currently performing a `subscribe`, or within
+            // componentWillReceiveProps, then we know that the subs will
+            // be updated immediately after the subscribe is complete, so we don't
             // need to use the queue.
-            this.setComp(key, value)
+            this.setSubs(key, value)
         }
         else {
             // If we're dealing with subscribed observables from other libraries,

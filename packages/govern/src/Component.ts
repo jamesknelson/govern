@@ -19,11 +19,11 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
     }
 
     get props() { return this.impl.props }
-    get comp() {
-        if (this.impl.isComposing) {
+    get subs() {
+        if (this.impl.isPerformingSubscribe) {
             throw new Error(`You cannot access a component's "output" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.impl.comp
+        return this.impl.subs
     }
     get state() { return this.impl.state }
 
@@ -45,7 +45,7 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
         if (this.impl.isDisposed) {
             throw new Error(`You cannot call "setState" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isComposing) {
+        if (this.impl.isPerformingSubscribe) {
             throw new Error(`You cannot call "setState" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -63,7 +63,7 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
         if (this.impl.isDisposed) {
             throw new Error(`You cannot call "action" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isComposing) {
+        if (this.impl.isPerformingSubscribe) {
             throw new Error(`You cannot call "action" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -81,8 +81,8 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
     // TypeScript isn't able to infer the output of the subclass's `render`
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
-    getTypedComp<C>(component: { compose: () => GovernNode<any, C> | null }): C {
-        return this.impl.comp as any
+    getTypedSubs<C>(component: { subscribe: () => GovernNode<any, C> | null }): C {
+        return this.impl.subs as any
     }
 }
 

@@ -10,7 +10,7 @@ export class Combine<O> implements Governable<CombineProps<O>, O>, ComponentLife
         this.impl = new ComponentImplementation(this, props)
     }
 
-    compose() {
+    subscribe() {
         // As stateless functional components are implemented using the standard
         // Component implementation, we can just return the children as-is, and
         // they'll be handled properly.
@@ -18,7 +18,7 @@ export class Combine<O> implements Governable<CombineProps<O>, O>, ComponentLife
     }
 
     render() {
-        return this.impl.comp
+        return this.impl.subs
     }
 
     createGovernor() {

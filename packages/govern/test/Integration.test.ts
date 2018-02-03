@@ -32,11 +32,11 @@ function createModelClass() {
       defaultValue: {},
     }
 
-    get comp() {
-      return this.getTypedComp(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
-    compose() {
+    subscribe() {
       return combine({
         name: createElement(ModelPrimitive, {
           defaultValue: this.props.defaultValue.name as string,
@@ -59,15 +59,15 @@ function createModelClass() {
 
     render() {
       let error = {} as any
-      if (this.comp.name.error) error.name = this.comp.name.error
-      if (this.comp.email.error) error.email = this.comp.email.error
+      if (this.subs.name.error) error.name = this.subs.name.error
+      if (this.subs.email.error) error.email = this.subs.email.error
       if (!Object.keys(error).length) error = undefined
 
       return {
-        children: this.comp,
+        children: this.subs,
         value: {
-          name: this.comp.name.value,
-          email: this.comp.email.value,
+          name: this.subs.name.value,
+          email: this.subs.email.value,
         },
         error: error,
         change: this.change,
@@ -77,10 +77,10 @@ function createModelClass() {
     change = (value) => {
       this.transaction(() => {
         if (value.name) {
-          this.comp.name.change(value.name)
+          this.subs.name.change(value.name)
         }
         if (value.email) {
-          this.comp.email.change(value.email)
+          this.subs.email.change(value.email)
         }
       })
     }
@@ -94,22 +94,22 @@ function createDataSourceClass() {
       this.state = { store: null }
     }
 
-    get comp() {
-      return this.getTypedComp(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
     receive = (store) => {
       this.setState({ store })
     }
 
-    compose() {
+    subscribe() {
       return outlet(combine(this.state.store))
     }
 
     render() {
       return {
         receive: this.receive,
-        observable: this.comp
+        observable: this.subs
       }
     }
   }
@@ -121,11 +121,11 @@ function createFormControllerClass() {
   return class FormController extends StrictComponent<{ data }> {
     awaitingData: boolean = true
 
-    get comp() {
-      return this.getTypedComp(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
-    compose() {
+    subscribe() {
       return combine({
         data: subscribe(this.props.data),
         model: createElement(Model, null)
@@ -133,11 +133,11 @@ function createFormControllerClass() {
     }
 
     render() {
-      return this.comp
+      return this.subs
     }
 
     componentDidInstantiate() {
-      this.receiveDataIfAvailable(this.comp.data)
+      this.receiveDataIfAvailable(this.subs.data)
     }
 
     componentDidUpdate(prevProps, prevState, prevComp) {
@@ -148,7 +148,7 @@ function createFormControllerClass() {
       if (this.awaitingData && output && Object.keys(output).length > 0) {
         this.transaction(() => {
           this.awaitingData = false
-          this.comp.model.change(output)
+          this.subs.model.change(output)
         })
       }
     }

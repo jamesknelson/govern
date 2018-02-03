@@ -46,12 +46,12 @@ export function createGovernor<P, O>(element: GovernElement<P, O>): Governor<P, 
         // an anonymous Component class.
         let sfc = element.type as any
         let constructor = class extends Component<any, any> {
-            compose() {
+            subscribe() {
                 return sfc(this.props)
             }
 
             render() {
-                return this.comp
+                return this.subs
             }
         }
         instance = new constructor(element.props)

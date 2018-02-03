@@ -8,18 +8,18 @@ describe('Component', () => {
     let didCallDidUpdate = false
 
 		class TestComponent extends Component<{}> {
-			compose() {
+			subscribe() {
 			  return combine({
 				  a: 1
 			  })
       }
 
       render() {
-        return this.comp
+        return this.subs
       }
 		
 			componentDidInstantiate() {
-			  calledDidInstantiateWith = this.comp
+			  calledDidInstantiateWith = this.subs
 			}
 		
 			componentDidUpdate(nextProps, nextState, nextComp) {
@@ -38,14 +38,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			compose() {
+			subscribe() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
       render() {
-        return this.comp
+        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -65,14 +65,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			compose() {
+			subscribe() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
       render() {
-        return this.comp
+        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -94,14 +94,14 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      compose() {
+      subscribe() {
 			  return combine({
           a: map(subscribe(counter), counter => counter.count)
         })
       }
       
       render() {
-        return this.comp
+        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -126,14 +126,14 @@ describe('Component', () => {
         this.setState({ a: 2 })
 			}
 
-			compose() {
+			subscribe() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
       render() {
-        return this.comp
+        return this.subs
       }
     }
     
