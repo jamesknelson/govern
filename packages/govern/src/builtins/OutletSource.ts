@@ -8,18 +8,18 @@ import { createGovernor, Governor } from '../Governor'
 import { Outlet, Subscription } from '../Observable'
 import { GovernElement, isValidElement } from '../Element'
 
-export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentLifecycle<OutletSourceProps<T>, {}, void, Outlet<T>> {
+export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentLifecycle<OutletSourceProps<T>, {}, Outlet<T>, void> {
 	childGovernor: Governor<any, any>
 	childElement: GovernElement<any, any>
-	impl: ComponentImplementation<OutletSourceProps<T>, any, void, Outlet<T>>
+	impl: ComponentImplementation<OutletSourceProps<T>, any, Outlet<T>, void>
 	outputGovernor: Governor<any, T>
 	outputObservable: Outlet<T>
-	outputImpl: ComponentImplementation<OutletSourceProps<T>, any, void, T>
+	outputImpl: ComponentImplementation<OutletSourceProps<T>, any, T, void>
     
     constructor(props: OutletSourceProps<T>) {
 		this.impl = new ComponentImplementation(this, props)
 		this.outputImpl = new ComponentImplementation({
-			render: () => {
+			getValue: () => {
 				return this.outputImpl.state.output
 			}
 		}, props)
@@ -74,7 +74,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
         }
     }
 
-    render() {
+    getValue() {
         return this.outputObservable
 	}
 

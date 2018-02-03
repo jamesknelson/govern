@@ -18,7 +18,7 @@ function createModelClass() {
       this.setState({ value }) 
     }
 
-    render() {
+    getValue() {
       return {
         change: this.change,
         value: this.state.value,
@@ -57,7 +57,9 @@ function createModelClass() {
       })
     }
 
-    render() {
+    getValue() {
+      this.getSubs()
+
       let error = {} as any
       if (this.subs.name.error) error.name = this.subs.name.error
       if (this.subs.email.error) error.email = this.subs.email.error
@@ -106,7 +108,7 @@ function createDataSourceClass() {
       return outlet(combine(this.state.store))
     }
 
-    render() {
+    getValue() {
       return {
         receive: this.receive,
         observable: this.subs
@@ -132,7 +134,7 @@ function createFormControllerClass() {
       })
     }
 
-    render() {
+    getValue() {
       return this.subs
     }
 

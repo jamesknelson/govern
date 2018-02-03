@@ -3,44 +3,44 @@ import { GovernElement, SFCElement, ComponentElement, createElement } from './El
 import { GovernableClass } from './Governable'
 import { Outlet, TransactionalObservable } from './Observable'
 
-type Factory<Props, T> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, T>;
+type Factory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, Value>;
 
-type SFCFactory<Props, T> = (props?: Attributes & Props, ...children: GovernNode[]) => SFCElement<Props, T>;
+type SFCFactory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => SFCElement<Props, Value>;
 
-type ComponentFactory<Props, T> = (props?: Attributes & Props, ...children: GovernNode[]) => ComponentElement<Props, T>;
+type ComponentFactory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => ComponentElement<Props, Value>;
 
 // Custom components
-function createFactory<Props, T>(type: SFC<Props, T>): SFCFactory<Props, T>;
-function createFactory<Props, T>(type: GovernableClass<Props, T>): Factory<Props, T>
-function createFactory<Props, T>(type: GovernableClass<Props, T> | SFC<Props, T>): Factory<Props, T> {
+function createFactory<Props, Value>(type: SFC<Props, Value>): SFCFactory<Props, Value>;
+function createFactory<Props, Value>(type: GovernableClass<Props, Value>): Factory<Props, Value>
+function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
     return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
 }
 
-export function subscribe<T>(
-    to: TransactionalObservable<T>,
+export function subscribe<Value>(
+    to: TransactionalObservable<Value>,
     key?: Key
-): GovernElement<SubscribeProps<T>, T> {
+): GovernElement<SubscribeProps<Value>, Value> {
     return createElement('subscribe', { to, key })
 }
 
-export function map<FromT, ToT>(
-    from: GovernElementLike<any, FromT>,
-    to: SFC<FromT, ToT>,
+export function map<FromValue, ToValue>(
+    from: GovernElementLike<any, FromValue>,
+    to: SFC<FromValue, ToValue>,
     key?: Key
-): GovernElement<MapProps<FromT, ToT>, ToT> {
+): GovernElement<MapProps<FromValue, ToValue>, ToValue> {
     return createElement('map', { from, to, key })
 }
 
-export function outlet<T = any>(
-    element: GovernElementLike<any, T>,
+export function outlet<Value = any>(
+    element: GovernElementLike<any, Value>,
     key?: Key
-): GovernElement<OutletSourceProps<T>, Outlet<T>> {
+): GovernElement<OutletSourceProps<Value>, Outlet<Value>> {
     return createElement('outlet', { children: element, key })
 }
 
-export function combine<T>(
-    children: CombineChildren<keyof T, T>,
+export function combine<Value>(
+    children: CombineChildren<keyof Value, Value>,
     key?: Key
-): GovernElement<CombineProps<T>, T> {
+): GovernElement<CombineProps<Value>, Value> {
     return createElement('combine', { children, key })
 }

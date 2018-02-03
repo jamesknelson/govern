@@ -3,10 +3,10 @@ import { ComponentLifecycle } from '../ComponentLifecycle'
 import { CombineChildren, CombineProps } from '../Core'
 import { Governable } from '../Governable'
 
-export class Combine<T> implements Governable<CombineProps<T>, T>, ComponentLifecycle<CombineProps<T>, {}, T, T> {
-    impl: ComponentImplementation<CombineProps<T>, {}, T, T>;
+export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
+    impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
     
-    constructor(props: CombineProps<T>) {
+    constructor(props: CombineProps<CombinedValue>) {
         this.impl = new ComponentImplementation(this, props)
     }
 
@@ -17,7 +17,7 @@ export class Combine<T> implements Governable<CombineProps<T>, T>, ComponentLife
         return this.impl.props.children
     }
 
-    render() {
+    getValue() {
         return this.impl.subs
     }
 

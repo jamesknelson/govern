@@ -7,17 +7,17 @@ import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
 import { isValidElement } from '../Element'
 
-export class Map<FromT, ToT> implements Governable<MapProps<FromT, ToT>, ToT>, ComponentLifecycle<MapProps<FromT, ToT>, any, ToT, ToT> {
+export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     element: GovernElementLike<any, any>
     governor: Governor<any, any>
-    impl: ComponentImplementation<MapProps<FromT, ToT>, any, ToT, ToT>;
+    impl: ComponentImplementation<MapProps<FromValue, ToValue>, any, ToValue, ToValue>;
     
-    constructor(props: MapProps<FromT, ToT>) {
+    constructor(props: MapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)
         this.receiveProps(props)
     }
 
-    componentWillReceiveProps(nextProps: MapProps<FromT, ToT>) {
+    componentWillReceiveProps(nextProps: MapProps<FromValue, ToValue>) {
         this.receiveProps(nextProps)
     }
 
@@ -26,7 +26,7 @@ export class Map<FromT, ToT> implements Governable<MapProps<FromT, ToT>, ToT>, C
 		delete this.governor
     }
 
-    receiveProps(props: MapProps<FromT, ToT>) {
+    receiveProps(props: MapProps<FromValue, ToValue>) {
         let fromElement = convertToElementIfPossible(props.from)
         if (!isValidElement(fromElement)) {
             throw new Error(`The "from" prop of a Map element must be an element, object, or array.`)
@@ -51,7 +51,7 @@ export class Map<FromT, ToT> implements Governable<MapProps<FromT, ToT>, ToT>, C
         }
     }
 
-    handleChange = (fromOut: FromT) => {
+    handleChange = (fromOut: FromValue) => {
         if (this.impl.governor) {
             this.impl.enqueueSetState(() => ({ fromOut }))
         }
@@ -64,11 +64,11 @@ export class Map<FromT, ToT> implements Governable<MapProps<FromT, ToT>, ToT>, C
         return this.impl.props.to(this.impl.state.fromOut)
     }
 
-    render() {
+    getValue() {
         return this.impl.subs
     }
 
-    createGovernor(): Governor<MapProps<FromT, ToT>, ToT> {
+    createGovernor(): Governor<MapProps<FromValue, ToValue>, ToValue> {
         return this.impl.createGovernor()
     }
 }

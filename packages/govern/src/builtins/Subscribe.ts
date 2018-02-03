@@ -18,7 +18,7 @@ export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, Component
         return createElement('subscribe', this.impl.props) as any
     }
 
-    render() {
+    getValue() {
         return this.impl.subs
     }
 

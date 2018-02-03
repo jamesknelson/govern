@@ -27,7 +27,7 @@ describe('createGovernor', () => {
         a: 1
       }
 
-      render() {
+      getValue() {
         return {
           a: this.props.a,
           b: 2,

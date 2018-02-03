@@ -57,8 +57,8 @@ export function isValidElement(object) {
 }
 
 
-export interface GovernElement<Props, T> {
-    type: string | GovernableClass<Props, T> | SFC<Props, T>;
+export interface GovernElement<Props, Value> {
+    type: string | GovernableClass<Props, Value> | SFC<Props, Value>;
     props: Props;
     key: Key | null;
 
@@ -67,54 +67,54 @@ export interface GovernElement<Props, T> {
     // This isn't ever actually set, as it doesn't make sense for an element
     // to have an output. However, it can be used to access the type of the
     // element's output in TypeScript types.
-    value: T;
+    value: Value;
 }
-export interface SFCElement<Props, T> extends GovernElement<Props, T> {
-    type: SFC<Props, T>;
+export interface SFCElement<Props, Value> extends GovernElement<Props, Value> {
+    type: SFC<Props, Value>;
 }
-export interface ComponentElement<Props, T> extends GovernElement<Props, T> {
-    type: GovernableClass<Props, T>;
+export interface ComponentElement<Props, Value> extends GovernElement<Props, Value> {
+    type: GovernableClass<Props, Value>;
 }
 
-export function createElement<FromT, ToT>(
+export function createElement<FromValue, ToValue>(
     type: 'map',
-    props?: Attributes & MapProps<FromT, ToT>
-): GovernElement<MapProps<FromT, ToT>, ToT>
-export function createElement<T>(
+    props?: Attributes & MapProps<FromValue, ToValue>
+): GovernElement<MapProps<FromValue, ToValue>, ToValue>
+export function createElement<Value>(
     type: 'subscribe',
-    props?: Attributes & SubscribeProps<T>
-): GovernElement<SubscribeProps<T>, T>
+    props?: Attributes & SubscribeProps<Value>
+): GovernElement<SubscribeProps<Value>, Value>
 
-export function createElement<T>(
+export function createElement<Value>(
     type: 'outlet',
-    props?: Attributes & OutletSourceProps<T> | null,
-    children?: GovernElementLike<any, T>
-): GovernElement<OutletSourceProps<T>, Outlet<T>>
+    props?: Attributes & OutletSourceProps<Value> | null,
+    children?: GovernElementLike<any, Value>
+): GovernElement<OutletSourceProps<Value>, Outlet<Value>>
 
-export function createElement<T>(
+export function createElement<CombinedValue>(
     type: 'combine',
-    props?: Attributes & CombineProps<T> | null,
-    children?: CombineChildren<keyof T, T>
-): GovernElement<CombineProps<T>, T>
+    props?: Attributes & CombineProps<CombinedValue> | null,
+    children?: CombineChildren<keyof CombinedValue, CombinedValue>
+): GovernElement<CombineProps<CombinedValue>, CombinedValue>
 
 // Custom components
-export function createElement<Props, T>(
-    type: SFC<Props, T>,
+export function createElement<Props, Value>(
+    type: SFC<Props, Value>,
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): SFCElement<Props, T>;
-export function createElement<Props, T>(
+    ...children: GovernNode[]): SFCElement<Props, Value>;
+export function createElement<Props, Value>(
     type:
         (new (props: Props) => { props: Props }) &
         (new (props: Props) => {
-            render(): T;
+            getValue(): Value;
         }),
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): ComponentElement<Props, T>;
-export function createElement<Props, T>(
+    ...children: GovernNode[]): ComponentElement<Props, Value>;
+export function createElement<Props, Value>(
     type: any,
     config?: Attributes & Props | null,
     ...children: GovernNode[]
-): GovernElement<Props, T> {
+): GovernElement<Props, Value> {
     let propName
     
     // Reserved names are extracted

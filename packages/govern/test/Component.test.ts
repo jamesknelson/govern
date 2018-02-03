@@ -14,7 +14,7 @@ describe('Component', () => {
 			  })
       }
 
-      render() {
+      getValue() {
         return this.subs
       }
 		
@@ -44,7 +44,7 @@ describe('Component', () => {
 			  })
       }
       
-      render() {
+      getValue() {
         return this.subs
       }
 		
@@ -71,7 +71,7 @@ describe('Component', () => {
 			  })
       }
       
-      render() {
+      getValue() {
         return this.subs
       }
 		
@@ -100,7 +100,7 @@ describe('Component', () => {
         })
       }
       
-      render() {
+      getValue() {
         return this.subs
       }
 		
@@ -132,7 +132,7 @@ describe('Component', () => {
 			  })
       }
       
-      render() {
+      getValue() {
         return this.subs
       }
     }

@@ -3,16 +3,16 @@ import { ComponentState, GovernNode } from './Core'
 import { ComponentImplementation } from './ComponentImplementation'
 import { ComponentLifecycle } from './ComponentLifecycle'
 
-export interface ComponentClass<Props, T=any> extends GovernableClass<Props, T> {
-    new (props: Props): Component<Props, ComponentState, T>;
+export interface ComponentClass<Props, Value=any> extends GovernableClass<Props, Value> {
+    new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
 }
 
-export interface Component<Props={}, State={}, Subs=any, T=any> extends ComponentLifecycle<Props, State, Subs, T> { }
+export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
 
-export abstract class Component<Props, State={}, Subs=any, T=any> implements Governable<Props, T>, ComponentLifecycle<Props, State, Subs, T> {
-    protected impl: ComponentImplementation<Props, State, Subs, T>;
+export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
+    protected impl: ComponentImplementation<Props, State, Value, Subs>;
 
     constructor(props: Props, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props, !!strict)
@@ -26,7 +26,11 @@ export abstract class Component<Props, State={}, Subs=any, T=any> implements Gov
         if (this.impl.isPerformingSubscribe) {
             throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.impl.subs
+        return this.getTypedSubs(this as this)
+    }
+
+    getSubs() {
+        return this.getTypedSubs(this)
     }
 
     get state() {
@@ -52,7 +56,7 @@ export abstract class Component<Props, State={}, Subs=any, T=any> implements Gov
             throw new Error(`You cannot call "setState" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.impl.isPerformingSubscribe) {
-            throw new Error(`You cannot call "setState" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "setState" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
         let updater = state as ((prevState: Readonly<State>, props: Props) => any)
@@ -70,7 +74,7 @@ export abstract class Component<Props, State={}, Subs=any, T=any> implements Gov
             throw new Error(`You cannot call "transaction" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.impl.isPerformingSubscribe) {
-            throw new Error(`You cannot call "transaction" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "transaction" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
         this.impl.increaseTransactionLevel()
@@ -82,13 +86,17 @@ export abstract class Component<Props, State={}, Subs=any, T=any> implements Gov
         return this.impl.createGovernor()
     }
 
-    abstract render(): T;
+    abstract getValue(): Value;
 
-    // TypeScript isn't able to infer the output of the subclass's `render`
+    // TypeScript isn't able to infer the output of the subclass's `getValue`
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
-    getTypedSubs<Subs>(component: { subscribe: () => GovernNode<any, Subs> | null }): Subs {
+    getTypedSubs<Subs>(component: { subscribe?: () => GovernNode<any, Subs> | null }): Subs {
         return this.impl.subs as any
+    }
+
+    getTypedValue<Value>(component: { getValue: () => Value }): Value {
+        return this.impl.value as any
     }
 }
 

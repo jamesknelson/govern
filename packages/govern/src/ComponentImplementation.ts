@@ -20,7 +20,7 @@ type Batch<Props, State> = {
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export class ComponentImplementation<Props, State, Subs, T> {
+export class ComponentImplementation<Props, State, Value, Subs> {
     props: Readonly<Props>;
     state: Readonly<State>;
     subs: Readonly<Subs>;
@@ -41,19 +41,19 @@ export class ComponentImplementation<Props, State, Subs, T> {
     // which doesn't appear in the result of Object.keys()
     childrenKeys: any[]
     currentBatch?: Batch<Props, State>;
-    governor?: Governor<Props, T>
+    governor?: Governor<Props, Value>
     isDisposed: boolean
     isPerformingSubscribe: boolean
     isStrict: boolean
-    lifecycle: ComponentLifecycle<Props, State, Subs, T>
+    lifecycle: ComponentLifecycle<Props, State, Value, Subs>
     nextSubs: any
-    observers: TransactionalObserver<T>[]
-    value: T;
+    observers: TransactionalObserver<Value>[]
+    value: Value;
     queue: Batch<Props, State>[]
     subscriptions: WeakMap<TransactionalObserver<any>, Subscription>
     transactionLevel: number;
 
-    constructor(lifecycle: ComponentLifecycle<Props, State, Subs, T>, props: Props, isStrict = false) {
+    constructor(lifecycle: ComponentLifecycle<Props, State, Value, Subs>, props: Props, isStrict = false) {
         this.transactionLevel = 0
         this.callbacks = []
         this.canDirectlySetComp = false
@@ -113,7 +113,7 @@ export class ComponentImplementation<Props, State, Subs, T> {
         this.decreaseTransactionLevel()
     }
 
-    createGovernor(): Governor<Props, T> {
+    createGovernor(): Governor<Props, Value> {
         if (this.governor) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
@@ -122,7 +122,7 @@ export class ComponentImplementation<Props, State, Subs, T> {
         // other changes occur.
         this.performSubscribe()
         this.subs = this.nextSubs
-        this.value = this.lifecycle.render()
+        this.value = this.lifecycle.getValue()
 
         if (this.lifecycle.componentDidInstantiate) {
             this.lifecycle.componentDidInstantiate()
@@ -281,7 +281,7 @@ export class ComponentImplementation<Props, State, Subs, T> {
     }
 
     subscribe = (
-        onNextOrObserver: TransactionalObserver<T> | ((value: T) => void),
+        onNextOrObserver: TransactionalObserver<Value> | ((value: Value) => void),
         onError?: (error: any) => void,
         onComplete?: () => void,
         onTransactionStart?: () => void,
@@ -300,7 +300,7 @@ export class ComponentImplementation<Props, State, Subs, T> {
             closed: false
         }
 
-        let observer: TransactionalObserver<T> =
+        let observer: TransactionalObserver<Value> =
             typeof onNextOrObserver !== 'function'
                 ? onNextOrObserver
                 : { next: onNextOrObserver,
@@ -410,7 +410,7 @@ export class ComponentImplementation<Props, State, Subs, T> {
 
             if (!this.lifecycle.shouldComponentUpdate ||
                 this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevSubs)) {
-               this.value = this.lifecycle.render()
+               this.value = this.lifecycle.getValue()
                for (let i = 0; i < this.observers.length; i++) {
                    this.observers[i].next(this.value)
                }

@@ -1,7 +1,7 @@
 import { Component } from './Component'
 import { shallowCompare } from './shallowCompare'
 
-export abstract class StrictComponent<Props, State={}, Subs=any, T=any> extends Component<Props, State, Subs, T> {
+export abstract class StrictComponent<Props, State={}, Value=any, Subs=any> extends Component<Props, State, Value, Subs> {
     constructor(props: Props) {
         // Passing { strict: true } ensures that error messages will be emitted
         // when `setState` is called outside of a batch.

@@ -13,7 +13,7 @@ export function createModelClass() {
             this.setState({ value })
         }
 
-        render() {
+        getValue() {
             return {
                 value: this.state.value,
                 change: this.change,
