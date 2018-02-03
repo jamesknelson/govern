@@ -1,6 +1,6 @@
 import { ComponentImplementation } from '../ComponentImplementation'
 import { ComponentLifecycle } from '../ComponentLifecycle'
-import { GovernElementLike, SourceProps } from '../Core'
+import { GovernElementLike, OutletSourceProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { convertToElementIfPossible } from '../convertToElementIfPossible'
 import { Governable } from '../Governable'
@@ -8,15 +8,15 @@ import { createGovernor, Governor } from '../Governor'
 import { Outlet, Subscription } from '../Observable'
 import { GovernElement, isValidElement } from '../Element'
 
-export class Source<T> implements Governable<SourceProps<T>, Outlet<T>>, ComponentLifecycle<SourceProps<T>, {}, void, Outlet<T>> {
+export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentLifecycle<OutletSourceProps<T>, {}, void, Outlet<T>> {
 	childGovernor: Governor<any, any>
 	childElement: GovernElement<any, any>
-	impl: ComponentImplementation<SourceProps<T>, any, void, Outlet<T>>
+	impl: ComponentImplementation<OutletSourceProps<T>, any, void, Outlet<T>>
 	outputGovernor: Governor<any, T>
 	outputObservable: Outlet<T>
-	outputImpl: ComponentImplementation<SourceProps<T>, any, void, T>
+	outputImpl: ComponentImplementation<OutletSourceProps<T>, any, void, T>
     
-    constructor(props: SourceProps<T>) {
+    constructor(props: OutletSourceProps<T>) {
 		this.impl = new ComponentImplementation(this, props)
 		this.outputImpl = new ComponentImplementation({
 			render: () => {
@@ -25,7 +25,7 @@ export class Source<T> implements Governable<SourceProps<T>, Outlet<T>>, Compone
 		}, props)
     }
 
-    componentWillReceiveProps(nextProps: SourceProps<T>) {
+    componentWillReceiveProps(nextProps: OutletSourceProps<T>) {
         this.receiveProps(nextProps)
     }
 
@@ -36,14 +36,14 @@ export class Source<T> implements Governable<SourceProps<T>, Outlet<T>>, Compone
 		delete this.childGovernor
     }
 
-    receiveProps(props: SourceProps<T>) {
+    receiveProps(props: OutletSourceProps<T>) {
 		if (!props.children || Object.keys(props).length !== 1) {
-			throw new Error(`A Govern <source> element must receive a single child as its only prop.`)
+			throw new Error(`A Govern <outlet> element must receive a single child as its only prop.`)
 		}
 	
 		let element = convertToElementIfPossible(props.children)
 		if (!isValidElement(element)) {
-			throw new Error(`A Govern <source> element's children must be an element, array, or object.`)
+			throw new Error(`A Govern <outlet> element's children must be an element, array, or object.`)
         }
 
         if (!doNodesReconcile(this.childElement, element)) {
@@ -78,7 +78,7 @@ export class Source<T> implements Governable<SourceProps<T>, Outlet<T>>, Compone
         return this.outputObservable
 	}
 
-    createGovernor(): Governor<SourceProps<T>, Outlet<T>> {
+    createGovernor(): Governor<OutletSourceProps<T>, Outlet<T>> {
 		this.receiveProps(this.impl.props)
 		this.outputGovernor = this.outputImpl.createGovernor()
 		this.outputObservable = this.outputGovernor.getOutlet()

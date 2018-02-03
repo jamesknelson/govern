@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './Governable'
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, SourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, OutletSourceProps } from './Core'
 import { Outlet, Observable } from './Observable'
 
 const RESERVED_PROPS = {
@@ -86,10 +86,10 @@ export function createElement<T>(
 ): GovernElement<SinkProps<T>, T>
 
 export function createElement<O>(
-    type: 'source',
-    props?: Attributes & SourceProps<O> | null,
+    type: 'outlet',
+    props?: Attributes & OutletSourceProps<O> | null,
     children?: GovernElementLike<any, O>
-): GovernElement<SourceProps<O>, Outlet<O>>
+): GovernElement<OutletSourceProps<O>, Outlet<O>>
 
 export function createElement<O>(
     type: 'shape',

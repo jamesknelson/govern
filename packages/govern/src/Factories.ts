@@ -1,4 +1,4 @@
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, SourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, OutletSourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { Outlet, TransactionalObservable } from './Observable'
@@ -31,11 +31,11 @@ export function map<FromOut, ToOut>(
     return createElement("map", { from, to, key })
 }
 
-export function source<O = any>(
+export function outlet<O = any>(
     element: GovernElementLike<any, O>,
     key?: Key
-): GovernElement<SourceProps<O>, Outlet<O>> {
-    return createElement("source", { children: element, key })
+): GovernElement<OutletSourceProps<O>, Outlet<O>> {
+    return createElement('outlet', { children: element, key })
 }
 
 export function shape<O>(

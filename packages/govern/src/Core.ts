@@ -2,7 +2,7 @@ import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './Observable'
 
-export type BuiltInType = 'map' | 'sink' | 'source' | 'shape'
+export type BuiltInType = 'map' | 'sink' | 'outlet' | 'shape'
 export type ComponentType<P, O> = GovernableClass<P, O> | StatelessComponent<P, O>;
 export type GovernType<P = any, O = any> = BuiltInType | ComponentType<P, O>;
 
@@ -21,18 +21,6 @@ export type MapProps<FromOut, ToOut> = {
 }
 
 export type ShapeChildren<Keys extends keyof O, O> = {
-    // TODO: Is it possible to infer O[K] from nested objects's elements, as
-    //       opposed to inferring the element itself?
-    // e.g. infer type of output.c.d as string instead of element
-    // let element = createElement('source', {
-    //     children: {
-    //       a: 1,
-    //       b: createElement('sink', { observable: o1 }),
-    //       c: {
-    //         d: createElement('sink', { observable: o1 })
-    //       },
-    //     }
-    //   })
     [K in Keys]: GovernElement<any, O[K]> | ShapeChildren<keyof O[K], O[K]> | O[K]
 }
 export type ShapeProps<O> = {
@@ -42,7 +30,7 @@ export type ShapeProps<O> = {
 export type SinkProps<T> = {
     from: TransactionalObservable<T>,
 }
-export type SourceProps<O> = {
+export type OutletSourceProps<O> = {
 	children: GovernElementLike<any, O>,
 }
 

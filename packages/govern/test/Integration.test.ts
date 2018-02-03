@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, source, sink, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, outlet, sink, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 
 function createModelClass() {
   class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
@@ -103,7 +103,7 @@ function createDataSourceClass() {
     }
 
     compose() {
-      return source(shape(this.state.store))
+      return outlet(shape(this.state.store))
     }
 
     render() {
