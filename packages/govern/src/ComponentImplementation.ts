@@ -9,9 +9,9 @@ import { TransactionalObservable, TransactionalObserver, Outlet, Subscription } 
 import { GovernNode } from './Core'
 import { isValidElement } from './Element'
 
-type Batch<P, S> = {
-    setProps?: P,
-    updaters?: ((prevState: Readonly<S>, props: P) => any)[],
+type Batch<Props, State> = {
+    setProps?: Props,
+    updaters?: ((prevState: Readonly<State>, props: Props) => any)[],
     changes?: [string, any][],
 }
 
@@ -20,10 +20,10 @@ type Batch<P, S> = {
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export class ComponentImplementation<P, S, C, O> {
-    props: Readonly<P>;
-    state: Readonly<S>;
-    subs: Readonly<C>;
+export class ComponentImplementation<Props, State, Subs, T> {
+    props: Readonly<Props>;
+    state: Readonly<State>;
+    subs: Readonly<Subs>;
 
     callbacks: Function[];
     canDirectlySetComp: boolean
@@ -40,20 +40,20 @@ export class ComponentImplementation<P, S, C, O> {
     // These are stored separately to children, as they may contain a symbol,
     // which doesn't appear in the result of Object.keys()
     childrenKeys: any[]
-    currentBatch?: Batch<P, S>;
-    governor?: Governor<P, O>
+    currentBatch?: Batch<Props, State>;
+    governor?: Governor<Props, T>
     isDisposed: boolean
     isPerformingSubscribe: boolean
     isStrict: boolean
-    lifecycle: ComponentLifecycle<P, S, C, O>
+    lifecycle: ComponentLifecycle<Props, State, Subs, T>
     nextSubs: any
-    observers: TransactionalObserver<O>[]
-    value: O;
-    queue: Batch<P, S>[]
+    observers: TransactionalObserver<T>[]
+    value: T;
+    queue: Batch<Props, State>[]
     subscriptions: WeakMap<TransactionalObserver<any>, Subscription>
     transactionLevel: number;
 
-    constructor(lifecycle: ComponentLifecycle<P, S, C, O>, props: P, isStrict = false) {
+    constructor(lifecycle: ComponentLifecycle<Props, State, Subs, T>, props: Props, isStrict = false) {
         this.transactionLevel = 0
         this.callbacks = []
         this.canDirectlySetComp = false
@@ -70,7 +70,7 @@ export class ComponentImplementation<P, S, C, O> {
         this.subscriptions = new WeakMap()
     }
 
-    enqueueSetState(updater: (prevState: Readonly<S>, props: P) => any, callback?: Function) {
+    enqueueSetState(updater: (prevState: Readonly<State>, props: Props) => any, callback?: Function) {
         if (this.isStrict && this.transactionLevel === 0) {
             throw new Error(`You cannot call "setState" outside of an action within a StrictComponent. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
@@ -102,7 +102,7 @@ export class ComponentImplementation<P, S, C, O> {
         }
     }
 
-    setProps = (props: P): void => {
+    setProps = (props: Props): void => {
         if (this.isDisposed) {
             throw new Error(`You cannot call "setProps" on a governor that has been already disposeed. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
@@ -113,7 +113,7 @@ export class ComponentImplementation<P, S, C, O> {
         this.decreaseTransactionLevel()
     }
 
-    createGovernor(): Governor<P, O> {
+    createGovernor(): Governor<Props, T> {
         if (this.governor) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
@@ -281,7 +281,7 @@ export class ComponentImplementation<P, S, C, O> {
     }
 
     subscribe = (
-        onNextOrObserver: TransactionalObserver<O> | ((value: O) => void),
+        onNextOrObserver: TransactionalObserver<T> | ((value: T) => void),
         onError?: (error: any) => void,
         onComplete?: () => void,
         onTransactionStart?: () => void,
@@ -300,7 +300,7 @@ export class ComponentImplementation<P, S, C, O> {
             closed: false
         }
 
-        let observer: TransactionalObserver<O> =
+        let observer: TransactionalObserver<T> =
             typeof onNextOrObserver !== 'function'
                 ? onNextOrObserver
                 : { next: onNextOrObserver,
@@ -366,7 +366,7 @@ export class ComponentImplementation<P, S, C, O> {
     }
 
     processQueue() {
-        let batch: Batch<P, S> | undefined = this.queue.shift()
+        let batch: Batch<Props, State> | undefined = this.queue.shift()
         while (batch) {
             let prevProps = this.props
             let prevState = this.state

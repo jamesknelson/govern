@@ -15,14 +15,14 @@ const BuiltInComponents = {
     combine: Combine,
 }
 
-export interface Governor<P, O> extends Outlet<O> {
-    getOutlet(): Outlet<O>;
-    setProps(props: P): void;
+export interface Governor<Props, T> extends Outlet<T> {
+    getOutlet(): Outlet<T>;
+    setProps(props: Props): void;
     dispose(): void;
 }
 
-export function createGovernor<P, O>(element: GovernElement<P, O>): Governor<P, O> {
-    let instance: Governable<P, O>
+export function createGovernor<Props, T>(element: GovernElement<Props, T>): Governor<Props, T> {
+    let instance: Governable<Props, T>
 
     if (!isValidElement(element)) {
         throw new Error(`createGovernor received unexpected input "${String(element)}".`)

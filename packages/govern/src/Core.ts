@@ -3,8 +3,8 @@ import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './Observable'
 
 export type BuiltInType = 'map' | 'subscribe' | 'outlet' | 'combine'
-export type ComponentType<P, O> = GovernableClass<P, O> | StatelessComponent<P, O>;
-export type GovernType<P = any, O = any> = BuiltInType | ComponentType<P, O>;
+export type ComponentType<Props, T> = GovernableClass<Props, T> | StatelessComponent<Props, T>;
+export type GovernType<Props = any, T = any> = BuiltInType | ComponentType<Props, T>;
 
 export type Key = string | number;
 
@@ -15,34 +15,34 @@ export interface Attributes {
 // tslint:disable-next-line:interface-over-type-literal
 export type ComponentState = {};
 
-export type MapProps<FromOut, ToOut> = {
-    from: GovernElementLike<any, FromOut>,
-    to: SFC<FromOut, ToOut>,
+export type MapProps<FromT, ToT> = {
+    from: GovernElementLike<any, FromT>,
+    to: SFC<FromT, ToT>,
 }
 
-export type CombineChildren<Keys extends keyof O, O> = {
-    [K in Keys]: GovernElement<any, O[K]> | CombineChildren<keyof O[K], O[K]> | O[K]
+export type CombineChildren<Keys extends keyof T, T> = {
+    [K in Keys]: GovernElement<any, T[K]> | CombineChildren<keyof T[K], T[K]> | T[K]
 }
-export type CombineProps<O> = {
-    children: CombineChildren<keyof O, O>
+export type CombineProps<T> = {
+    children: CombineChildren<keyof T, T>
 }
 
 export type SubscribeProps<T> = {
     to: TransactionalObservable<T>,
 }
-export type OutletSourceProps<O> = {
-	children: GovernElementLike<any, O>,
+export type OutletSourceProps<T> = {
+	children: GovernElementLike<any, T>,
 }
 
-export type GovernElementLike<P, O> =
-    GovernElement<P, O> |
-    CombineChildren<keyof O, O>
+export type GovernElementLike<Props, T> =
+    GovernElement<Props, T> |
+    CombineChildren<keyof T, T>
 
-export type GovernNode<P = any, O = any> = GovernElementLike<P, O> | O
+export type GovernNode<Props = any, T = any> = GovernElementLike<Props, T> | T
 
-export type SFC<P, O> = StatelessComponent<P, O>;
-export interface StatelessComponent<P, O> {
-    (props: P): GovernNode<any, O>;
-    defaultProps?: Partial<P>;
+export type SFC<Props, T> = StatelessComponent<Props, T>;
+export interface StatelessComponent<Props, T> {
+    (props: Props): GovernNode<any, T>;
+    defaultProps?: Partial<Props>;
     displayName?: string;
 }

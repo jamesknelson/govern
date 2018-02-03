@@ -1,12 +1,12 @@
 import { Governor } from './Governor'
 
 
-export interface Governable<P, O> {
-    createGovernor(): Governor<P, O>;
+export interface Governable<Props, T> {
+    createGovernor(): Governor<Props, T>;
 }
 
-export interface GovernableClass<P, O> {
-    new (props: P): Governable<P, O>;
-    defaultProps?: Partial<P>;
+export interface GovernableClass<Props, T> {
+    new (props: Props): Governable<Props, T>;
+    defaultProps?: Partial<Props>;
     displayName?: string;
 }

@@ -3,31 +3,37 @@ import { ComponentState, GovernNode } from './Core'
 import { ComponentImplementation } from './ComponentImplementation'
 import { ComponentLifecycle } from './ComponentLifecycle'
 
-export interface ComponentClass<P, O=any> extends GovernableClass<P, O> {
-    new (props: P): Component<P, ComponentState, O>;
-    defaultProps?: Partial<P>;
+export interface ComponentClass<Props, T=any> extends GovernableClass<Props, T> {
+    new (props: Props): Component<Props, ComponentState, T>;
+    defaultProps?: Partial<Props>;
     displayName?: string;
 }
 
-export interface Component<P={}, S={}, C=any, O=any> extends ComponentLifecycle<P, S, C, O> { }
+export interface Component<Props={}, State={}, Subs=any, T=any> extends ComponentLifecycle<Props, State, Subs, T> { }
 
-export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, O>, ComponentLifecycle<P, S, C, O> {
-    protected impl: ComponentImplementation<P, S, C, O>;
+export abstract class Component<Props, State={}, Subs=any, T=any> implements Governable<Props, T>, ComponentLifecycle<Props, State, Subs, T> {
+    protected impl: ComponentImplementation<Props, State, Subs, T>;
 
-    constructor(props: P, { strict }: { strict?: boolean } = {}) {
+    constructor(props: Props, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props, !!strict)
     }
 
-    get props() { return this.impl.props }
+    get props() {
+        return this.impl.props
+    }
+
     get subs() {
         if (this.impl.isPerformingSubscribe) {
-            throw new Error(`You cannot access a component's "output" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
         return this.impl.subs
     }
-    get state() { return this.impl.state }
 
-    set state(state: S) {
+    get state() {
+        return this.impl.state
+    }
+
+    set state(state: State) {
         if (this.impl.governor) {
             throw new Error(`You cannot set a component's state directly outside of the constructor. See component "${getDisplayName(this.constructor)}".`)
         }
@@ -35,8 +41,8 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
         this.impl.state = state
     }
 
-    setState<K extends keyof S>(
-        state: ((prevState: Readonly<S>, props: P) => (Pick<S, K> | S)) | (Pick<S, K> | S),
+    setState<K extends keyof State>(
+        state: ((prevState: Readonly<State>, props: Props) => (Pick<State, K> | State)) | (Pick<State, K> | State),
         callback?: () => void
     ): void {
         if (!this.impl.governor) {
@@ -49,7 +55,7 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
             throw new Error(`You cannot call "setState" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
-        let updater = state as ((prevState: Readonly<S>, props: P) => any)
+        let updater = state as ((prevState: Readonly<State>, props: Props) => any)
         if (typeof state !== 'function') {
             updater = () => state
         }
@@ -58,13 +64,13 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
 
     transaction(run: Function): void {
         if (!this.impl.governor) {
-            throw new Error(`You cannot call "action" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.impl.isDisposed) {
-            throw new Error(`You cannot call "action" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "transaction" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.impl.isPerformingSubscribe) {
-            throw new Error(`You cannot call "action" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "transaction" within a component's "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
         this.impl.increaseTransactionLevel()
@@ -76,12 +82,12 @@ export abstract class Component<P, S={}, C=any, O=any> implements Governable<P, 
         return this.impl.createGovernor()
     }
 
-    abstract render(): O;
+    abstract render(): T;
 
     // TypeScript isn't able to infer the output of the subclass's `render`
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
-    getTypedSubs<C>(component: { subscribe: () => GovernNode<any, C> | null }): C {
+    getTypedSubs<Subs>(component: { subscribe: () => GovernNode<any, Subs> | null }): Subs {
         return this.impl.subs as any
     }
 }

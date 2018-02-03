@@ -1,11 +1,11 @@
 import { GovernNode } from './Core'
 
-export interface ComponentLifecycle<P, S, C, O> {
+export interface ComponentLifecycle<Props, State, Subs, T> {
     componentDidInstantiate?();
-    componentWillReceiveProps?(nextProps: P);
-    subscribe?(): GovernNode<any, C> | null;
-    shouldComponentUpdate?(prevProps?: P, prevState?: S, prevSubs?: C);
-    render(): O;
-    componentDidUpdate?(prevProps?: P, prevState?: S, prevSubs?: C);
+    componentWillReceiveProps?(nextProps: Props);
+    subscribe?(): GovernNode<any, Subs> | null;
+    shouldComponentUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
+    render(): T;
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
     componentWillBeDisposed?();
 }
