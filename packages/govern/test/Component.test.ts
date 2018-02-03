@@ -164,7 +164,7 @@ describe('Component', () => {
       }
       
       getValue() {
-        return this.subs
+        return null
       }
     }
     
@@ -178,6 +178,46 @@ describe('Component', () => {
     expect(updateCount).toBe(1)
     governor.setProps({ updated: true })
     expect(updateCount).toBe(1)
+  })
+
+  it("shouldComponentUpdate receives old state and props", () => {
+    let state, props
+    let nextState, nextProps
+
+    class TestComponent extends Component<{ updated }> {
+      state = { x: 1 }
+
+      componentWillReceiveProps(nextProps) {
+        this.setState({
+          x: 2
+        })
+      }
+
+      shouldComponentUpdate(prevProps, prevState) {
+        state = prevState
+        props = prevProps
+        nextState = this.state
+        nextProps = this.props
+        return false
+      }
+      
+      getValue() {
+        return null
+      }
+    }
+    
+    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let latest
+    let updateCount = 0
+    governor.subscribe(value => {
+      latest = value
+      updateCount++
+    })
+    governor.setProps({ updated: true })
+    expect(state).toEqual({ x: 1 })
+    expect(props).toEqual({ updated: false })
+    expect(nextState).toEqual({ x: 2 })
+    expect(nextProps).toEqual({ updated: true })
   })
 
   it("throws if 'subscribe' returns a non-node object", () => {

@@ -314,7 +314,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         let batch: Batch<Props, State> | undefined = this.queue.shift()
         while (batch) {
             let prevProps = this.props
-            let prevState = this.state
+            let prevState = Object.assign({}, this.state)
             let prevSubs = this.subs
 
             this.currentBatch = batch
