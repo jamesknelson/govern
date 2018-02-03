@@ -1,20 +1,20 @@
 import { of as observableOf } from 'zen-observable'
-import { map, outlet, sink, shape, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../src'
+import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../src'
 import { createModelClass } from './utils/createModelClass'
 
 describe('Batch', () => {
   function SplitObservable({ userObservable }: { userObservable: Observable<{ firstName: string, lastName: string }> }) {
     return shape({
-      firstName: outlet(map(sink(userObservable), user => user.firstName)),
-      lastName: outlet(map(sink(userObservable), user => user.lastName)),
+      firstName: outlet(map(subscribe(userObservable), user => user.firstName)),
+      lastName: outlet(map(subscribe(userObservable), user => user.lastName)),
     })
   }
 
   function JoinedObservables({ firstName, lastName }: { firstName: Observable<string>, lastName: Observable<string> }) {
     return map(
       shape({
-        firstName: sink(firstName),
-        lastName: sink(lastName),
+        firstName: subscribe(firstName),
+        lastName: subscribe(lastName),
       }),
       ({ firstName, lastName }) => {
         return firstName + ' ' + lastName

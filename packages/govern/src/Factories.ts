@@ -1,4 +1,4 @@
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SinkProps, OutletSourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, ShapeChildren, ShapeProps, SubscribeProps, OutletSourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { Outlet, TransactionalObservable } from './Observable'
@@ -16,11 +16,11 @@ function createFactory<P, O>(type: GovernableClass<P, O> | SFC<P, O>): Factory<P
     return (props: P, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
 }
 
-export function sink<T>(
-    from: TransactionalObservable<T>,
+export function subscribe<T>(
+    to: TransactionalObservable<T>,
     key?: Key
-): GovernElement<SinkProps<T>, T> {
-    return createElement("sink", { from, key })
+): GovernElement<SubscribeProps<T>, T> {
+    return createElement('subscribe', { to, key })
 }
 
 export function map<FromOut, ToOut>(
@@ -28,7 +28,7 @@ export function map<FromOut, ToOut>(
     to: SFC<FromOut, ToOut>,
     key?: Key
 ): GovernElement<MapProps<FromOut, ToOut>, ToOut> {
-    return createElement("map", { from, to, key })
+    return createElement('map', { from, to, key })
 }
 
 export function outlet<O = any>(
@@ -42,5 +42,5 @@ export function shape<O>(
     children: ShapeChildren<keyof O, O>,
     key?: Key
 ): GovernElement<ShapeProps<O>, O> {
-    return createElement("shape", { children, key })
+    return createElement('shape', { children, key })
 }

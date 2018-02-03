@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, outlet, sink, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 import { createCounter } from './utils/createCounter'
 
 describe('Component', () => {
@@ -96,7 +96,7 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       compose() {
 			  return shape({
-          a: map(sink(counter), counter => counter.count)
+          a: map(subscribe(counter), counter => counter.count)
         })
       }
       

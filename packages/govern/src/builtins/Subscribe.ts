@@ -1,21 +1,21 @@
 import { ComponentImplementation } from '../ComponentImplementation'
 import { ComponentLifecycle } from '../ComponentLifecycle'
-import { SinkProps } from '../Core'
+import { SubscribeProps } from '../Core'
 import { createElement } from '../Element'
 import { Governable } from '../Governable'
 
-export class Sink<T> implements Governable<SinkProps<T>, T>, ComponentLifecycle<SinkProps<T>, {}, T, T> {
-    impl: ComponentImplementation<SinkProps<T>, {}, T, T>;
+export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, ComponentLifecycle<SubscribeProps<T>, {}, T, T> {
+    impl: ComponentImplementation<SubscribeProps<T>, {}, T, T>;
     
-    constructor(props: SinkProps<T>) {
+    constructor(props: SubscribeProps<T>) {
         this.impl = new ComponentImplementation(this, props)
     }
 
     compose() {
         // As stateless functional components are implemented using the standard
-        // Component implementation, we can just return a new sink element, and
+        // Component implementation, we can just return a new subscribe element, and
         // the ComponentImplementation class will handle it appropriately. 
-        return createElement("sink", this.impl.props) as any
+        return createElement('subscribe', this.impl.props) as any
     }
 
     render() {

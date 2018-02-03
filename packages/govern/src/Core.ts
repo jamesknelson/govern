@@ -2,7 +2,7 @@ import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './Observable'
 
-export type BuiltInType = 'map' | 'sink' | 'outlet' | 'shape'
+export type BuiltInType = 'map' | 'subscribe' | 'outlet' | 'shape'
 export type ComponentType<P, O> = GovernableClass<P, O> | StatelessComponent<P, O>;
 export type GovernType<P = any, O = any> = BuiltInType | ComponentType<P, O>;
 
@@ -27,8 +27,8 @@ export type ShapeProps<O> = {
     children: ShapeChildren<keyof O, O>
 }
 
-export type SinkProps<T> = {
-    from: TransactionalObservable<T>,
+export type SubscribeProps<T> = {
+    to: TransactionalObservable<T>,
 }
 export type OutletSourceProps<O> = {
 	children: GovernElementLike<any, O>,

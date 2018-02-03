@@ -1,5 +1,5 @@
 import * as Observable from 'zen-observable'
-import { map, outlet, sink, shape, createElement, createGovernor, Component, SFC } from '../src'
+import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC } from '../src'
 
 describe('Map', () => {
   it("maps initial value", () => {

@@ -23,12 +23,12 @@ export function doNodesReconcile(x?: GovernNode, y?: GovernNode) {
     let isYElement = isValidElement(y)
 
     if (isXElement && isYElement) {
-        // Sinks are a special case; their props are never updated as they're
+        // Subscribes are a special case; their props are never updated as they're
         // handled directly by ComponentImplementation, so we consider them
         // different if their properties are not identical.
         return (
-            x.type === 'sink'
-                ? (y.type === 'sink' && x.props.from === y.props.from)
+            x.type === 'subscribe'
+                ? (y.type === 'subscribe' && x.props.to === y.props.to)
                 : (x.type === y.type && x.key === y.key)
         )
     }

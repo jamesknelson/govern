@@ -1,4 +1,4 @@
-import { map, outlet, sink, shape, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../../src'
+import { map, outlet, subscribe, shape, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../../src'
 
 export function createModelClass() {
     return class Model<T> extends Component<{ defaultValue: T }, any> {

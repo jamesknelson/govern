@@ -2,7 +2,7 @@ import { Component } from './Component'
 import { GovernElement, isValidElement } from './Element'
 import { Governable } from './Governable'
 import { Outlet } from './Observable'
-import { Sink } from './builtins/Sink'
+import { Subscribe } from './builtins/Subscribe'
 import { OutletSource } from './builtins/OutletSource'
 import { Map } from './builtins/Map'
 import { Shape } from './builtins/Shape'
@@ -10,7 +10,7 @@ import { Shape } from './builtins/Shape'
 
 const BuiltInComponents = {
     map: Map,
-    sink: Sink,
+    subscribe: Subscribe,
     outlet: OutletSource,
     shape: Shape,
 }

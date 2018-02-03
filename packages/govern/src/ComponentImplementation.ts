@@ -32,7 +32,7 @@ export class ComponentImplementation<P, S, C, O> {
             node: any,
             subscription: Subscription,
 
-            // A governor will not exist in the case of a `sink` element.
+            // A governor will not exist in the case of a `subscribe` element.
             governor?: Governor<any, any>
         }
     }
@@ -202,8 +202,8 @@ export class ComponentImplementation<P, S, C, O> {
 
                         let governor: Governor<any, any> | undefined
                         let observable: TransactionalObservable<any>
-                        if (nextChildNode.type === 'sink') {
-                            observable = nextChildNode.props.from
+                        if (nextChildNode.type === 'subscribe') {
+                            observable = nextChildNode.props.to
                         }
                         else {
                             governor = createGovernor(nextChildNode)
@@ -226,13 +226,13 @@ export class ComponentImplementation<P, S, C, O> {
                             governor: governor,
                         }
                     }
-                    else if (nextChildNode.type !== 'sink') {
+                    else if (nextChildNode.type !== 'subscribe') {
                         // If `setProps` causes a change in comp, it will
                         // immediately be emitted to the observer.
                         prevChild.governor!.setProps(nextChildNode.props)
                     }
                     else {
-                        // Sinks won't emit a new value, so we need to manually 
+                        // Subscribes won't emit a new value, so we need to manually 
                         // carry over the previous value to the next.
                         if (key === Root) {
                             this.nextComp = this.comp
@@ -450,7 +450,7 @@ export class ComponentImplementation<P, S, C, O> {
             this.setComp(key, value)
         }
         else {
-            // If we're dealing with sinked observables from other libraries,
+            // If we're dealing with subscribed observables from other libraries,
             // changes may not be batched.
             let isIndividualChange = this.transactionLevel === 0
             if (isIndividualChange) {
