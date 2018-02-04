@@ -1,7 +1,7 @@
 {
-  "name": "govern",
+  "name": "outlets",
   "version": "0.4.0-10",
-  "description": "Components for state.",
+  "description": "Observables for mere mortals.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
   "main": "./dist/commonjs/index.js",
@@ -11,8 +11,8 @@
     "clean": "rimraf dist",
     "build:commonjs": "tsc --pretty --module commonjs --outDir dist/commonjs",
     "build:es": "tsc --pretty --module es2015 --outDir dist/es",
-    "build:umd": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=development rollup -c -o dist/umd/govern.js && rimraf dist/umd-intermediate",
-    "build:umd:min": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=production rollup -c -o dist/umd/govern.min.js && rimraf dist/umd-intermediate",
+    "build:umd": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=development rollup -c -o dist/umd/outlets.js && rimraf dist/umd-intermediate",
+    "build:umd:min": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=production rollup -c -o dist/umd/outlets.min.js && rimraf dist/umd-intermediate",
     "build": "npm run build:es && npm run build:commonjs && npm run build:umd && npm run build:umd:min",
     "build:watch": "npm run clean && npm run build:es -- --watch",
     "prepublish": "npm run clean && npm run build && npm run test",
@@ -20,10 +20,8 @@
     "test:watch": "jest --watch"
   },
   "keywords": [
-    "state",
-    "state-management",
-    "governors",
-    "controllers"
+    "outlets",
+    "observables"
   ],
   "devDependencies": {
     "@types/jest": "^22.1.0",
@@ -37,9 +35,6 @@
     "ts-jest": "^22.0.1",
     "typescript": "^2.6.2",
     "zen-observable": "^0.7.1"
-  },
-  "dependencies": {
-    "outlets": "0.4.0-10"
   },
   "jest": {
     "transform": {

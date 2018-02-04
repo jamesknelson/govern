@@ -1,5 +1,6 @@
 import { of as observableOf } from 'zen-observable'
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, Observable, StrictComponent } from '../src'
+import { Observable } from 'outlets'
+import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 import { createModelClass } from './utils/createModelClass'
 
 describe('Batch', () => {

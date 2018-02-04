@@ -1,3 +1,4 @@
+import { Outlet } from 'outlets'
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { GovernElementLike, GovernNode, OutletSourceProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
@@ -5,7 +6,6 @@ import { createElement, GovernElement, isValidElement } from '../Element'
 import { isPlainObject } from '../isPlainObject'
 import { Governable } from '../Governable'
 import { createGovernor, Governor } from '../Governor'
-import { Outlet } from '../Outlet'
 
 export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentImplementationLifecycle<OutletSourceProps<T>, {}, Outlet<T>, void> {
 	childGovernor: Governor<any, any>

@@ -1,13 +1,10 @@
+import { Outlet, OutletSubject, Subscription, TransactionalObservable, TransactionalObserver } from 'outlets'
 import { isPlainObject } from './isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
 import { isValidElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
 import { createGovernor, Governor } from './Governor'
-import { Outlet } from './Outlet'
-import { OutletSubject } from './OutletSubject'
-import { Subscription } from './Subscription'
-import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
 
 type Batch<Props, State> = {
     setProps?: Props,

@@ -1,6 +1,6 @@
+import { TransactionalObservable } from 'outlets'
 import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
-import { TransactionalObservable } from './TransactionalObservable'
 
 export type BuiltInType = 'map' | 'subscribe' | 'outlet' | 'combine'
 export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
