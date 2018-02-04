@@ -1,3 +1,4 @@
+export { Outlet } from 'outlets'
 export * from './Component'
 export * from './Core'
 export * from './Element'
