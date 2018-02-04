@@ -1,10 +1,11 @@
 import * as React from 'react'
 import * as Govern from 'govern'
+import { Observable } from 'outlets'
 
 
 export interface SourceProps {
   element?: Govern.GovernElement<any, any>,
-  children: (observable: Govern.Observable<any>) => React.ReactNode | null,
+  children: (observable: Observable<any>) => React.ReactNode | null,
 }
 
 

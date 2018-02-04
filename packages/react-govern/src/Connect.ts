@@ -1,9 +1,10 @@
 import * as React from 'react'
 import * as Govern from 'govern'
+import { Subscription, Observable } from 'outlets'
 
 
 export interface ConnectProps {
-  to: Govern.Observable<any>,
+  to: Observable<any>,
   children: (value: any) => React.ReactNode,
 }
 
@@ -17,7 +18,7 @@ export class Connect extends React.Component<ConnectProps, { output: any, dummy:
 
   resetCount: number = 0
   isResetting: boolean
-  subscription?: Govern.Subscription
+  subscription?: Subscription
 
   // Keep track of whteher our observable is in a transaction, and thus may
   // have side effects that involve changes to the environment, or may emit a
