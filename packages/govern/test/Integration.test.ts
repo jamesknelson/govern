@@ -58,8 +58,6 @@ function createModelClass() {
     }
 
     getValue() {
-      this.getSubs()
-
       let error = {} as any
       if (this.subs.name.error) error.name = this.subs.name.error
       if (this.subs.email.error) error.email = this.subs.email.error
