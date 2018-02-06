@@ -1,6 +1,6 @@
 {
   "name": "react-outlets",
-  "version": "0.4.0-12",
+  "version": "0.4.0-14",
   "description": "Connect outlets into React components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -61,6 +61,5 @@
         "skipBabel": true
       }
     }
-  },
-  "dependencies": {}
+  }
 }
