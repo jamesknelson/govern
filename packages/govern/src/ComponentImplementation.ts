@@ -121,6 +121,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     transactionLevel: number = 0
 
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props, isStrict = false) {
+        this.disallowSideEffectsReason.unshift('in constructor')
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.props = props
@@ -180,6 +181,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.awaitingFlush = true
         if (this.lifecycle.componentWillReceiveProps) {
             this.pushFix()
+            // TODO: add test that we don't start/stop a transaction if setState is called within here.
             this.lifecycle.componentWillReceiveProps(props)
             this.popFix()
         }
@@ -207,13 +209,21 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             this.callbacks.push(callback)
         }
 
-        this.increaseTransactionLevel()
+        let needTransaction = !this.awaitingFlush
+        if(needTransaction) {
+            // hack to deal with componentWillReceiveProps so that it doesn't
+            // start a transaction just when calling `setProps` I wish it
+            // would die.
+            this.increaseTransactionLevel()
+        }
         this.disallowSideEffectsReason.unshift("running a setState updater")
         this.state = Object.assign({}, this.state, updater(this.state, this.props))
         this.disallowSideEffectsReason.shift()
         this.connect()
         this.publish()
-        this.decreaseTransactionLevel()
+        if (needTransaction) {
+            this.decreaseTransactionLevel()
+        }
     }
 
     connect() {
@@ -405,8 +415,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
  
-        if (!isExpectingChange) {
+        let needTransaction = !this.awaitingFlush && !isExpectingChange
+        if (needTransaction) {
             this.increaseTransactionLevel()
+        }
+        if (!isExpectingChange) {
             if (this.lastCombinedType === 'array') {
                 this.subs = (this.subs as any).slice(0)
             }
@@ -418,7 +431,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         if (!isExpectingChange) {
             this.publish()
         }
-        if (!isExpectingChange) {
+        if (needTransaction) {
             this.decreaseTransactionLevel()
         }
     }
@@ -451,6 +464,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
+        this.disallowSideEffectsReason.shift()
         this.connect()
         this.pushFix()
         this.disallowSideEffectsReason.unshift("publishing a value")

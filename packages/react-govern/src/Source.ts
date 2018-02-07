@@ -35,6 +35,7 @@ export class Source extends React.Component<SourceProps> {
     this.governor.setProps({
       children: this.getSourceElement(nextProps)
     })
+    this.governor.flush()
   }
 
   componentDidCatch(error) {

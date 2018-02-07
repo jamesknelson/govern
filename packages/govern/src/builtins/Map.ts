@@ -20,7 +20,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
     }
 
     componentWillBeDisposeed() {
-		this.governor.dispose()
+        this.governor.dispose()
 		delete this.governor
     }
 
