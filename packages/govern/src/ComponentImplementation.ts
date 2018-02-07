@@ -30,7 +30,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
 export class ComponentImplementation<Props, State, Value, Subs> {
     props: Readonly<Props>;
     state: Readonly<State>;
-    subs: Readonly<Subs>;
+    subs: Subs;
 
     callbacks: Function[];
     canDirectlySetSubs: boolean
@@ -52,8 +52,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     isDisposed: boolean
     isPerformingSubscribe: boolean
     isStrict: boolean
+    lastCombinedType?: 'array' | 'object'
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
-    nextSubs: any
     queue: Batch<Props, State>[]
     subject: OutletSubject<Value>;
     transactionLevel: number;
@@ -124,7 +124,6 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         // Need to cache the value in case `get` is called before any
         // other changes occur.
         this.performSubscribe()
-        this.subs = this.nextSubs
         this.subject = new OutletSubject(this.lifecycle.getValue())
 
         let outlet = new Outlet(this.subject)
@@ -153,45 +152,63 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 throw new Error(`You must return an element from "subscribe", but instead received a "${typeof element}". See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
 
+            // element has changed type
+            let forceFullUpdate = false
+
             let nextChildrenKeys: string[]
             let nextChildNodes
             if (isValidElement(element) && element!.type === "combine") {
                 if (Array.isArray(element.props.children)) {
-                    this.nextSubs = []
+                    // this will wipe out any changes from directly set stuff
+                    if (this.lastCombinedType !== 'array') {
+                        this.lastCombinedType = 'array'
+                        this.subs = [] as any
+                        forceFullUpdate = true
+                    }
+                        
                     nextChildNodes = element.props.children
                     nextChildrenKeys = Object.keys(element.props.children)
                 }
                 else if (isPlainObject(element.props.children)) {
-                    this.nextSubs = {}
+                    if (this.lastCombinedType !== 'object') {
+                        this.lastCombinedType = 'object'
+                        this.subs = {} as any
+                        forceFullUpdate = true
+                    }
                     nextChildNodes = element.props.children
                     nextChildrenKeys = Object.keys(element.props.children)
                 }
                 else {
+                    if (this.lastCombinedType) {
+                        delete this.subs
+                        delete this.lastCombinedType
+                        forceFullUpdate = true
+                    }
                     nextChildNodes = { [Root]: element.props.children }
                     nextChildrenKeys = [Root]
                 }
             }
             else {
+                if (this.lastCombinedType) {
+                    delete this.subs
+                    delete this.lastCombinedType
+                    forceFullUpdate = true
+                }
                 nextChildNodes = { [Root]: element }
                 nextChildrenKeys = [Root]
             }
 
-            let keysToRemove = new Set(this.childrenKeys)
+            let childrenToDisposeKeys = new Set(this.childrenKeys)
+            let subsKeysToRemove = new Set(Object.keys(this.subs))
             let nextChildren = {}
             for (let i = 0; i < nextChildrenKeys.length; i++) {
                 let key = nextChildrenKeys[i]
                 let prevChild = this.children[key]
                 let nextChildNode = nextChildNodes[key]
-                keysToRemove.delete(key)
                 nextChildren[key] = this.children[key]
+                subsKeysToRemove.delete(key)
                 if (isValidElement(nextChildNode)) {
-                    if (!doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
-                        if (prevChild) {
-                            // The old element is out of date, so we'll need to clean
-                            // up the old child.
-                            keysToRemove.add(key)
-                        }
-
+                    if (forceFullUpdate || !doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
                         let governor: Governor<any, any> | undefined
                         let observable: TransactionalObservable<any>
                         if (nextChildNode.type === 'subscribe') {
@@ -202,8 +219,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                             observable = governor
                         }
 
-                        // Govern components will immediately emit their current value
-                        // on subscription, ensuring that subs is updated.
+                        // Outlets will immediately emit their current value
+                        // on subscription, ensuring that `subs` is updated.
                         let subscription = observable.subscribe(
                             value => this.handleChildChange(key, value),
                             this.handleChildError,
@@ -218,24 +235,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                             governor: governor,
                         }
                     }
-                    else if (nextChildNode.type !== 'subscribe') {
-                        // If `setProps` causes a change in subs, it will
-                        // immediately be emitted to the observer.
-                        prevChild.governor!.setProps(nextChildNode.props)
-                    }
                     else {
-                        // Subscribes won't emit a new value, so we need to manually 
-                        // carry over the previous value to the next.
-                        if (key === Root) {
-                            this.nextSubs = this.subs
-                        }
-                        else {
-                            this.nextSubs[key] = this.subs[key]
+                        // Keep around the previous child, and update it if
+                        // necessary
+                        childrenToDisposeKeys.delete(key)
+                        if (nextChildNode.type !== 'subscribe') {
+                            prevChild.governor!.setProps(nextChildNode.props)
                         }
                     }
                 }
                 else {
-                    keysToRemove.add(key)
                     delete nextChildren[key]
                     this.setSubs(key, nextChildNode)
                 }
@@ -243,9 +252,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
             // Clean up after any previous children that are no longer being
             // subscribed.
-            let keysToRemoveArray = Array.from(keysToRemove)
-            for (let i = 0; i < keysToRemoveArray.length; i++) {
-                let key = keysToRemoveArray[i]
+            let childrenToDisposeArray = Array.from(childrenToDisposeKeys)
+            for (let i = 0; i < childrenToDisposeArray.length; i++) {
+                let key = childrenToDisposeArray[i]
                 let prevChild = this.children[key]
                 if (prevChild) {
                     prevChild.subscription.unsubscribe()
@@ -254,6 +263,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                     }
                 }
                 delete this.children[key]
+            }
+
+            let subsToRemoveArray = Array.from(subsKeysToRemove)
+            for (let i = 0; i < subsToRemoveArray.length; i++) {
+                delete this.subs[subsToRemoveArray[i]]
             }
 
             this.children = nextChildren
@@ -265,10 +279,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     setSubs(key: string | Symbol, value: any) {
         if (key === Root) {
-            this.nextSubs = value
+            this.subs = value
         }
         else {
-            this.nextSubs[key as any] = value
+            this.subs[key as any] = value
         }
     }
     
@@ -312,9 +326,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         while (batch) {
             let prevProps = this.props
             let prevState = Object.assign({}, this.state)
-            let prevSubs = this.subs
+            let prevSubs = Object.assign({}, this.subs)
 
             this.currentBatch = batch
+
+            if (batch.changes) {
+                for (let i = 0; i < batch.changes.length; i++) {
+                    let [key, subs] = batch.changes[i]
+                    this.setSubs(key, subs)
+                }
+            }
             
             if (batch.updaters || batch.setProps) {
                 if (batch.setProps && this.lifecycle.componentWillReceiveProps) {
@@ -335,20 +356,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 let updaters = batch.updaters || []
                 for (let i = 0; i < updaters.length; i++) {
                     let updater = updaters[i]
-                    Object.assign(this.state, updater(this.state, this.props))
+                    Object.assign(this.state || {}, updater(this.state, this.props))
                 }
 
                 this.performSubscribe()
             }
-            else if (batch.changes) {
-                // The batch was triggered by an update from a child, so
-                // we don't need to re-subscribe the whole thing.
-                for (let i = 0; i < batch.changes.length; i++) {
-                    let [key, subs] = batch.changes[i]
-                    this.setSubs(key, subs)
-                }
-            }
-            this.subs = this.nextSubs
 
             if (!this.lifecycle.shouldComponentUpdate ||
                 this.lifecycle.shouldComponentUpdate(prevProps, prevState, prevSubs)
