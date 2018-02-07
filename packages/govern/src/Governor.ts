@@ -18,10 +18,11 @@ const BuiltInComponents = {
 export interface Governor<Props, Value> extends Outlet<Value> {
     getOutlet(): Outlet<Value>;
     setProps(props: Props): void;
+    flush(): void;
     dispose(): void;
 }
 
-export function createGovernor<Props, Value>(element: GovernElement<Props, Value>): Governor<Props, Value> {
+export function createGovernor<Props, Value>(element: GovernElement<Props, Value>, autoFlush = true): Governor<Props, Value> {
     let instance: Governable<Props, Value>
 
     if (!isValidElement(element)) {
@@ -61,5 +62,9 @@ export function createGovernor<Props, Value>(element: GovernElement<Props, Value
     }
 
     // Return the component instance's governor.
-    return instance.createGovernor()
+    let governor = instance.createGovernor()
+    if (autoFlush) {
+        governor.flush()
+    }
+    return governor
 }

@@ -56,6 +56,7 @@ describe('Component', () => {
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
+    governor.flush()
     expect(didUpdateCallCount).toBe(1)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -67,7 +68,7 @@ describe('Component', () => {
       state = { a: 1 }
 
 			subscribe() {
-			  return combine({
+        return combine({
 				  a: this.state.a
 			  })
       }
@@ -86,6 +87,7 @@ describe('Component', () => {
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
+    governor.flush()
     expect(didUpdateCallCount).toBe(2)
     expect(governor.getValue()).toEqual({ a: 2 })
   })
@@ -122,6 +124,7 @@ describe('Component', () => {
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
     governor.setProps({ updated: true })
+    governor.flush()
     expect(didUpdateCallCount).toBe(2)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -152,9 +155,8 @@ describe('Component', () => {
       latest = value
       updateCount++
     })
-    expect(updateCount).toBe(1)
     governor.setProps({ updated: true })
-    expect(updateCount).toBe(2)
+    governor.flush()
     expect(latest).toEqual({ a: 2 })
   })
 

@@ -47,19 +47,24 @@ describe('Batch', () => {
     let observables = splitGovernor.getValue()
     let fullNameGovernor = createGovernor(createElement(JoinedObservables, observables))
     
-    let updateCount = 0
+    let transactionCount = 0
     let lastValue = undefined as any
-    fullNameGovernor.subscribe(name => {
-        updateCount++
-        lastValue = name
-    })
+    let noop = () => {}
+    fullNameGovernor.subscribe(
+      name => { lastValue = name },
+      noop,
+      noop,
+      noop,
+      () => { transactionCount++ }
+    )
 
-    expect(updateCount).toEqual(1)
+    expect(transactionCount).toEqual(0)
     expect(lastValue).toEqual(' ')
 
     splitGovernor.setProps({ userObservable: observableOf({ firstName: "James", lastName: "Nelson" }) })
+    splitGovernor.flush()
 
-    expect(updateCount).toEqual(3)
+    expect(transactionCount).toEqual(2)
     expect(lastValue).toEqual('James Nelson')
   })
 

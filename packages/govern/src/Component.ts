@@ -26,11 +26,11 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     get props() {
-        return this.impl.props
+        return this.impl.getFix().props
     }
 
     get subs() {
-        if (this.impl.isPerformingSubscribe) {
+        if (this.impl.isRunningConnectChild) {
             throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
         return this.getTypedSubs(this as this)
@@ -41,7 +41,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     get state() {
-        return this.impl.state
+        return this.impl.getFix().state
     }
 
     set state(state: State) {
@@ -59,10 +59,10 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (!this.impl.governor) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isDisposed) {
+        if (this.impl.willDispose) {
             throw new Error(`You cannot call "setState" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isPerformingSubscribe) {
+        if (this.impl.disallowSideEffectsReason[0]) {
             throw new Error(`You cannot call "setState" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -70,17 +70,17 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (typeof state !== 'function') {
             updater = () => state
         }
-        this.impl.enqueueSetState(updater, callback)
+        this.impl.setState(updater, callback)
     }
 
     transaction(run: Function): void {
         if (!this.impl.governor) {
             throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isDisposed) {
+        if (this.impl.willDispose) {
             throw new Error(`You cannot call "transaction" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.isPerformingSubscribe) {
+        if (this.impl.disallowSideEffectsReason[0]) {
             throw new Error(`You cannot call "transaction" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -99,7 +99,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     // function by just accessing `this`, so we need to pass in the subclass
     // if we want access to a correctly typed output :-(
     getTypedSubs<Subs>(component: { subscribe?: () => GovernElement<any, Subs> | null }): Subs {
-        return this.impl.subs as any
+        return this.impl.getFix().subs as any
     }
 
     getTypedValue<Value>(component: { getValue: () => Value }): Value {

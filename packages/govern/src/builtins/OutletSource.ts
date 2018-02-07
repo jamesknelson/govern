@@ -28,6 +28,15 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
         this.receiveProps(nextProps)
     }
 
+    componentDidInstantiate() {
+        this.outputGovernor.flush()
+        this.childGovernor.flush()
+    }
+
+    componentDidUpdate() {
+        this.childGovernor.flush()
+    }
+
     componentWillBeDisposeed() {
 		this.outputGovernor.dispose()
 		this.childGovernor.dispose()
@@ -50,7 +59,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
                 this.childGovernor.dispose()
             }
             this.childElement = element
-            this.childGovernor = createGovernor(element)
+            this.childGovernor = createGovernor(element, false)
             this.childGovernor.subscribe(
                 this.handleChange,
                 this.outputImpl.handleChildError,
@@ -66,7 +75,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
 
     handleChange = (output: T) => {
 		if (this.outputImpl.governor) {
-            this.outputImpl.enqueueSetState(() => ({ output }))
+            this.outputImpl.setState(() => ({ output }))
         }
         else {
             this.outputImpl.state = { output }
@@ -79,7 +88,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
 
     createGovernor(): Governor<OutletSourceProps<T>, Outlet<T>> {
 		this.receiveProps(this.impl.props)
-		this.outputGovernor = this.outputImpl.createGovernor()
+        this.outputGovernor = this.outputImpl.createGovernor()
 		this.outputObservable = this.outputGovernor.getOutlet()
 		return this.impl.createGovernor()
     }

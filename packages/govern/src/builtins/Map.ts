@@ -24,6 +24,14 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
 		delete this.governor
     }
 
+    componentDidInstantiate() {
+        this.governor.flush()
+    }
+
+    componentDidUpdate() {
+        this.governor.flush()
+    }
+
     receiveProps(props: MapProps<FromValue, ToValue>) {
         let fromElement = props.from
         if (!isValidElement(fromElement)) {
@@ -35,7 +43,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
                 this.governor.dispose()
             }
             this.element = fromElement
-            this.governor = createGovernor(fromElement)
+            this.governor = createGovernor(fromElement, false)
             this.governor.subscribe(
                 this.handleChange,
                 this.impl.handleChildError,
@@ -51,7 +59,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
 
     handleChange = (fromOut: FromValue) => {
         if (this.impl.governor) {
-            this.impl.enqueueSetState(() => ({ fromOut }))
+            this.impl.setState(() => ({ fromOut }))
         }
         else {
             this.impl.state = { fromOut }
