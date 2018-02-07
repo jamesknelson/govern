@@ -11,7 +11,7 @@ export class ClosableSubscription implements Subscription {
 
     constructor(unsubscribeCallback?: () => void) {
         this.closed = false
-        this.unsubscribeCallback = this.unsubscribeCallback
+        this.unsubscribeCallback = unsubscribeCallback
     }
 
     // Cancels the subscription

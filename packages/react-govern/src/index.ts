@@ -1,3 +1,2 @@
-export { Connect } from './Connect'
-export { govern } from './govern'
+export { Connect, connect, govern } from './Connect'
 export { Source } from './Source'

@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as Govern from 'govern'
 import * as ReactTestRenderer from 'react-test-renderer'
 
-import { govern } from '../src/govern'
+import { connect } from '../src/Connect'
 
 
 class TestController extends Govern.Component<any, any> {
@@ -24,7 +24,7 @@ class TestComponent extends React.Component<any> {
 
 
 test('injects initial value', () => {
-  let decorator = govern(
+  let decorator = connect(
     props => Govern.createElement(TestController, { defaultValue: props.defaultValue }),
   )
   let DecoratedComponent = decorator(TestComponent)
@@ -35,7 +35,7 @@ test('injects initial value', () => {
 })
 
 test('allows for elements as first argument', () => {
-  let decorator = govern(
+  let decorator = connect(
     Govern.createElement(TestController, { defaultValue: 1 })
   )
   let DecoratedComponent = decorator(TestComponent)
@@ -46,7 +46,7 @@ test('allows for elements as first argument', () => {
 })
 
 test('allows for components as first argument', () => {
-  let decorator = govern(TestController)
+  let decorator = connect(TestController)
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />
@@ -58,7 +58,7 @@ test('injects subsequent outputs', () => {
   let governor = Govern.createGovernor(
     Govern.createElement(TestController, { defaultValue: 1 }),
   )
-  let decorator = govern(props => Govern.subscribe(governor))
+  let decorator = connect(props => Govern.subscribe(governor))
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />
