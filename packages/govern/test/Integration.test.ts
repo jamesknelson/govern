@@ -141,7 +141,7 @@ function createFormControllerClass() {
     }
 
     componentDidUpdate(prevProps, prevState, prevSubs) {
-      this.receiveDataIfAvailable(prevSubs.data)
+      this.receiveDataIfAvailable(this.subs.data)
     }
 
     receiveDataIfAvailable(output) {

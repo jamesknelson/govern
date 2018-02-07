@@ -199,7 +199,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
 
             let childrenToDisposeKeys = new Set(this.childrenKeys)
-            let subsKeysToRemove = new Set(Object.keys(this.subs))
+            let subsKeysToRemove = new Set(this.lastCombinedType ? Object.keys(this.subs) : [])
             let nextChildren = {}
             for (let i = 0; i < nextChildrenKeys.length; i++) {
                 let key = nextChildrenKeys[i]
