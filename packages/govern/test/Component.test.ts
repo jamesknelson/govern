@@ -425,4 +425,23 @@ describe('Component', () => {
       inner: 2
     })
   })
+
+  it("supports getDerivedStateFromProps", () => {
+    class TestComponent extends Component<{ updated }, any> {
+      state = {} as any
+
+      static getDerivedStateFromProps(props: { updated }, prevState) {
+        return props.updated ? { hello: 'world' } : {}
+      }
+
+      getValue() {
+        return this.state.hello
+      }
+    }
+
+    let governor = createGovernor(createElement(TestComponent))
+    expect(governor.getValue()).toBe(undefined)
+    governor.setProps({ updated: true })
+    expect(governor.getValue()).toBe('world')
+  })
 })

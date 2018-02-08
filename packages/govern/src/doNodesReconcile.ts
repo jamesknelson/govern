@@ -1,4 +1,4 @@
-import { isPlainObject } from './isPlainObject'
+import { isPlainObject } from './utils/isPlainObject'
 import { GovernNode } from './Core'
 import { isValidElement } from './Element'
 

@@ -2,12 +2,12 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { MapProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
-import { createGovernor, Governor } from '../Governor'
+import { internalCreateGovernor, InternalGovernor } from '../Governor'
 import { GovernElement, isValidElement } from '../Element'
 
 export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     element: GovernElement<any, any>
-    governor: Governor<any, any>
+    governor: InternalGovernor<any, any>
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, any, ToValue, ToValue>;
     
     constructor(props: MapProps<FromValue, ToValue>) {
@@ -43,7 +43,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
                 this.governor.dispose()
             }
             this.element = fromElement
-            this.governor = createGovernor(fromElement, false)
+            this.governor = internalCreateGovernor(fromElement)
             this.governor.subscribe(
                 this.handleChange,
                 this.impl.handleChildError,
@@ -53,7 +53,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
             )
         }
         else {
-            this.governor.setProps(fromElement.props)
+            this.governor.setPropsWithoutFlush(fromElement.props)
         }
     }
 
@@ -74,7 +74,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
         return this.impl.subs
     }
 
-    createGovernor(): Governor<MapProps<FromValue, ToValue>, ToValue> {
+    createGovernor(): InternalGovernor<MapProps<FromValue, ToValue>, ToValue> {
         return this.impl.createGovernor()
     }
 }

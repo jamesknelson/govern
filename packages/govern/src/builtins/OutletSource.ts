@@ -3,15 +3,15 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { GovernElementLike, GovernNode, OutletSourceProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { createElement, GovernElement, isValidElement } from '../Element'
-import { isPlainObject } from '../isPlainObject'
+import { isPlainObject } from '../utils/isPlainObject'
 import { Governable } from '../Governable'
-import { createGovernor, Governor } from '../Governor'
+import { internalCreateGovernor, InternalGovernor } from '../Governor'
 
 export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<T>>, ComponentImplementationLifecycle<OutletSourceProps<T>, {}, Outlet<T>, void> {
-	childGovernor: Governor<any, any>
+	childGovernor: InternalGovernor<any, any>
 	childElement: GovernElement<any, any>
 	impl: ComponentImplementation<OutletSourceProps<T>, any, Outlet<T>, void>
-	outputGovernor: Governor<any, T>
+	outputGovernor: InternalGovernor<any, T>
 	outputObservable: Outlet<T>
 	outputImpl: ComponentImplementation<OutletSourceProps<T>, any, T, void>
     
@@ -59,7 +59,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
                 this.childGovernor.dispose()
             }
             this.childElement = element
-            this.childGovernor = createGovernor(element, false)
+            this.childGovernor = internalCreateGovernor(element)
             this.childGovernor.subscribe(
                 this.handleChange,
                 this.outputImpl.handleChildError,
@@ -69,7 +69,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
             )
         }
         else {
-            this.childGovernor.setProps(element.props)
+            this.childGovernor.setPropsWithoutFlush(element.props)
         }
     }
 
@@ -86,7 +86,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
         return this.outputObservable
 	}
 
-    createGovernor(): Governor<OutletSourceProps<T>, Outlet<T>> {
+    createGovernor(): InternalGovernor<OutletSourceProps<T>, Outlet<T>> {
 		this.receiveProps(this.impl.props)
         this.outputGovernor = this.outputImpl.createGovernor()
 		this.outputObservable = this.outputGovernor.getOutlet()

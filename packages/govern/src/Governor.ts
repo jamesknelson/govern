@@ -15,19 +15,39 @@ const BuiltInComponents = {
     combine: Combine,
 }
 
-export interface Governor<Props, Value> extends Outlet<Value> {
-    getOutlet(): Outlet<Value>;
-    setProps(props: Props): void;
-    flush(): void;
+// This is the same object, but with some methods extra methods that aren't
+// available on the external interface.
+export interface InternalGovernor<Props, Value> extends Outlet<Value> {
     dispose(): void;
+    flush(): void;
+    getOutlet(): Outlet<Value>;
+    setPropsWithoutFlush(props: Props): void;
+    setProps(props: Props): void;
 }
 
-export function createGovernor<Props, Value>(element: GovernElement<Props, Value>, autoFlush = true): Governor<Props, Value> {
+export interface Governor<Props, Value> extends Outlet<Value> {
+    dispose(): void;
+    getOutlet(): Outlet<Value>;
+    setProps(props: Props): void;
+}
+
+export function createGovernor<Props, Value>(element: GovernElement<Props, Value>): Governor<Props, Value> {
     let instance: Governable<Props, Value>
 
-    if (!isValidElement(element)) {
-        throw new Error(`createGovernor received unexpected input "${String(element)}".`)
-    }
+    // Return the component instance's governor.
+    let governor = internalCreateGovernor(element)
+    // TODO: add `setProps`
+    governor.flush()
+    return governor
+}
+
+/**
+ * This allows the `flushProps` method to be called manually. It is used
+ * internally, but not exposed via the public API as forgetting to flush props
+ * is a superb way to waste a couple hours chasing funny bugs.
+ */
+export function internalCreateGovernor<Props, Value>(element: GovernElement<Props, Value>): InternalGovernor<Props, Value> {
+    let instance: Governable<Props, Value>
 
     // Create a component instance for the element, with the specified
     // initial props.
@@ -62,9 +82,5 @@ export function createGovernor<Props, Value>(element: GovernElement<Props, Value
     }
 
     // Return the component instance's governor.
-    let governor = instance.createGovernor()
-    if (autoFlush) {
-        governor.flush()
-    }
-    return governor
+    return instance.createGovernor()
 }

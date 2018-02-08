@@ -1,11 +1,14 @@
 /*!
  * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ * 
+ * This version of is-plain-object also treats things that look like Govern
+ * or React elements as *not* plain objects.
  *
  * Copyright (c) 2014-2017, Jon Schlinkert.
  * Released under the MIT License.
  */
 
-import { isValidElement } from './Element'
+import { isValidElement } from '../Element'
 
 function isObject(x) {
 	return typeof x === 'object' && x !== null;

@@ -1,10 +1,10 @@
 import { Outlet, OutletSubject, Subscription, TransactionalObservable, TransactionalObserver } from 'outlets'
-import { isPlainObject } from './isPlainObject'
+import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
 import { isValidElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
-import { createGovernor, Governor } from './Governor'
+import { internalCreateGovernor, InternalGovernor } from './Governor'
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -17,8 +17,9 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     // TODO: rename to UNSAFE_componentWillReceiveProps.
     componentWillReceiveProps?(nextProps: Props);
 
-    // TODO: move these to static method
-    getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
+    constructor: Function & {
+        getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
+    }
 
     // TODO: rename to "connect"
     subscribe?(): any;
@@ -72,7 +73,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             subscription: Subscription,
 
             // A governor will not exist in the case of a `subscribe` element.
-            governor?: Governor<any, any>
+            governor?: InternalGovernor<any, any>
         }
     } = {}
 
@@ -84,9 +85,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     // to the end of the connect.
     expectingChildChangeFor?: string
 
+    // If we know there is a flush coming up, then let's wait for the flush
+    // before ending any transactions.
     shouldEndTransactionOnFlush: boolean = false
 
-    governor?: Governor<Props, Value>
+    governor?: InternalGovernor<Props, Value>
 
     // Keep track of whether we need to call componentDidInstantiate on the
     // next flush.
@@ -116,7 +119,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
 
     // A queue of side effects that must be run on children
-    queue: { governor: Governor<any, any>, action: 'flush' | 'dispose' }[] = []
+    queue: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' }[] = []
 
     // A pipe for events out of this object
     subject: OutletSubject<Value>
@@ -128,10 +131,13 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     transactionLevel: number = 0
 
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props, isStrict = false) {
-        this.disallowSideEffectsReason.unshift('in constructor')
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.props = props
+
+        // This will be shifted off the stack during `createGovernor`, which
+        // is guaranteed to run directly after the subclass constructor.
+        this.disallowSideEffectsReason.unshift('in constructor')
     }
 
     /**
@@ -176,7 +182,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    setProps = (props: Props): void => {
+    setPropsWithoutFlush = (props: Props): void => {
         if (this.disallowSideEffectsReason[0]) {
             if (this.isStrict) {
                 throw new Error(`You cannot update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
@@ -185,23 +191,36 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 console.warn(`You should not update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
         }
+
         this.awaitingFlush = true
+
         if (this.lifecycle.componentWillReceiveProps) {
             this.pushFix()
-            // TODO: add test that we don't start/stop a transaction if setState is called within here.
             this.isReceivingProps = true
             this.lifecycle.componentWillReceiveProps(props)
             this.isReceivingProps = false
             this.popFix()
         }
+
         this.props = props
-        if (this.lifecycle.getDerivedStateFromProps) {
+
+        if (this.lifecycle.constructor.getDerivedStateFromProps) {
             this.disallowSideEffectsReason.unshift("running `getDerivedStateFromProps`")
-            this.state = Object.assign({}, this.state, this.lifecycle.getDerivedStateFromProps(props, this.state))
+            this.state = Object.assign({}, this.state, this.lifecycle.constructor.getDerivedStateFromProps(props, this.state))
+            this.disallowSideEffectsReason.shift()
         }
-        this.disallowSideEffectsReason.shift()
+        
         this.connect()
         this.publish()
+    }
+
+    // A convencience method for manually changing the props of a Governor.
+    // Avoid using this if possible.
+    setProps = (props: Props, dontFlush=false): void => {
+        this.setPropsWithoutFlush(props)
+        if (!dontFlush) {
+            this.flush()
+        }
     }
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
@@ -218,33 +237,48 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             this.callbacks.push(callback)
         }
 
-        let needTransaction = !this.awaitingFlush
+        // If we're not awaiting flush from a call to `setPropsWithoutFlush`,
+        // we're not in `componentWillReceiveProps`, and we're not in a
+        // transaction, then this call was likely triggered by an action
+        // function in a subclass that was too lazy to add a transaction
+        // manually, so we'll add one here.
+        let needTransaction =
+            !this.awaitingFlush &&
+            !this.isReceivingProps &&
+            this.transactionLevel === 0
         if(needTransaction) {
-            // hack to deal with componentWillReceiveProps so that it doesn't
-            // start a transaction just when calling `setProps` I wish it
-            // would die.
             this.increaseTransactionLevel()
         }
+
         this.disallowSideEffectsReason.unshift("running a setState updater")
         this.state = Object.assign({}, this.state, updater(this.state, this.props))
         this.disallowSideEffectsReason.shift()
+
+        // If `setState` is called within `componentWillReceiveProps`, then
+        // a `connect` and `publish` is already scheduled immediately
+        // afterwards.
         if (!this.isReceivingProps) {
             this.connect()
             this.publish()
         }
+
         if (needTransaction) {
             this.decreaseTransactionLevel()
         }
     }
 
+    // TODO:
+    // this method feels like it could be a lot cleaner.
     connect() {
         if (this.lifecycle.subscribe) {
-            this.disallowSideEffectsReason.unshift("running connect")
-            this.isRunningConnectChild = true
+            this.disallowSideEffectsReason.unshift("running connectChild")
+
             this.pushFix()
+            this.isRunningConnectChild = true
             let element = this.lifecycle.subscribe()
-            this.popFix()
             this.isRunningConnectChild = false
+            this.popFix()
+
             if (element === undefined) {
                 console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
             }
@@ -317,16 +351,13 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 subsKeysToRemove.delete(key)
                 if (isValidElement(nextChildNode)) {
                     if (forceFullUpdate || !doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
-                        let governor: Governor<any, any> | undefined
+                        let governor: InternalGovernor<any, any> | undefined
                         let observable: TransactionalObservable<any>
                         if (nextChildNode.type === 'subscribe') {
                             observable = nextChildNode.props.to
                         }
                         else {
-                            governor = createGovernor(
-                                nextChildNode,
-                                false /* don't autoflush */
-                            )
+                            governor = internalCreateGovernor(nextChildNode)
                             this.addToQueue({
                                 governor: governor,
                                 action: 'flush',
@@ -361,7 +392,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                         childrenToDisposeKeys.delete(key)
                         if (nextChildNode.type !== 'subscribe') {
                             this.expectingChildChangeFor = key
-                            prevChild.governor!.setProps(nextChildNode.props)
+                            prevChild.governor!.setPropsWithoutFlush(nextChildNode.props)
                             delete this.expectingChildChangeFor
                             this.addToQueue({
                                 governor: prevChild.governor!,
@@ -372,7 +403,13 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 }
                 else {
                     delete nextChildren[key]
-                    this.setSubs(key, nextChildNode)
+                    
+                    if (key === Root) {
+                        this.subs = nextChildNode
+                    }
+                    else {
+                        this.subs[key as any] = nextChildNode
+                    }
                 }
             }
 
@@ -406,17 +443,12 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    setSubs(key: string | Symbol, value: any) {
-        if (key === Root) {
-            this.subs = value
-        }
-        else {
-            this.subs[key as any] = value
-        }
-    }
-
+    // Handle each published value from our children.
     handleChildChange(key: string, value) {
+        // Was this called as part of a `subscribe` or `setProps` call
+        // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
+
         if ((!isExpectingChange && this.disallowSideEffectsReason[0]) || this.transactionLevel === 0) {
             if (this.isStrict) {
                 throw new Error(`A Govern component cannot receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
@@ -426,10 +458,20 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
  
+        // If we're not awaiting flush from a call to `setPropsWithoutFlush`,
+        // and we're not expecting a change due to a `connectChild` call, then
+        // we must have received an event from a raw ES Observable that
+        // doesn't support transactions, and we'll wrap it in a transaction
+        // before passing it on.
         let needTransaction = !this.awaitingFlush && !isExpectingChange
         if (needTransaction) {
             this.increaseTransactionLevel()
         }
+
+        // If this method wasn't called while wrapped in `connect`, and our
+        // current child is a `<combine />`, we'll need to shallow clone our
+        // child before updating it. Otherwise we'll also overwrite our last
+        // published child, breaking `shouldComponentPublish`.
         if (!isExpectingChange) {
             if (this.lastCombinedType === 'array') {
                 this.subs = (this.subs as any).slice(0)
@@ -438,10 +480,20 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 this.subs = Object.assign({}, this.subs)
             }
         }
-        this.setSubs(key, value)
+
+        // Mutatively update our child
+        if (key === Root) {
+            this.subs = value
+        }
+        else {
+            this.subs[key as any] = value
+        }
+
+        // We don't need to `publish` if there is already one scheduled.
         if (!isExpectingChange && !this.isReceivingProps) {
             this.publish()
         }
+
         if (needTransaction) {
             this.decreaseTransactionLevel()
         }
@@ -449,13 +501,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     publish() {
         this.pushFix()
-        this.disallowSideEffectsReason.unshift("running shouldComponentUpdate")
+
+        this.disallowSideEffectsReason.unshift("running shouldComponentPublish")
         let shouldComponentPublish =
             !this.previousPublish ||
             !this.lifecycle.shouldComponentUpdate ||
             this.lifecycle.shouldComponentUpdate(this.previousPublish.props, this.previousPublish.state, this.previousPublish.subs)
         this.disallowSideEffectsReason.shift()
         
+        // Publish a new value based on the current props, state and child.
         if (shouldComponentPublish) {
             this.disallowSideEffectsReason.unshift("publishing a value")
             this.subject.next(this.lifecycle.getValue())
@@ -467,31 +521,42 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
             this.hasPublishedSinceLastUpdate = true
         }
+
         this.popFix()
     }
 
-    createGovernor(): Governor<Props, Value> {
+    createGovernor(): InternalGovernor<Props, Value> {
         if (this.governor) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
+        // Side effects were disallowed during the subclass' constructor.
         this.disallowSideEffectsReason.shift()
+
+        // Props and any state were set in the constructor, so we can jump
+        // directly to `connect`.
         this.connect()
+
+        // Skip `publish`, as we need to use the initial value when creating
+        // the outlet.
         this.pushFix()
         this.disallowSideEffectsReason.unshift("publishing a value")
         this.subject = new OutletSubject(this.lifecycle.getValue())
         this.disallowSideEffectsReason.shift()
+        this.popFix()
+
+        // Used by shouldComponentPublish
         this.previousPublish = {
             props: this.props,
             state: this.state,
             subs: Object.assign({}, this.subs),
         }
-        this.popFix()
 
         let outlet = new Outlet(this.subject)
         this.governor = Object.assign(outlet, {
             getOutlet: () => new Outlet(this.subject),
             setProps: this.setProps,
+            setPropsWithoutFlush: this.setPropsWithoutFlush,
             flush: this.flush,
             dispose: this.dispose,
         })
@@ -514,7 +579,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     flush = () => {
         this.awaitingFlush = false
 
-        let nextItem: { governor: Governor<any, any>, action: 'flush' | 'dispose' } | undefined
+        // Iterate through children that have been created, updated or
+        // destroyed, calling `flush` or `dispose` to process any side
+        // effects in their children, or their `componentDidUpdate`/
+        // `componentWillBeDisposed` lifecycle methods.
+        let nextItem: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' } | undefined
         while (nextItem = this.queue.shift()) {
             if (nextItem.action === 'flush') {
                 nextItem.governor.flush()
@@ -524,6 +593,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
         
+        // Once we've emptied the queue of possible side effects in children,
+        // we'll run our own unpure lifecycle methods.
         if (!this.hasCalledComponentDidInstantiate) {
             this.hasCalledComponentDidInstantiate = true
             if (this.lifecycle.componentDidInstantiate) {
@@ -549,12 +620,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             subs: this.subs,
         }
 
+        // Run callbacks passed into `setState`
         while (this.callbacks.length) {
             let callback = this.callbacks.shift() as Function
             callback()
         }
 
-        // Our lifecycle methods / callbacks may have caused more changes
+        // If our `componentDidInstantiate` / `componentDidUpdate` lifecycle
+        // methods caused any further calls to `connect`, we'll need to
+        // recursively process the queue.
         if (this.queue.length && !this.awaitingFlush) {
             this.flush()
         }
@@ -566,10 +640,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
     
     decreaseTransactionLevel = () => {
+        // If we know that a flush will be called by the parent in the
+        // future, then we can defer the transaction end until then.
         if (this.awaitingFlush) {
-            // We can safely bail, a flush will be called by the parent in the
-            // future, and a parent will never call `dispose` on a child until
-            // it has flushed it.
             this.shouldEndTransactionOnFlush = true
             return
         }
@@ -635,9 +708,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     /**
-     * Add to the queue if the specified item isn't already there.
+     * Add to the flush queue if the specified item isn't already there.
      */
-    addToQueue(item: { governor: Governor<any, any>, action: 'flush' | 'dispose' }) {
+    addToQueue(item: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' }) {
         for (let i = 0; i < this.queue.length; i++) {
             let currentItem = this.queue[i]
             if (currentItem.governor === item.governor && currentItem.action === item.action) {

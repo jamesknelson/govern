@@ -34,12 +34,6 @@ const RESERVED_PROPS = {
     ref: true,
 }
 
-// The Symbol used to tag the GovernElement-like types. If there is no native Symbol
-// nor polyfill, then a plain number is used for performance.
-const hasSymbol = typeof Symbol === 'function' && Symbol.for;
-
-const GOVERN_ELEMENT_TYPE = hasSymbol ? Symbol.for('govern.element') : '__GOVERN_ELEMENT__'
-
 function hasValidKey(config) {
     return config.key !== undefined
 }
@@ -55,8 +49,9 @@ const BUILT_IN_TYPES = [
  * Checks if an object is a GovernElement. I'm using duck typing here instead
  * of checking checking the value of `$$typeof`, as I want to be able to work
  * with elements created with `React.createElement` as well.
- * TODO: In dev mode, for functions, check that a `getValue` exists on the
- * prototype, if one exists.
+ * TODO: In dev mode, for functions, check that a `publish` method exists on
+ * the prototype (if a prototype exists), ensuring that `type` refers to a
+ * govern component instead of a React component.
  */
 export function isValidElement(object) {
     return (
@@ -66,8 +61,7 @@ export function isValidElement(object) {
         ((typeof object.type === 'function') ||
          (typeof object.type === 'string' && BUILT_IN_TYPES.indexOf(object.type) !== -1)) &&
         ('props' in object) &&
-        ('key' in object) &&
-        ('$$typeof' in object)
+        ('key' in object)
     )
 }
 
@@ -76,8 +70,6 @@ export interface GovernElement<Props, Value> {
     type: string | GovernableClass<Props, Value> | SFC<Props, Value>;
     props: Props;
     key: Key | null;
-
-    $$typeof: any;
 
     // This isn't ever actually set, as it doesn't make sense for an element
     // to have an output. However, it can be used to access the type of the
@@ -177,7 +169,6 @@ export function createElement<Props, Value>(
         type,
         props: props as Props,
         key,
-        $$typeof: GOVERN_ELEMENT_TYPE,
         value: <any>undefined,
     }
 }
