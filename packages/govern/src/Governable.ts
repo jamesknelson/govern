@@ -6,7 +6,7 @@ export interface Governable<Props, Value> {
 }
 
 export interface GovernableClass<Props, Value> {
-    new (props: Props): InternalGovernor<Props, Value>;
+    new (props: Props): Governable<Props, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
 }
