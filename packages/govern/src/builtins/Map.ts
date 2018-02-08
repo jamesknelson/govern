@@ -66,12 +66,12 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
         }
     }
 
-    subscribe() {
+    connectChild() {
         return this.impl.props.to(this.impl.state.fromOut)
     }
 
-    getValue() {
-        return this.impl.subs
+    publish() {
+        return this.impl.child
     }
 
     createGovernor(): InternalGovernor<MapProps<FromValue, ToValue>, ToValue> {

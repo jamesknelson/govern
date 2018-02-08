@@ -10,15 +10,15 @@ export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, Component
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    connectChild() {
         // As stateless functional components are implemented using the standard
         // Component implementation, we can just return a new subscribe element, and
         // the ComponentImplementation class will handle it appropriately. 
         return createElement('subscribe', this.impl.props) as any
     }
 
-    getValue() {
-        return this.impl.subs
+    publish() {
+        return this.impl.child
     }
 
     createGovernor() {

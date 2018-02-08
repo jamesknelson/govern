@@ -4,7 +4,7 @@ import { map, outlet, subscribe, combine, createElement, createGovernor, Compone
 describe('Map', () => {
   it("maps initial value", () => {
     class Test extends Component<{a: string}> {
-      getValue() {
+      publish() {
           return { b: this.props.a }
       }
     }
@@ -17,7 +17,7 @@ describe('Map', () => {
 
   it("accepts changes to from element's props", () => {
     class Double extends Component<{x: number}> {
-      getValue() {
+      publish() {
           return this.props.x*2
       }
     }
@@ -37,7 +37,7 @@ describe('Map', () => {
 
   it("accepts changes to map fn", () => {
     class Double extends Component<{x: number}> {
-      getValue() {
+      publish() {
           return this.props.x*2
       }
     }

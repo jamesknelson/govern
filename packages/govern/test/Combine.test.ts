@@ -33,7 +33,7 @@ describe('Combine', () => {
 
   it("handles changing of child props", () => {
     class Double extends Component<{x: number}> {
-        getValue() {
+        publish() {
             return this.props.x*2
         }
     }

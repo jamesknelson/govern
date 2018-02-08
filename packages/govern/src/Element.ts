@@ -113,7 +113,7 @@ export function createElement<Props, Value>(
     type:
         (new (props: Props) => { props: Props }) &
         (new (props: Props) => {
-            getValue(): Value;
+            publish(): Value;
         }),
     props?: Attributes & Props | null,
     ...children: GovernNode[]): ComponentElement<Props, Value>;

@@ -9,18 +9,18 @@ describe('Component', () => {
     let didCallDidUpdate = false
 
 		class TestComponent extends Component<{}> {
-			subscribe() {
+			connectChild() {
 			  return combine({
 				  a: 1
 			  })
       }
 
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
 		
 			componentDidInstantiate() {
-			  calledDidInstantiateWith = this.subs
+			  calledDidInstantiateWith = this.child
 			}
 		
 			componentDidUpdate(nextProps, nextState, nextComp) {
@@ -39,14 +39,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			subscribe() {
+			connectChild() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -56,7 +56,6 @@ describe('Component', () => {
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
-    governor.flush()
     expect(didUpdateCallCount).toBe(1)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -67,14 +66,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			subscribe() {
+			connectChild() {
         return combine({
 				  a: this.state.a
 			  })
       }
       
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -87,7 +86,6 @@ describe('Component', () => {
     
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     governor.setProps({ updated: true })
-    governor.flush()
     expect(didUpdateCallCount).toBe(2)
     expect(governor.getValue()).toEqual({ a: 2 })
   })
@@ -97,25 +95,25 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      get subs() {
-        return this.getTypedSubs(this)
+      get child() {
+        return this.getTypedChild(this)
       }
 
-      subscribe() {
+      connectChild() {
 			  return combine({
           a: subscribe(counter)
         })
       }
       
-      getValue() {
+      publish() {
         return {
-          a: this.subs.a.count
+          a: this.child.a.count
         }
       }
 		
 			componentDidUpdate(prevProps, prevState, prevSubs) {
         didUpdateCallCount += 1
-        if (this.subs.a.count === 0) {
+        if (this.child.a.count === 0) {
           counter.getValue().increase()
         }
 			}
@@ -124,7 +122,6 @@ describe('Component', () => {
     let governor = createGovernor(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
     governor.setProps({ updated: true })
-    governor.flush()
     expect(didUpdateCallCount).toBe(2)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -137,14 +134,14 @@ describe('Component', () => {
         this.setState({ a: 2 })
 			}
 
-			subscribe() {
+			connectChild() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
     }
     
@@ -156,17 +153,16 @@ describe('Component', () => {
       updateCount++
     })
     governor.setProps({ updated: true })
-    governor.flush()
     expect(latest).toEqual({ a: 2 })
   })
 
-  it("shouldComponentUpdate can prevent updates", () => {
+  it("shouldComponentPublish can prevent updates", () => {
     class TestComponent extends Component<{ updated }> {
-      shouldComponentUpdate() {
+      shouldComponentPublish() {
         return false
       }
       
-      getValue() {
+      publish() {
         return null
       }
     }
@@ -183,7 +179,7 @@ describe('Component', () => {
     expect(updateCount).toBe(1)
   })
 
-  it("shouldComponentUpdate receives old state and props", () => {
+  it("shouldComponentPublish receives old state and props", () => {
     let state, props
     let nextState, nextProps
 
@@ -196,7 +192,7 @@ describe('Component', () => {
         })
       }
 
-      shouldComponentUpdate(prevProps, prevState) {
+      shouldComponentPublish(prevProps, prevState) {
         state = prevState
         props = prevProps
         nextState = this.state
@@ -204,7 +200,7 @@ describe('Component', () => {
         return false
       }
       
-      getValue() {
+      publish() {
         return null
       }
     }
@@ -226,14 +222,14 @@ describe('Component', () => {
   it("throws if 'subscribe' returns a non-node object", () => {
     expect(() => {
       class TestComponent extends Component<{}> {
-        subscribe() {
+        connectChild() {
           return {
             a: 1
           }
         }
         
-        getValue() {
-          return this.subs
+        publish() {
+          return this.child
         }
       }
 
@@ -241,27 +237,27 @@ describe('Component', () => {
     }).toThrow()
   })
 
-  it("child components with shouldComponentUpdate: false still appear in the parent after setting parent props", () => {
+  it("child components with shouldComponentPublish: false still appear in the parent after setting parent props", () => {
     class TestChildComponent extends Component {
-      shouldComponentUpdate(prevProps, prevState) {
+      shouldComponentPublish(prevProps, prevState) {
         return false
       }
       
-      getValue() {
+      publish() {
         return "hello"
       }
     }
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      connectChild() {
         return combine({
           test: createElement(TestChildComponent)
         })
       }
 
-      getValue() {
+      publish() {
         return {
-          child: this.subs,
+          child: this.child,
           updated: this.props.updated,
         }
       }
@@ -285,13 +281,13 @@ describe('Component', () => {
     let observable = Observable.from('a')
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      connectChild() {
         let children = { a: subscribe(observable), b: subscribe(observable) }
         if (this.props.updated) delete children.b
         return combine(children)
       }
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
     }
     let governor = createGovernor(createElement(TestComponent))
@@ -309,19 +305,19 @@ describe('Component', () => {
         super(props)
         childConstructorCount++
       }
-      getValue() {
+      publish() {
         return "test"
       }
     }
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      connectChild() {
         return combine(
           this.props.updated
             ? [createElement(Child)]
             : {'0': createElement(Child)} as any
         )
       }
-      getValue() {
+      publish() {
         return null
       }
     }
@@ -340,14 +336,14 @@ describe('Component', () => {
         subject.next(2)
       }
 
-      subscribe() {
+      connectChild() {
         return combine({
           inner: subscribe(outlet)
         })
       }
 
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
     }
 
@@ -365,30 +361,30 @@ describe('Component', () => {
     })
   })
 
-  it("shouldComponentUpdate receives old subs", () => {
+  it("shouldComponentPublish receives old subs", () => {
     let subject = new OutletSubject(1)
     let outlet = new Outlet(subject)
-    let shouldComponentUpdateValue
+    let shouldComponentPublishValue
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      connectChild() {
         return combine({
           inner: subscribe(outlet)
         })
       }
 
-      shouldComponentUpdate(prevProps, prevState, prevSubs) {
-        shouldComponentUpdateValue = prevSubs.inner !== this.subs.inner
+      shouldComponentPublish(prevProps, prevState, prevSubs) {
+        shouldComponentPublishValue = prevSubs.inner !== this.child.inner
       }
 
-      getValue() {
-        return this.subs
+      publish() {
+        return this.child
       }
     }
 
     let governor = createGovernor(createElement(TestComponent))
     subject.next(2)
-    expect(shouldComponentUpdateValue).toEqual(true)
+    expect(shouldComponentPublishValue).toEqual(true)
   })
 
   it("events can be received from combined <subscribe /> elements in the same transaction as a setState", () => {
@@ -396,15 +392,15 @@ describe('Component', () => {
     let outlet = new Outlet(subject)
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      connectChild() {
         return combine({
           inner: subscribe(outlet)
         })
       }
 
-      getValue() {
+      publish() {
         return {
-          child: this.subs,
+          child: this.child,
           update: () => {
             subject.transactionStart()
             this.setState({})
@@ -434,7 +430,7 @@ describe('Component', () => {
         return props.updated ? { hello: 'world' } : {}
       }
 
-      getValue() {
+      publish() {
         return this.state.hello
       }
     }

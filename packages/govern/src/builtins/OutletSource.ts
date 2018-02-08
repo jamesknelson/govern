@@ -18,7 +18,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
     constructor(props: OutletSourceProps<T>) {
 		this.impl = new ComponentImplementation(this, props)
 		this.outputImpl = new ComponentImplementation({
-			getValue: () => {
+			publish: () => {
 				return this.outputImpl.state.output
 			}
 		}, props)
@@ -82,7 +82,7 @@ export class OutletSource<T> implements Governable<OutletSourceProps<T>, Outlet<
         }
     }
 
-    getValue() {
+    publish() {
         return this.outputObservable
 	}
 

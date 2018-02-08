@@ -67,12 +67,12 @@ export function internalCreateGovernor<Props, Value>(element: GovernElement<Prop
         // an anonymous Component class.
         let sfc = element.type as any
         let constructor = class extends Component<any, any> {
-            subscribe() {
+            connectChild() {
                 return sfc(this.props)
             }
 
-            getValue() {
-                return this.subs
+            publish() {
+                return this.child
             }
         }
         instance = new constructor(element.props)

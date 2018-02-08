@@ -13,7 +13,7 @@ export function createCounterClass() {
             this.setState(({ count }) => ({ count: count + 1 }))
         }
 
-        getValue() {
+        publish() {
             return {
                 count: this.state.count,
                 increase: this.increase,

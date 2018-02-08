@@ -27,7 +27,7 @@ describe('createGovernor', () => {
         a: 1
       }
 
-      getValue() {
+      publish() {
         return {
           a: this.props.a,
           b: 2,

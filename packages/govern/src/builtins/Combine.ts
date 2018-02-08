@@ -10,15 +10,15 @@ export class Combine<CombinedValue> implements Governable<CombineProps<CombinedV
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    connectChild() {
         // As stateless functional components are implemented using the standard
         // Component implementation, we can just return the children as-is, and
         // they'll be handled properly.
         return createElement('combine', this.impl.props)
     }
 
-    getValue() {
-        return this.impl.subs
+    publish() {
+        return this.impl.child
     }
 
     createGovernor() {

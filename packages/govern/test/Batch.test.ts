@@ -5,34 +5,34 @@ import { createModelClass } from './utils/createModelClass'
 
 describe('Batching', () => {
   class SplitObservable extends Component<{ userObservable: Observable<{ firstName: string, lastName: string }> }> {
-    subscribe() {
+    connectChild() {
       let { userObservable } = this.props
       return combine({
         firstName: outlet(map(subscribe(userObservable), user => user.firstName)),
         lastName: outlet(map(subscribe(userObservable), user => user.lastName)),
       })
     }
-    get subs() {
-      return this.getTypedSubs(this)
+    get child() {
+      return this.getTypedChild(this)
     }
-    getValue() {
-      return this.subs
+    publish() {
+      return this.child
     }
   }
 
   class JoinedObservables extends Component<{ firstName: Observable<string>, lastName: Observable<string> }> {
-    subscribe() {
+    connectChild() {
       let { firstName, lastName } = this.props
       return combine({
         firstName: subscribe(firstName),
         lastName: subscribe(lastName),
       })
     }
-    get subs() {
-      return this.getTypedSubs(this)
+    get child() {
+      return this.getTypedChild(this)
     }
-    getValue() {
-      let { firstName, lastName } = this.subs
+    publish() {
+      let { firstName, lastName } = this.child
       return firstName + ' ' + lastName
     }
   }
@@ -54,7 +54,6 @@ describe('Batching', () => {
     expect(lastValue).toEqual(' ')
 
     splitGovernor.setProps({ userObservable: observableOf({ firstName: "James", lastName: "Nelson" }) })
-    splitGovernor.flush()
 
     expect(lastValue).toEqual('James Nelson')
     expect(valueCount).toEqual(2)

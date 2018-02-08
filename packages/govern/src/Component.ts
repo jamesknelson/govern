@@ -9,17 +9,17 @@ export interface ComponentClass<Props, Value=any> extends GovernableClass<Props,
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> extends ComponentImplementationLifecycle<Props, State, Value, Subs> {
+export interface ComponentLifecycle<Props={}, State={}, Value=any, Child=any> extends ComponentImplementationLifecycle<Props, State, Value, Child> {
     // While `ComponentImplementation` allows us to "subscribe" to any value,
     // it only makes sense for components to subscribe to elements (as other
     // values are treated as constants.)
-    subscribe?(): GovernElement<any, Subs> | null;
+    connectChild?(): GovernElement<any, Child> | null;
 }
 
-export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
+export interface Component<Props={}, State={}, Value=any, Child=any> extends ComponentLifecycle<Props, State, Value, Child> { }
 
-export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
-    protected impl: ComponentImplementation<Props, State, Value, Subs>;
+export abstract class Component<Props, State={}, Value=any, Child=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Child> {
+    protected impl: ComponentImplementation<Props, State, Value, Child>;
 
     constructor(props: Props, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props, !!strict)
@@ -29,15 +29,15 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         return this.impl.getFix().props
     }
 
-    get subs() {
+    get child() {
         if (this.impl.isRunningConnectChild) {
-            throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot access a component's "child" property within its "connectChild" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.getTypedSubs(this as this)
+        return this.getTypedChild(this as this)
     }
 
     getSubs() {
-        return this.getTypedSubs(this)
+        return this.getTypedChild(this)
     }
 
     get state() {
@@ -59,11 +59,8 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (!this.impl.governor) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.willDispose) {
-            throw new Error(`You cannot call "setState" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
-        }
         if (this.impl.disallowSideEffectsReason[0]) {
-            throw new Error(`You cannot call "setState" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "setState" while ${this.impl.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
         let updater = state as ((prevState: Readonly<State>, props: Props) => any)
@@ -77,11 +74,8 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (!this.impl.governor) {
             throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.willDispose) {
-            throw new Error(`You cannot call "transaction" on a component instance that has been disposeed. See component "${getDisplayName(this.constructor)}".`)
-        }
         if (this.impl.disallowSideEffectsReason[0]) {
-            throw new Error(`You cannot call "transaction" within a component's "getValue" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "transaction" while ${this.impl.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
         this.impl.increaseTransactionLevel()
@@ -93,16 +87,16 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         return this.impl.createGovernor()
     }
 
-    abstract getValue(): Value;
+    abstract publish(): Value;
 
-    // TypeScript isn't able to infer the output of the subclass's `getValue`
-    // function by just accessing `this`, so we need to pass in the subclass
-    // if we want access to a correctly typed output :-(
-    getTypedSubs<Subs>(component: { subscribe?: () => GovernElement<any, Subs> | null }): Subs {
-        return this.impl.getFix().subs as any
+    // TypeScript isn't able to infer the output of the subclass's
+    // `connectChild` function by just accessing `this`, so we need to pass
+    // in the subclass if we want access to a correctly typed output :-(
+    getTypedChild<Child>(component: { connectChild?: () => GovernElement<any, Child> | null }): Child {
+        return this.impl.getFix().child as any
     }
 
-    getTypedValue<Value>(component: { getValue: () => Value }): Value {
+    getTypedValue<Value>(component: { publish: () => Value }): Value {
         return this.impl.subject.getValue() as any
     }
 }

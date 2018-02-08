@@ -18,7 +18,7 @@ function createModelClass() {
       this.setState({ value }) 
     }
 
-    getValue() {
+    publish() {
       return {
         change: this.change,
         value: this.state.value,
@@ -32,11 +32,11 @@ function createModelClass() {
       defaultValue: {},
     }
 
-    get subs() {
-      return this.getTypedSubs(this)
+    get child() {
+      return this.getTypedChild(this)
     }
 
-    subscribe() {
+    connectChild() {
       return combine({
         name: createElement(ModelPrimitive, {
           defaultValue: this.props.defaultValue.name as string,
@@ -57,17 +57,17 @@ function createModelClass() {
       })
     }
 
-    getValue() {
+    publish() {
       let error = {} as any
-      if (this.subs.name.error) error.name = this.subs.name.error
-      if (this.subs.email.error) error.email = this.subs.email.error
+      if (this.child.name.error) error.name = this.child.name.error
+      if (this.child.email.error) error.email = this.child.email.error
       if (!Object.keys(error).length) error = undefined
 
       return {
-        children: this.subs,
+        children: this.child,
         value: {
-          name: this.subs.name.value,
-          email: this.subs.email.value,
+          name: this.child.name.value,
+          email: this.child.email.value,
         },
         error: error,
         change: this.change,
@@ -77,10 +77,10 @@ function createModelClass() {
     change = (value) => {
       this.transaction(() => {
         if (value.name) {
-          this.subs.name.change(value.name)
+          this.child.name.change(value.name)
         }
         if (value.email) {
-          this.subs.email.change(value.email)
+          this.child.email.change(value.email)
         }
       })
     }
@@ -94,22 +94,22 @@ function createDataSourceClass() {
       this.state = { store: null }
     }
 
-    get subs() {
-      return this.getTypedSubs(this)
+    get child() {
+      return this.getTypedChild(this)
     }
 
     receive = (store) => {
       this.setState({ store })
     }
 
-    subscribe() {
+    connectChild() {
       return outlet(combine(this.state.store))
     }
 
-    getValue() {
+    publish() {
       return {
         receive: this.receive,
-        observable: this.subs
+        observable: this.child
       }
     }
   }
@@ -121,34 +121,34 @@ function createFormControllerClass() {
   return class FormController extends Component<{ data }> {
     awaitingData: boolean = true
 
-    get subs() {
-      return this.getTypedSubs(this)
+    get child() {
+      return this.getTypedChild(this)
     }
 
-    subscribe() {
+    connectChild() {
       return combine({
         data: subscribe(this.props.data),
         model: createElement(Model, null)
       })
     }
 
-    getValue() {
-      return this.subs
+    publish() {
+      return this.child
     }
 
     componentDidInstantiate() {
-      this.receiveDataIfAvailable(this.subs.data)
+      this.receiveDataIfAvailable(this.child.data)
     }
 
     componentDidUpdate(prevProps, prevState, prevSubs) {
-      this.receiveDataIfAvailable(this.subs.data)
+      this.receiveDataIfAvailable(this.child.data)
     }
 
     receiveDataIfAvailable(output) {
       if (this.awaitingData && output && Object.keys(output).length > 0) {
         this.transaction(() => {
           this.awaitingData = false
-          this.subs.model.change(output)
+          this.child.model.change(output)
         })
       }
     }
