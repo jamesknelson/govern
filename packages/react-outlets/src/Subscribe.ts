@@ -122,6 +122,7 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     this.subscription = props.to.subscribe({
       next: this.handleChange,
       error: this.receiveError,
+      complete: undefined,
       transactionStart: this.handleTransactionStart,
       transactionEnd: this.handleTransactionEnd
     })
