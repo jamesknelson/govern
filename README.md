@@ -7,7 +7,9 @@ Govern
 
 Use govern to create re-usable controllers for your forms, data store, authentication, etc. Use govern's four built-in components to combine them.
 
-If you've used React, you already know the API. Just replace `render` with `publish`:
+If you've used React, you already know the API. Just replace `render` with `publish`!
+
+See a [live demo](https://codesandbox.io/s/vmvzk774n0) at Code Sandbox.
 
 ```
 import * as Govern from "govern";
@@ -85,7 +87,7 @@ The React ecosystem already has Redux and `setState`. So why do we need Govern t
 
 Where Redux is great at managing *global* state like fetched data, Govern is great at managing [*control* state](http://jamesknelson.com/5-types-react-application-state/) -- for example, selected items, pagination, or search queries.
 
-And where React's `setState` method is great for simple cases like animations, it still ties state to the DOM. With Govern's renderless components, you can use the same `setState` API to store state wherever you'd like.
+And where React's `setState` method is great for simple cases like animations, it still ties state to the DOM. With Govern's observable components, you can use the same `setState` API to store state wherever you'd like.
 
 #### When should I use Govern?
 
@@ -126,8 +128,8 @@ If you've used React, Govern's renderless components will feel familiar. They ha
 
 Govern components have two main differences from React components:
 
-- They don't output React elements. Instead of an `rende()` method, they have an `output()` method that returns a plain JavaScript object.
-- Handler methods must be bound using the `this.bindAction()` method instead of JavaScript's `Function.prototype.bind()`.
+- They don't output React elements. Instead of an `render()` method, they have a `publish()` method that returns a plain JavaScript object.
+- Handler methods with side effects should be wrapped with `this.transaction(() => { ... })`.
 
 For example, here is a Govern component that could be used to manage a single input's state:
 
@@ -150,7 +152,7 @@ class Model extends Govern.Component {
     })
   }
 
-  render() {
+  publish() {
     // Govern components output plain old JavaScript objects and arrays.
     return {
       change: this.change,
@@ -178,9 +180,9 @@ const EmailModel = (props) =>
 Using Govern components
 -----------------------
 
-### govern(mapOwnPropsToGovernElement, mapOutputToProps)
+### connect(mapOwnPropsToGovernElement, mapOutputToProps)
 
-Once you have a Govern component, you can instantiate it and attach its output to a React component with the `govern` decorator function. It's signature is:
+Once you have a Govern component, you can instantiate it and attach its output to a React component with the `connect` decorator function. It's signature is:
 
 ```
 govern(
@@ -190,7 +192,7 @@ govern(
   (component: ReactComponent) => ReactComponent
 ```
 
-If you've used Redux before, `govern` will be familiar; it is a lot like `connect`. It's first function is used to specify what data you need, and its second (optional) function let's you specify how to inject that data into an attached component.
+If you've used Redux before, `connect` will be familiar, but takes slightly different arguments. It's first function is used to specify what data you need, and its second (optional) function let's you specify how to inject that data into an attached component.
 
 For example:
 
@@ -211,7 +213,7 @@ const EmailForm = (props) =>
 // Create a new component which uses the output of EmailModel as the props
 // for EmailForm.
 const ControlledEmailForm =
-  govern(props => Govern.createElement(EmailModel, props))(EmailForm)
+  connect(props => Govern.createElement(EmailModel, props))(EmailForm)
 
 ReactDOM.render(
   // The props for `ControlledEmailForm` will be passed to
@@ -224,7 +226,7 @@ ReactDOM.render(
 You can also use `govern` with the ESNext decorator syntax:
 
 ```jsx
-@govern(props => Govern.createElement(EmailModel, props))
+@connect(props => Govern.createElement(EmailModel, props))
 class EmailForm extends React.Component {
   render() {
     <label>
@@ -242,7 +244,7 @@ Creating a Govern element that receives all input props is a common scenario,
 so there is a shortcut, where you can just pass in a component:
 
 ```jsx
-@govern(EmailModel)
+@connect(EmailModel)
 class EmailForm extends React.Component {
   render() {
     <label>
@@ -256,7 +258,7 @@ class EmailForm extends React.Component {
 }
 ```
 
-While `govern` is the simplest way of using a Govern component, there can be times when it doesn't give you enough control. Luckily, you have other options.
+While `connect` is the simplest way of using a Govern component, there can be times when it doesn't give you enough control. Luckily, you have other options.
 
 ### `createGovernor(element: GovernElement)`
 
@@ -278,20 +280,25 @@ let emailModel = createGovernor(
 )
 ```
 
-You can then interact with the component through the returned controller's `get()`, `setProps(...)`, `subscribe(...)` and `destroy()` methods:
+You can an observable's latest published value by calling `getValue()`:
 
 ```js
-// undefined
-modelController.get().error
-
-// ["I don't like e-mails!"]
-modelController.setProps({ validate: () => ["I don't like e-mails!"] })
-modelController.get().error
+emailModel.getValue() // test@example.com
 ```
 
-### `<Connect to={observable} children={(output) => ReactNode} />`
+The returned Governor objects also follow the proposed [ESNext Observables](https://github.com/tc39/proposal-observable) format, so subscribing to them is simple:
 
-Once you have a Governor object, you can use the `<Connect>` component to access its output in a React component. Internally, this uses the governor's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the render function passed via the `children` prop.
+```js
+emailModel.subscribe(value => {
+  console.log('component published:', value)
+})
+```
+
+You can also set the governor component's props using its `setProps()` method, but try to leave this to the `connect` decorator or `<Connect to />` component when possible.
+
+### `<Subscribe to={observable} children={(output) => ReactNode} />`
+
+Once you have a Governor object, you can use the `<Subscribe>` component to access its output in a React component. Internally, this uses the governor's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the render function passed via the `children` prop.
 
 For example, you could re-implement the above form example using `createGovernor` and `<Subscribe>`, but with the form's state stored *outside* the form component:
 
@@ -304,7 +311,7 @@ const EmailForm = ({ governor }) =>
       E-mail:
       <input
         value={model.value}
-        onChange={e => model.change(e.targe.value)}
+        onChange={e => model.change(e.target.value)}
       />
     </label>
   } />
@@ -336,7 +343,7 @@ For example, you could create a LoginFormModel component that contains the state
 
 ```jsx
 const LoginFormModel = ({ defaultValue }) =>
-  ({
+  Govern.createElement('combine', {
     email: createElement(EmailModel, {
       defaultValue: props.defaultValue.email
     }),
@@ -392,7 +399,7 @@ const AuthStatusController = () => ({
   auth: createElement('sink', { observable: authGovernor })
 })
 
-let ConnectedAuthStatus = govern(AuthStatusController)(AuthStatus)
+let ConnectedAuthStatus = connect(AuthStatusController)(AuthStatus)
 ```
 
 
@@ -421,7 +428,6 @@ The constructor is called when a Controller isntance is instantiated.
 
 Perform any initialization here, including:
 
-- creating actions with `bindActions`
 - setting an initial value of `this.state`
 - addings event handlers to stores, etc.
 
@@ -435,11 +441,11 @@ Similar to `componentDidMount`, this component will be called once the initial o
 
 This is identical to the React lifecycle method.
 
-### `componentDidUpdate(nextProps, nextState, nextOutput)`
+### `componentDidUpdate(nextProps, nextState, nextChild)`
 
-Similar to React's `componentDidUpdate`, but also receives the updated `output`. This can be used in a similar way to React's `refs`.
+Similar to React's `componentDidUpdate`.
 
-### `componentWillBeDestroyed()`
+### `componentWillBeDisposed()`
 
 Called when a component will be be destroyed. Use this in the same way that you'd use React's `componentWillUnmount()` lifecycle method.
 
@@ -447,9 +453,9 @@ Called when a component will be be destroyed. Use this in the same way that you'
 Component Instance API
 ----------------------
 
-### `this.output`
+### `this.child`
 
-A property that contains the last output of the component.
+A property that contains the last output of the component connected via `connectChild`.
 
 This is similar in purpose to React's `refs` property. You can use it to interact with child components when required, but it is generally cleaner to avoid this if possible.
 
@@ -476,7 +482,7 @@ interface Governor<Props, Output> {
   setProps(newProps: P): void,
 
   // Clean up the component instance
-  destroy(): void,
+  dispose(): void,
 
   // Subscribes to the sequence with an observer
   subscribe(observer: Observer<T>): Subscription;
