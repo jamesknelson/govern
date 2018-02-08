@@ -8,7 +8,7 @@ import { connect } from '../src/Connect'
 class TestController extends Govern.Component<any, any> {
   state = { value: this.props.defaultValue }
 
-  getValue() {
+  publish() {
     return {
       value: this.state.value,
       change: (value) => this.setState({ value })

@@ -3,14 +3,77 @@ Govern
 
 [![Version](http://img.shields.io/npm/v/govern.svg)](https://www.npmjs.org/package/govern)
 
+**Govern is a React-like component system, but for state.**
 
-**A component-based state management tool for React.**
+Use govern to create re-usable controllers for your forms, data store, authentication, etc. Use govern's four built-in components to combine them.
 
-[Try it out](https://reactarmory.com/examples/govern/govern-form) in React Armory's live editor!
+If you've used React, you already know the API. Just replace `render` with `publish`:
 
-Govern is based around the concept of *renderless components*, i.e. components without a `render` function.
+```
+import * as Govern from "govern";
+import { Connect } from "react-govern";
 
-Renderless components are great for managing application state. For example, you can use them to implement re-usable form controllers, authentication logic, or even a JSON API interface. And best of all, they can be composed and re-used.
+
+class Model extends Govern.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      value: props.defaultValue || '',
+    }
+
+    this.change = this.change.bind(this)
+  }
+
+  change(value) {
+    this.setState({ value })
+  }
+
+  publish() {
+    return {
+      change: this.change,
+      value: this.state.value,
+      error: this.props.validate && this.props.validate(this.state.value),
+    }
+  }
+}
+
+
+const SignUpForm = (props) =>
+  <Connect to={
+    <combine children={{
+      name:
+        <Model
+          validate={value => !value && 'who are you?'}
+        />,
+      email:
+        <Model
+          validate={value => value.indexOf('@') === -1 && 'not an email'}
+        />,
+    }} />
+  }>
+    {model =>
+      <div>
+        <Field label='Name' model={model.name} />
+        <Field label='E-mail' model={model.email} />
+      </div>
+    }
+  </Connect>
+
+
+const Field = (props) =>
+  <div>
+    <label>
+      {props.label}
+      <input
+        value={props.model.value}
+        onChange={e => props.model.change(e.target.value)}
+      />
+      {props.model.error &&
+        <span style={{ color: 'red' }}>{props.model.error}</span>
+      }
+    </label>
+  </div>
+```
 
 
 Another state management tool?
