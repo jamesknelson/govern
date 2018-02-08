@@ -17,17 +17,17 @@ import { TransactionalObserverTarget } from './TransactionalObserverTarget'
  * In addition, outlets must be transactional; that is, they must surround
  * value events with transaction events.
  */
-export class Outlet<T, U=T> implements TransactionalObservable<U>, OutletSource<U> {
+export class Outlet<T> implements TransactionalObservable<T>, OutletSource<T> {
     source: OutletSource<T>
-    operator?: Operator<T, U>
+    operator?: Operator<any, T>
 
-    constructor(source: OutletSource<T>, operator?: Operator<T, U>) {
+    constructor(source: OutletSource<T>, operator?: Operator<any, T>) {
         this.operator = operator
         this.source = source
     }
 
-    lift<V>(operator?: Operator<U, V>): Outlet<U, V> {
-        return new Outlet<U, V>(this, operator)
+    lift<U>(operator?: Operator<T, U>): Outlet<U> {
+        return new Outlet<U>(this as any, operator)
     }
 
     get closed() {
@@ -35,7 +35,7 @@ export class Outlet<T, U=T> implements TransactionalObservable<U>, OutletSource<
     }
     
     subscribe(
-        targetOrNextOrObserver: Target<U> | TransactionalObserver<U> | ((value: U) => void),
+        targetOrNextOrObserver: Target<T> | TransactionalObserver<T> | ((value: T) => void),
         error?: (error: any) => void,
         complete?: () => void,
         transactionStart?: () => void,
@@ -54,7 +54,7 @@ export class Outlet<T, U=T> implements TransactionalObservable<U>, OutletSource<
         }
     }
 
-    getValue(): U {
+    getValue(): T {
         if (this.operator) {
             return this.operator.getValue(this.source)
         }
@@ -63,7 +63,7 @@ export class Outlet<T, U=T> implements TransactionalObservable<U>, OutletSource<
         }
     }
 
-    map<V>(transform: (value: U) => V): Outlet<U, V> {
+    map<U>(transform: (value: T) => U): Outlet<U> {
         return this.lift(new MapOperator(transform))
     }
 }
