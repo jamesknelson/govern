@@ -3,7 +3,7 @@ import { Observable } from 'outlets'
 import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
 import { createModelClass } from './utils/createModelClass'
 
-describe('Batch', () => {
+describe('Batching', () => {
   class SplitObservable extends Component<{ userObservable: Observable<{ firstName: string, lastName: string }> }> {
     subscribe() {
       let { userObservable } = this.props
@@ -23,52 +23,44 @@ describe('Batch', () => {
   class JoinedObservables extends Component<{ firstName: Observable<string>, lastName: Observable<string> }> {
     subscribe() {
       let { firstName, lastName } = this.props
-      return map(
-        combine({
-          firstName: subscribe(firstName),
-          lastName: subscribe(lastName),
-        }),
-        ({ firstName, lastName }) => {
-          return firstName + ' ' + lastName
-        }
-      )
+      return combine({
+        firstName: subscribe(firstName),
+        lastName: subscribe(lastName),
+      })
     }
     get subs() {
       return this.getTypedSubs(this)
     }
     getValue() {
-      return this.subs
+      let { firstName, lastName } = this.subs
+      return firstName + ' ' + lastName
     }
   }
 
-  it("doesn't batch multiple events from the same raw observable", () => {
+  it("batches multiple multiple events from the same raw observable", () => {
     let userObservable = observableOf({ firstName: "", lastName: "" })
     let splitGovernor = createGovernor(createElement(SplitObservable, { userObservable }))
     let observables = splitGovernor.getValue()
     let fullNameGovernor = createGovernor(createElement(JoinedObservables, observables))
     
-    let transactionCount = 0
+    let valueCount = 0
     let lastValue = undefined as any
-    let noop = () => {}
-    fullNameGovernor.subscribe(
-      name => { lastValue = name },
-      noop,
-      noop,
-      noop,
-      () => { transactionCount++ }
-    )
+    fullNameGovernor.subscribe(name => {
+      valueCount++
+      lastValue = name
+    })
 
-    expect(transactionCount).toEqual(0)
+    expect(valueCount).toEqual(1)
     expect(lastValue).toEqual(' ')
 
     splitGovernor.setProps({ userObservable: observableOf({ firstName: "James", lastName: "Nelson" }) })
     splitGovernor.flush()
 
-    expect(transactionCount).toEqual(2)
     expect(lastValue).toEqual('James Nelson')
+    expect(valueCount).toEqual(2)
   })
 
-  it("does batch multiple events that originate from a govern observable", () => {
+  it("batches multiple events that originate from a govern observable", () => {
     let Model = createModelClass()
     let modelGovernor = createGovernor(
       map(

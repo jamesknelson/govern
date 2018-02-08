@@ -23,9 +23,10 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     // TODO: rename to "connect"
     subscribe?(): any;
 
+    // TODO: rename to "shouldComponentPublish"
     shouldComponentUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
 
-    // TODO: rename to "render"
+    // TODO: rename to "publish"
     getValue(): Value;
     
     componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
@@ -83,6 +84,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     // to the end of the connect.
     expectingChildChangeFor?: string
 
+    shouldEndTransactionOnFlush: boolean = false
+
     governor?: Governor<Props, Value>
 
     // Keep track of whether we need to call componentDidInstantiate on the
@@ -94,6 +97,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     hasPublishedSinceLastUpdate: boolean = false
 
     willDispose: boolean = false
+
+    // Keep track of whether we're in a componentWillReceiveProps lifecycle
+    // method, so that we don't double connect/double publish.
+    isReceivingProps: boolean = false
 
     // Keep track of whether the user is running "connectChild", so we can
     // prevent them from accessing the existing child.
@@ -182,7 +189,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         if (this.lifecycle.componentWillReceiveProps) {
             this.pushFix()
             // TODO: add test that we don't start/stop a transaction if setState is called within here.
+            this.isReceivingProps = true
             this.lifecycle.componentWillReceiveProps(props)
+            this.isReceivingProps = false
             this.popFix()
         }
         this.props = props
@@ -219,8 +228,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.disallowSideEffectsReason.unshift("running a setState updater")
         this.state = Object.assign({}, this.state, updater(this.state, this.props))
         this.disallowSideEffectsReason.shift()
-        this.connect()
-        this.publish()
+        if (!this.isReceivingProps) {
+            this.connect()
+            this.publish()
+        }
         if (needTransaction) {
             this.decreaseTransactionLevel()
         }
@@ -428,7 +439,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
         this.setSubs(key, value)
-        if (!isExpectingChange) {
+        if (!isExpectingChange && !this.isReceivingProps) {
             this.publish()
         }
         if (needTransaction) {
@@ -547,6 +558,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         if (this.queue.length && !this.awaitingFlush) {
             this.flush()
         }
+
+        if (this.shouldEndTransactionOnFlush) {
+            this.shouldEndTransactionOnFlush = false
+            this.decreaseTransactionLevel()
+        }
     }
     
     decreaseTransactionLevel = () => {
@@ -554,7 +570,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             // We can safely bail, a flush will be called by the parent in the
             // future, and a parent will never call `dispose` on a child until
             // it has flushed it.
-            this.transactionLevel -= 1
+            this.shouldEndTransactionOnFlush = true
             return
         }
 

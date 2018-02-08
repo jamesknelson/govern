@@ -15,10 +15,22 @@ export class TransactionalObserverTarget<T> extends Target<T> {
      * further events. This is slightly different to `subscription.closed`,
      * which indicates whether the subscription was closed by the owner.
      */
-    protected isStopped: boolean;
+    protected isStopped: boolean = false;
+
+    /**
+     * Store the latest value, so we can send it before transactionEnd if
+     * the user doesn't provide a transactionEnd handler.
+     */
+    protected latestValue: any;
+
+    /**
+     * Store the transactionLevel, so we can always push out events that
+     * are published outside of actions (like initial events).
+     */
+    protected transactionLevel: number = 0;
 
     protected observer: TransactionalObserver<T>;
-    protected subscriptions: Subscription[];
+    protected subscriptions: Subscription[] = [];
 
     constructor(
         nextOrObserver: TransactionalObserver<T> | ((value: T) => void),
@@ -42,8 +54,6 @@ export class TransactionalObserverTarget<T> extends Target<T> {
             }
         }
 
-        this.isStopped = false
-        this.subscriptions = []
         this.subscription = new ClosableSubscription(() => {
             for (let i = 0; i < this.subscriptions.length; i++) {
                 this.subscriptions[i].unsubscribe()
@@ -72,7 +82,8 @@ export class TransactionalObserverTarget<T> extends Target<T> {
             throw new TargetClosedError()
         }
 
-        if (!this.isStopped && this.observer.next) {
+        this.latestValue = value
+        if (!this.isStopped && this.observer.next && (this.observer.transactionEnd || this.transactionLevel === 0)) {
             this.observer.next(value)
         }
     }
@@ -109,6 +120,8 @@ export class TransactionalObserverTarget<T> extends Target<T> {
             throw new TargetClosedError()
         }
 
+        this.transactionLevel++
+
         if (!this.isStopped && this.observer.transactionStart) {
             this.observer.transactionStart()
         }
@@ -119,8 +132,15 @@ export class TransactionalObserverTarget<T> extends Target<T> {
             throw new TargetClosedError()
         }
 
-        if (!this.isStopped && this.observer.transactionEnd) {
-            this.observer.transactionEnd()
+        this.transactionLevel--
+
+        if (!this.isStopped) {
+            if (this.observer.transactionEnd) {
+                this.observer.transactionEnd()
+            }
+            else if (this.transactionLevel === 0) {
+                this.observer.next(this.latestValue)
+            }
         }
     }
 }
