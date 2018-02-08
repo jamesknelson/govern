@@ -1,6 +1,6 @@
 {
   "name": "react-govern",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -32,7 +32,7 @@
     "react": "^16.0.0"
   },
   "dependencies": {
-    "react-outlets": "0.4.0-15"
+    "react-outlets": "^0.4.1"
   },
   "devDependencies": {
     "@types/jest": "^22.1.0",
