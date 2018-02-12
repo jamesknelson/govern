@@ -36,10 +36,6 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
         return this.getTypedChild(this as this)
     }
 
-    getSubs() {
-        return this.getTypedChild(this)
-    }
-
     get state() {
         return this.impl.getFix().state
     }
