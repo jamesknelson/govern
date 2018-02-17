@@ -21,7 +21,7 @@ export class Combine<CombinedValue> implements Governable<CombineProps<CombinedV
         return this.impl.child
     }
 
-    createGovernor() {
-        return this.impl.createGovernor()
+    createOutlet(initialTransactionId: string) {
+        return this.impl.createOutlet(initialTransactionId)
     }
 }

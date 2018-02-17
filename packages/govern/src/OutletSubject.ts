@@ -4,38 +4,28 @@
  */
 
 import { Target, TargetClosedError } from './Target'
-import { OutletSource } from './OutletSource'
 import { closedSubscription, ClosableSubscription, Subscription } from './Subscription'
 
-export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
-    closed: boolean
-    
+export class OutletSubject<T> {
     protected hasError: boolean
     protected isStopped: boolean;
     protected subscriptionsToSources: Subscription[]
     protected subscribedTargets: Target<T>[]
     protected thrownError: any
-    protected transactionLevel: number
+    protected transactionId?: string
     protected value: T
     
-    constructor(initialValue: T) {
-        super()
-
+    constructor() {
         this.hasError = false
         this.isStopped = false
         this.subscriptionsToSources = []
         this.subscribedTargets = []
-        this.transactionLevel = 0
-        this.value = initialValue
     }
 
     // A relay is a source, so it is possible to subscribe new targets to the
     // relay. These targets can indicate that they'd like to close their
     // subscription.
     subscribe(target: Target<T>): Subscription {
-        if (this.closed) {
-            return closedSubscription
-        }
         if (this.hasError) {
             target.error(this.thrownError)
             return closedSubscription
@@ -56,11 +46,11 @@ export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
 
         target.start(subscription)
 
-        if (this.transactionLevel) {
-            target.transactionStart()
+        if (this.transactionId) {
+            target.transactionStart(this.transactionId)
         }
 
-        this.next(this.value)
+        target.next(this.value)
 
         return subscription
     }
@@ -68,29 +58,12 @@ export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
     getValue(): T {
         if (this.hasError) {
             throw this.thrownError
-        } else if (this.closed) {
-            throw new TargetClosedError()
         } else {
             return this.value;
         }
     }
 
-    // When this relay is subscribed to a source as a target, this will be
-    // called with the new subscription object, allowing this target to
-    // unsubscribe from the source.
-    start(subscription: Subscription) {
-        if (this.closed) {
-            throw new TargetClosedError()
-        }
-
-        this.subscriptionsToSources.push(subscription)
-    }
-
     next(value: T) {
-        if (this.closed) {
-            throw new TargetClosedError()
-        }
-
         if (!this.isStopped) {
             this.value = value
 
@@ -104,10 +77,6 @@ export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
     }
 
     error(err?: any) {
-        if (this.closed) {
-            throw new TargetClosedError()
-        }
-
         if (!this.isStopped) {
             this.hasError = true
             this.thrownError = err
@@ -123,12 +92,8 @@ export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
     }
 
     complete() {
-        if (this.closed) {
-            throw new TargetClosedError()
-        }
-
-        if (this.transactionLevel !== 0) {
-            this.error(new OutOfTransactionError())
+        if (this.transactionId) {
+            this.error(new InTransactionError())
             return 
         }
 
@@ -144,43 +109,49 @@ export class OutletSubject<T> extends Target<T> implements OutletSource<T> {
         }
     }
 
-    transactionStart() {
-        if (this.closed) {
-            throw new TargetClosedError()
+    transactionStart(transactionId: string) {
+        if (this.transactionId) {
+            this.error(new InTransactionError())
+            return 
         }
 
-        ++this.transactionLevel
+        this.transactionId = transactionId
 
-        if (!this.isStopped && this.transactionLevel === 1) {
+        if (!this.isStopped) {
             let targets = this.subscribedTargets
             const len = targets.length
             const copy = targets.slice()
             for (let i = 0; i < len; i++) {
-                copy[i].transactionStart()
+                copy[i].transactionStart(transactionId)
             }
         }
     }
 
-    transactionEnd() {
-        if (this.closed) {
-            throw new TargetClosedError()
-        }
-
-        if (this.transactionLevel === 0) {
+    transactionEnd(transactionId: string) {
+        if (!this.transactionId) {
             this.error(new OutOfTransactionError())
             return 
         }
 
-        --this.transactionLevel
+        delete this.transactionId
 
-        if (!this.isStopped && this.transactionLevel === 0) {
+        if (!this.isStopped) {
             let targets = this.subscribedTargets
             const len = targets.length
             const copy = targets.slice()
             for (let i = 0; i < len; i++) {
-                copy[i].transactionEnd()
+                copy[i].transactionEnd(transactionId)
             }
         }
+    }
+}
+
+
+export class InTransactionError extends Error {
+    constructor() {
+        super('in transaction');
+        this.name = 'InTransactionError';
+        (Object as any).setPrototypeOf(this, InTransactionError.prototype);
     }
 }
 

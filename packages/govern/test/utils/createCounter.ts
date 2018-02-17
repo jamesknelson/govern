@@ -1,8 +1,8 @@
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC } from '../../src'
+import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../../src'
 
 export function createCounter() {
     const Counter = createCounterClass()
-    return createGovernor(createElement(Counter, null))
+    return instantiate(createElement(Counter, null))
 }
 
 export function createCounterClass() {

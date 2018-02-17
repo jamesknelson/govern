@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { Observable, Outlet } from 'outlets'
 import { GovernableClass } from './Governable'
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
+import { Outlet } from './Outlet'
 
 const RESERVED_PROPS = {
     key: true,

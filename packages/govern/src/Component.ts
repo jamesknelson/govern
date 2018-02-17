@@ -2,6 +2,7 @@ import { Governable, GovernableClass } from './Governable'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './Element'
+import { getUniqueId } from './utils/getUniqueId';
 
 export interface ComponentClass<Props, Value=any> extends GovernableClass<Props, Value> {
     new (props: Props): Component<Props, ComponentState, Value>;
@@ -74,13 +75,14 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
             throw new Error(`You cannot call "transaction" while ${this.impl.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
-        this.impl.increaseTransactionLevel()
+        let transactionId = getUniqueId()
+        this.impl.transactionStart(transactionId)
         run()
-        this.impl.decreaseTransactionLevel()
+        this.impl.transactionEnd(transactionId)
     }
 
-    createGovernor() {
-        return this.impl.createGovernor()
+    createOutlet(initialTransactionId: string) {
+        return this.impl.createOutlet(initialTransactionId)
     }
 
     abstract publish(): Value;

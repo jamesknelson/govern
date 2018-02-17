@@ -2,58 +2,69 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { MapProps } from '../Core'
 import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
-import { internalCreateGovernor, InternalGovernor } from '../Governor'
+import { instantiateWithManualFlush } from '../Governor'
+import { Outlet } from '../Outlet'
 import { GovernElement, isValidElement } from '../Element'
+import { getUniqueId } from '../utils/getUniqueId';
 
 export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     element: GovernElement<any, any>
-    governor: InternalGovernor<any, any>
+    fromOutlet: Outlet<any, any>
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, any, ToValue, ToValue>;
+    transactionIds: string[] = []
     
     constructor(props: MapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)
-        this.receiveProps(props)
     }
 
     componentWillReceiveProps(nextProps: MapProps<FromValue, ToValue>) {
-        this.receiveProps(nextProps)
+        this.receiveProps(nextProps, this.impl.transactionIdPropagatedToChildren!)
     }
 
     componentWillBeDisposeed() {
-        this.governor.dispose()
-		delete this.governor
+        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
+        this.transactionIds.length = 0
+        this.fromOutlet.dispose()
+		delete this.fromOutlet
     }
 
     componentDidInstantiate() {
-        this.governor.flush()
+        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
+        this.transactionIds.length = 0
     }
 
     componentDidUpdate() {
-        this.governor.flush()
+        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
+        this.transactionIds.length = 0
     }
 
-    receiveProps(props: MapProps<FromValue, ToValue>) {
+    receiveProps(props: MapProps<FromValue, ToValue>, transactionId: string) {
         let fromElement = props.from
         if (!isValidElement(fromElement)) {
             throw new Error(`The "from" prop of a Map element must be an element, object, or array.`)
         }
 
         if (!doNodesReconcile(this.element, fromElement)) {
-            if (this.governor) {
-                this.governor.dispose()
+            if (this.fromOutlet) {
+                this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
+                this.transactionIds.length = 0
+                this.fromOutlet.dispose()
             }
             this.element = fromElement
-            this.governor = internalCreateGovernor(fromElement)
-            this.governor.subscribe(
+            this.fromOutlet = instantiateWithManualFlush(fromElement, transactionId)
+            this.transactionIds.push(transactionId)
+            this.fromOutlet.subscribe(
                 this.handleChange,
                 this.impl.handleChildError,
                 this.impl.handleChildComplete,
-                this.impl.increaseTransactionLevel,
-                this.impl.decreaseTransactionLevel
+                this.impl.transactionStart,
+                this.impl.transactionEnd
             )
         }
         else {
-            this.governor.setPropsWithoutFlush(fromElement.props)
+            this.transactionIds.push(transactionId)
+            this.fromOutlet.transactionStart(transactionId, false)
+            this.fromOutlet.setProps(fromElement.props)
         }
     }
 
@@ -74,7 +85,8 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
         return this.impl.child
     }
 
-    createGovernor(): InternalGovernor<MapProps<FromValue, ToValue>, ToValue> {
-        return this.impl.createGovernor()
+    createOutlet(initialTransactionId: string): Outlet<ToValue, MapProps<FromValue, ToValue>> {
+        this.receiveProps(this.impl.props, initialTransactionId)
+        return this.impl.createOutlet(initialTransactionId)
     }
 }

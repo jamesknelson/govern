@@ -21,7 +21,7 @@ export class Subscribe<T> implements Governable<SubscribeProps<T>, T>, Component
         return this.impl.child
     }
 
-    createGovernor() {
-        return this.impl.createGovernor()
+    createOutlet(initialTransactionId: string) {
+        return this.impl.createOutlet(initialTransactionId)
     }
 }

@@ -1,10 +1,14 @@
-import { Outlet, OutletSubject, Subscription, TransactionalObservable, TransactionalObserver } from 'outlets'
+import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
 import { isValidElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
-import { internalCreateGovernor, InternalGovernor } from './Governor'
+import { instantiateWithManualFlush } from './Governor'
+import { Outlet } from './Outlet'
+import { OutletSubject } from './OutletSubject'
+import { Subscription } from './Subscription'
+import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -26,10 +30,6 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
 }
 
 export class ComponentImplementation<Props, State, Value, Child> {
-    // Has `setProps` or the constructor been called, but a corresponding
-    // `flush` not yet been called?
-    awaitingFlush: boolean = true
-
     // Keep track of whether side effects are allowed to help keep
     // components responsible.
     //
@@ -64,7 +64,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
             subscription: Subscription,
 
             // A governor will not exist in the case of a `subscribe` element.
-            governor?: InternalGovernor<any, any>
+            governor?: Outlet<any, any>
         }
     } = {}
 
@@ -76,11 +76,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // to the end of the connect.
     expectingChildChangeFor?: string
 
-    // If we know there is a flush coming up, then let's wait for the flush
-    // before ending any transactions.
-    shouldEndTransactionOnFlush: boolean = false
-
-    governor?: InternalGovernor<Props, Value>
+    governor?: Outlet<Value, Props>
 
     // Keep track of whether we need to call componentDidInstantiate on the
     // next flush.
@@ -89,8 +85,6 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // Keep track of whether a specific transaction caused a publish, as we'll
     // running our own componentDidUpdate if it didn't.
     hasPublishedSinceLastUpdate: boolean = false
-
-    willDispose: boolean = false
 
     // Keep track of whether we're in a componentWillReceiveProps lifecycle
     // method, so that we don't double connect/double publish.
@@ -110,23 +104,32 @@ export class ComponentImplementation<Props, State, Value, Child> {
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>
 
     // A queue of side effects that must be run on children
-    queue: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' }[] = []
+    queue: {
+        governor: Outlet<any, any>,
+        action: 'endTransaction' | 'dispose',
+        transactionId?: string,
+    }[] = []
 
     // A pipe for events out of this object
-    subject: OutletSubject<Value>
+    subject: OutletSubject<Value> = new OutletSubject()
 
     // Keep track of what props, state and child were at the start of a
     // transaction, so we can pass them through to componentDidUpdate.
     lastUpdate: { props: Props, state: State, child: Child }
 
+    transactionIdLevels: Map<string, number> = new Map()
+    transactionIdPropagatedToChildren?: string
+    transactionIdPropagatedToSubscribers?: string
     transactionLevel: number = 0
+
+    willDispose: boolean = false
 
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>, props: Props, isStrict = false) {
         this.isStrict = isStrict
         this.lifecycle = lifecycle
         this.props = props
 
-        // This will be shifted off the stack during `createGovernor`, which
+        // This will be shifted off the stack during `instantiate`, which
         // is guaranteed to run directly after the subclass constructor.
         this.disallowSideEffectsReason.unshift('in constructor')
     }
@@ -167,13 +170,15 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
         // If we're not in a transaction, bumping the level will run the end
         // transaction handler and trigger disposal.
+        // TODO: flush without transaction
         if (!this.transactionLevel) {
-            this.increaseTransactionLevel()
-            this.decreaseTransactionLevel()
+            let transactionId = getUniqueId()
+            this.transactionStart(transactionId, false)
+            this.transactionEnd(transactionId, false)
         }
     }
 
-    setPropsWithoutFlush = (props: Props): void => {
+    setProps = (props: Props): void => {
         if (this.disallowSideEffectsReason[0]) {
             if (this.isStrict) {
                 throw new Error(`You cannot update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
@@ -182,8 +187,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 console.warn(`You should not update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
         }
-
-        this.awaitingFlush = true
+        else if (this.transactionLevel === 0) {
+            throw new Error(`setProps cannot be called outside of a transaction.`)
+        }
 
         if (this.lifecycle.componentWillReceiveProps) {
             this.pushFix()
@@ -205,40 +211,21 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.publish()
     }
 
-    // A convencience method for manually changing the props of a Governor.
-    // Avoid using this if possible.
-    setProps = (props: Props, dontFlush=false): void => {
-        this.setPropsWithoutFlush(props)
-        if (!dontFlush) {
-            this.flush()
-        }
-    }
-
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
         if (this.disallowSideEffectsReason[0]) {
             if (this.isStrict) {
                 throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
-            else if (this.transactionLevel !== 0) {
+            else {
                 console.warn(`A Govern component should not call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}"`)
             }
+        }
+        else if (this.transactionLevel === 0) {
+            throw new Error(`"setState" cannot be called outside of a transaction.`)
         }
 
         if (callback) {
             this.callbacks.push(callback)
-        }
-
-        // If we're not awaiting flush from a call to `setPropsWithoutFlush`,
-        // we're not in `componentWillReceiveProps`, and we're not in a
-        // transaction, then this call was likely triggered by an action
-        // function in a subclass that was too lazy to add a transaction
-        // manually, so we'll add one here.
-        let needTransaction =
-            !this.awaitingFlush &&
-            !this.isReceivingProps &&
-            this.transactionLevel === 0
-        if(needTransaction) {
-            this.increaseTransactionLevel()
         }
 
         this.disallowSideEffectsReason.unshift("running a setState updater")
@@ -247,14 +234,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
         // If `setState` is called within `componentWillReceiveProps`, then
         // a `connect` and `publish` is already scheduled immediately
-        // afterwards.
+        // afterward, so we don't need to run them.
         if (!this.isReceivingProps) {
             this.connect()
             this.publish()
-        }
-
-        if (needTransaction) {
-            this.decreaseTransactionLevel()
         }
     }
 
@@ -342,16 +325,20 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 childKeysToRemove.delete(key)
                 if (isValidElement(nextChildNode)) {
                     if (forceFullUpdate || !doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
-                        let governor: InternalGovernor<any, any> | undefined
-                        let observable: TransactionalObservable<any>
+                        let governor: Outlet<any, any> | undefined
+                        let observable: Outlet<any>
                         if (nextChildNode.type === 'subscribe') {
                             observable = nextChildNode.props.to
+                            observable.transactionStart(this.transactionIdPropagatedToChildren!, false)
                         }
                         else {
-                            governor = internalCreateGovernor(nextChildNode)
+                            let transactionId = getUniqueId()
+                            governor = instantiateWithManualFlush(nextChildNode, transactionId)
+                            governor.transactionStart(this.transactionIdPropagatedToChildren!, false)
                             this.addToQueue({
                                 governor: governor,
-                                action: 'flush',
+                                action: 'endTransaction',
+                                transactionId: transactionId,
                             })
                             observable = governor
                         }
@@ -359,22 +346,20 @@ export class ComponentImplementation<Props, State, Value, Child> {
                         // Outlets will immediately emit their current value
                         // on subscription, ensuring that `child` is updated.
                         this.expectingChildChangeFor = key
-                        if (typeof observable.subscribe !== 'function') {
-                            debugger
-                        }
+                        // TODO: pass in a ComponentTarget object
                         let subscription = observable.subscribe(
                             value => this.handleChildChange(key, value),
                             this.handleChildError,
                             this.handleChildComplete,
-                            this.increaseTransactionLevel,
-                            this.decreaseTransactionLevel,
+                            this.transactionStart,
+                            this.transactionEnd,
                         )
                         delete this.expectingChildChangeFor
 
                         nextChildren[key] = {
                             node: nextChildNode,
                             subscription: subscription,
-                            governor: governor,
+                            governor: observable,
                         }
                     }
                     else {
@@ -383,11 +368,14 @@ export class ComponentImplementation<Props, State, Value, Child> {
                         childrenToDisposeKeys.delete(key)
                         if (nextChildNode.type !== 'subscribe') {
                             this.expectingChildChangeFor = key
-                            prevChild.governor!.setPropsWithoutFlush(nextChildNode.props)
+                            let transactionId = getUniqueId()
+                            prevChild.governor!.transactionStart(transactionId, false)
+                            prevChild.governor!.setProps(nextChildNode.props)
                             delete this.expectingChildChangeFor
                             this.addToQueue({
                                 governor: prevChild.governor!,
-                                action: 'flush',
+                                action: 'endTransaction',
+                                transactionId: transactionId,
                             })
                         }
                     }
@@ -440,7 +428,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
         // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
 
-        if ((!isExpectingChange && this.disallowSideEffectsReason[0]) || this.transactionLevel === 0) {
+        if (!isExpectingChange && this.disallowSideEffectsReason[0]) {
             if (this.isStrict) {
                 throw new Error(`A Govern component cannot receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
@@ -448,17 +436,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 console.warn(`A Govern component should not receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}"`)
             }
         }
- 
-        // If we're not awaiting flush from a call to `setPropsWithoutFlush`,
-        // and we're not expecting a change due to a `connectChild` call, then
-        // we must have received an event from a raw ES Observable that
-        // doesn't support transactions, and we'll wrap it in a transaction
-        // before passing it on.
-        let needTransaction = !this.awaitingFlush && !isExpectingChange
-        if (needTransaction) {
-            this.increaseTransactionLevel()
+        if (!isExpectingChange && this.transactionLevel === 0) {
+            throw new Error(`A Govern component cannot receive new values from children outside of a transaction.`)
         }
-
+ 
         // If this method wasn't called while wrapped in `connect`, and our
         // current child is a `<combine />`, we'll need to shallow clone our
         // child before updating it. Otherwise we'll also overwrite our last
@@ -484,10 +465,6 @@ export class ComponentImplementation<Props, State, Value, Child> {
         if (!isExpectingChange && !this.isReceivingProps) {
             this.publish()
         }
-
-        if (needTransaction) {
-            this.decreaseTransactionLevel()
-        }
     }
 
     publish() {
@@ -502,21 +479,25 @@ export class ComponentImplementation<Props, State, Value, Child> {
         
         // Publish a new value based on the current props, state and child.
         if (shouldComponentPublish) {
-            this.disallowSideEffectsReason.unshift("publishing a value")
-            this.subject.next(this.lifecycle.publish())
-            this.disallowSideEffectsReason.shift()
-            this.previousPublish = {
-                props: this.props,
-                state: this.state,
-                child: this.child,
-            }
-            this.hasPublishedSinceLastUpdate = true
+            this.broadcastPublish()
         }
 
         this.popFix()
     }
 
-    createGovernor(): InternalGovernor<Props, Value> {
+    broadcastPublish() {
+        this.disallowSideEffectsReason.unshift("publishing a value")
+        this.subject.next(this.lifecycle.publish())
+        this.disallowSideEffectsReason.shift()
+        this.previousPublish = {
+            props: this.props,
+            state: this.state,
+            child: Object.assign({}, this.child),
+        }
+        this.hasPublishedSinceLastUpdate = true
+    }
+
+    createOutlet(initialTransactionId: string): Outlet<Value, Props> {
         if (this.governor) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
@@ -526,119 +507,97 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
         // Props and any state were set in the constructor, so we can jump
         // directly to `connect`.
+        this.transactionStart(initialTransactionId, false)
         this.connect()
-
-        // Skip `publish`, as we need to use the initial value when creating
-        // the outlet.
         this.pushFix()
-        this.disallowSideEffectsReason.unshift("publishing a value")
-        this.subject = new OutletSubject(this.lifecycle.publish())
-        this.disallowSideEffectsReason.shift()
+        this.broadcastPublish()
         this.popFix()
 
-        // Used by shouldComponentPublish
-        this.previousPublish = {
-            props: this.props,
-            state: this.state,
-            child: Object.assign({}, this.child),
-        }
-
-        let outlet = new Outlet(this.subject)
-        this.governor = Object.assign(outlet, {
-            getOutlet: () => new Outlet(this.subject),
-            setProps: this.setProps,
-            setPropsWithoutFlush: this.setPropsWithoutFlush,
-            flush: this.flush,
-            dispose: this.dispose,
-        })
+        this.governor = new Outlet(this)
 
         return this.governor
     }
-    
-    increaseTransactionLevel = () => {
-        if (++this.transactionLevel === 1) {
+
+    transactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
+        if (!transactionId) {
+            throw new Error('You must pass a transactionId to "transactionStart"')
+        }
+
+        this.transactionLevel += 1
+        let transactionIdLevel = (this.transactionIdLevels.get(transactionId) || 0) + 1
+        this.transactionIdLevels.set(transactionId, transactionIdLevel)
+
+        if (this.transactionLevel === 1) {
+            this.transactionIdPropagatedToChildren = transactionId
+            for (let i = 0; i < this.childrenKeys.length; i++) {
+                let key = this.childrenKeys[i]
+                let child = this.children[key]
+
+                // child.governor only exists when the element was instantiated
+                // from an element, and thus we're the only subscriber -- so
+                // we can set `false` for `propagateToSubscribers`.
+                if (child && child.governor) {
+                    child.governor.transactionStart(transactionId, false)
+                }
+            }
+        }
+
+        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers) {
+            this.transactionIdPropagatedToSubscribers = transactionId
             this.disallowSideEffectsReason.unshift("publishing transactionStart")
-            this.subject.transactionStart()
+            this.subject.transactionStart(transactionId)
             this.disallowSideEffectsReason.shift()
         }
     }
 
-    /**
-     * The flush phase is where we work through possible side effects; first
-     * in children, and then in our own lifecycle methods.
-     */
-    flush = () => {
-        this.awaitingFlush = false
-
-        // Iterate through children that have been created, updated or
-        // destroyed, calling `flush` or `dispose` to process any side
-        // effects in their children, or their `componentDidUpdate`/
-        // `componentWillBeDisposed` lifecycle methods.
-        let nextItem: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' } | undefined
-        while (nextItem = this.queue.shift()) {
-            if (nextItem.action === 'flush') {
-                nextItem.governor.flush()
+    transactionEnd = (transactionId: string, propagateToSubscribers: boolean = true) => {
+        let transactionIdLevel: number = this.transactionIdLevels.get(transactionId)!
+        
+        // Negative transaction levels are used to denote transactions that
+        // have already been ended from one subscriber or child, but still
+        // need to be ended by other subscribers or children. 
+        //
+        // It is important to consider the transaction closed on the first
+        // completion notification, otherwise we can get circular dependencies
+        // that never close.
+        if (transactionIdLevel < 0) {
+            if (transactionIdLevel === -1) {
+                this.transactionIdLevels.delete(transactionId)
             }
             else {
-                nextItem.governor.dispose()
+                this.transactionIdLevels.set(transactionId, transactionIdLevel + 1)
             }
-        }
-        
-        // Once we've emptied the queue of possible side effects in children,
-        // we'll run our own unpure lifecycle methods.
-        if (!this.hasCalledComponentDidInstantiate) {
-            this.hasCalledComponentDidInstantiate = true
-            if (this.lifecycle.componentDidInstantiate) {
-                this.pushFix()
-                this.lifecycle.componentDidInstantiate()
-                this.popFix()
-            }
-        }
-        else if (this.hasPublishedSinceLastUpdate && this.lifecycle.componentDidUpdate) {
-            this.hasPublishedSinceLastUpdate = false
-            this.pushFix()
-            this.lifecycle.componentDidUpdate(
-                this.lastUpdate.props,
-                this.lastUpdate.state,
-                this.lastUpdate.child
-            )
-            this.popFix()
-        }
 
-        this.lastUpdate = {
-            props: this.props,
-            state: this.state,
-            child: this.child,
-        }
-
-        // Run callbacks passed into `setState`
-        while (this.callbacks.length) {
-            let callback = this.callbacks.shift() as Function
-            callback()
-        }
-
-        // If our `componentDidInstantiate` / `componentDidUpdate` lifecycle
-        // methods caused any further calls to `connect`, we'll need to
-        // recursively process the queue.
-        if (this.queue.length && !this.awaitingFlush) {
-            this.flush()
-        }
-
-        if (this.shouldEndTransactionOnFlush) {
-            this.shouldEndTransactionOnFlush = false
-            this.decreaseTransactionLevel()
-        }
-    }
-    
-    decreaseTransactionLevel = () => {
-        // If we know that a flush will be called by the parent in the
-        // future, then we can defer the transaction end until then.
-        if (this.awaitingFlush) {
-            this.shouldEndTransactionOnFlush = true
+            // We've already processed this transaction id, so we just need
+            // to update the expected number of events remaining for debugging
+            // purposes.
             return
         }
+        else {
+            if (transactionIdLevel === 1) {
+                this.transactionIdLevels.delete(transactionId)
+            }
+            else {
+                this.transactionIdLevels.set(transactionId, 1 - transactionIdLevel)
 
-        if (this.transactionLevel === 1) {
+                // TODO: figure out something more useful to do than just whinging
+                // to the developer. Also, only do it in dev mode.
+                setTimeout(() => {
+                    if (this.transactionIdLevels.get(transactionId) !== undefined) {
+                        console.error('A Govern transaction did not complete successfully!')
+                    }
+                })
+            }
+
+            this.transactionLevel -= transactionIdLevel
+        }
+
+        if (transactionIdLevel === 0 || this.transactionLevel < 0) {
+            throw new Error('Tried to lower transaction level below 0')
+        }
+
+        if (this.transactionLevel === 0) {
+            ++this.transactionLevel
             if (this.willDispose) {
                 this.flush()
                 this.disallowSideEffectsReason.unshift('disposed')
@@ -668,25 +627,108 @@ export class ComponentImplementation<Props, State, Value, Child> {
                     this.popFix()
                 }
 
-                this.subject.transactionEnd()
+                --this.transactionLevel
+                this.broadcastTransactionEnd()
                 this.subject.complete()
                 this.state = {} as any
                 this.child = {} as any
-                this.transactionLevel -= 1
             }
             else {
                 // Lower the transaction level before emitting transactionEnd,
-                // and flushing, so that any side effects of the flush will
-                // be executed properly.
-                // so that any side effects of transactionEnd start a new
-                // transaction.
-                this.transactionLevel -= 1
+                // so that any side effects of the flush will be executed
+                // properly. However, leave transactionLevel as 1 for the flush
+                // itself, so that setState can be called.
                 this.flush()
-                this.subject.transactionEnd()
+                --this.transactionLevel
+                this.broadcastTransactionEnd()
             }
         }
+    }
+
+    broadcastTransactionEnd() {
+        for (let i = 0; i < this.childrenKeys.length; i++) {
+            let key = this.childrenKeys[i]
+            let child = this.children[key]
+
+            // child.governor only exists when the element was instantiated
+            // from an element, and thus we're the only subscriber -- so
+            // we can set `false` for `propagateToSubscribers`.
+            if (child && child.governor) {
+                this.disallowSideEffectsReason.unshift("publishing transactionEnd")
+                child.governor.transactionEnd(this.transactionIdPropagatedToChildren!)
+                this.disallowSideEffectsReason.shift()
+            }
+        }
+
+        if (this.transactionIdPropagatedToSubscribers) {
+            this.disallowSideEffectsReason.unshift("publishing transactionEnd")
+            this.subject.transactionEnd(this.transactionIdPropagatedToSubscribers)
+            this.disallowSideEffectsReason.shift()
+            delete this.transactionIdPropagatedToSubscribers
+        }
+    }
+
+    /**
+     * The flush phase is where we work through possible side effects; first
+     * in children, and then in our own lifecycle methods.
+     */
+    flush = () => {
+        // Iterate through children that have been created, updated or
+        // destroyed, calling `flush` or `dispose` to process any side
+        // effects in their children, or their `componentDidUpdate`/
+        // `componentWillBeDisposed` lifecycle methods.
+        let nextItem: { governor: Outlet<any, any>, action: 'endTransaction' | 'dispose', transactionId?: string } | undefined
+        while (nextItem = this.queue.shift()) {
+            if (nextItem.action === 'endTransaction') {
+                nextItem.governor.transactionEnd(nextItem.transactionId!)
+            }
+            else {
+                nextItem.governor.dispose()
+            }
+        }
+        
+        // Once we've emptied the queue of possible side effects in children,
+        // we'll run our own unpure lifecycle methods.
+        if (!this.hasCalledComponentDidInstantiate) {
+            this.hasCalledComponentDidInstantiate = true
+            this.hasPublishedSinceLastUpdate = false
+            if (this.lifecycle.componentDidInstantiate) {
+                this.pushFix()
+                this.lifecycle.componentDidInstantiate()
+                this.popFix()
+            }
+        }
+        else if (this.hasPublishedSinceLastUpdate && this.lifecycle.componentDidUpdate) {
+            this.pushFix()
+            this.hasPublishedSinceLastUpdate = false
+            this.lifecycle.componentDidUpdate(
+                this.lastUpdate.props,
+                this.lastUpdate.state,
+                this.lastUpdate.child
+            )
+            this.popFix()
+        }
         else {
-            this.transactionLevel--
+            this.hasPublishedSinceLastUpdate = false
+        }
+
+        this.lastUpdate = {
+            props: this.props,
+            state: this.state,
+            child: this.child,
+        }
+
+        // Run callbacks passed into `setState`
+        while (this.callbacks.length) {
+            let callback = this.callbacks.shift() as Function
+            callback()
+        }
+
+        // If our `componentDidInstantiate` / `componentDidUpdate` lifecycle
+        // methods caused any further calls to `connect`, we may need to
+        // recursively process the queue.
+        if ((this.hasPublishedSinceLastUpdate || this.queue.length) && this.transactionLevel === 1) {
+            this.flush()
         }
     }
 
@@ -701,10 +743,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
     /**
      * Add to the flush queue if the specified item isn't already there.
      */
-    addToQueue(item: { governor: InternalGovernor<any, any>, action: 'flush' | 'dispose' }) {
+    addToQueue(item: { governor: Outlet<any, any>, action: 'endTransaction' | 'dispose', transactionId?: string }) {
         for (let i = 0; i < this.queue.length; i++) {
             let currentItem = this.queue[i]
-            if (currentItem.governor === item.governor && currentItem.action === item.action) {
+            if (currentItem.governor === item.governor && currentItem.action === item.action && currentItem.transactionId === item.transactionId) {
                 return
             }
         }

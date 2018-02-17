@@ -1,6 +1,4 @@
-import * as Observable from 'zen-observable'
-import { Outlet, OutletSubject } from 'outlets'
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC, StrictComponent } from '../src'
 import { createCounter } from './utils/createCounter'
 
 describe('Component', () => {
@@ -28,7 +26,7 @@ describe('Component', () => {
 			}
     }
     
-    let governor = createGovernor(createElement(TestComponent, null))
+    let governor = instantiate(createElement(TestComponent, null))
     expect(didCallDidUpdate).toBe(false)
     expect(calledDidInstantiateWith).toEqual({ a: 1 })
   })
@@ -54,8 +52,10 @@ describe('Component', () => {
 			}
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(didUpdateCallCount).toBe(1)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -84,10 +84,12 @@ describe('Component', () => {
 			}
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
-    expect(didUpdateCallCount).toBe(2)
+    governor.transactionEnd('1')
     expect(governor.getValue()).toEqual({ a: 2 })
+    expect(didUpdateCallCount).toBe(2)
   })
 
   it("children emitting values within componentDidUpdate causes another componentDidUpdate", () => {
@@ -101,7 +103,7 @@ describe('Component', () => {
 
       connectChild() {
 			  return combine({
-          a: subscribe(counter)
+          a: subscribe(counter),
         })
       }
       
@@ -114,14 +116,16 @@ describe('Component', () => {
 			componentDidUpdate(prevProps, prevState, prevSubs) {
         didUpdateCallCount += 1
         if (this.child.a.count === 0) {
-          counter.getValue().increase()
+          this.child.a.increase()
         }
 			}
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(didUpdateCallCount).toBe(2)
     expect(governor.getValue()).toEqual({ a: 1 })
   })
@@ -145,14 +149,16 @@ describe('Component', () => {
       }
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
     let latest
     let updateCount = 0
     governor.subscribe(value => {
       latest = value
       updateCount++
     })
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(latest).toEqual({ a: 2 })
   })
 
@@ -167,7 +173,7 @@ describe('Component', () => {
       }
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
     let latest
     let updateCount = 0
     governor.subscribe(value => {
@@ -175,7 +181,9 @@ describe('Component', () => {
       updateCount++
     })
     expect(updateCount).toBe(1)
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(updateCount).toBe(1)
   })
 
@@ -205,14 +213,16 @@ describe('Component', () => {
       }
     }
     
-    let governor = createGovernor(createElement(TestComponent, { updated: false }))
+    let governor = instantiate(createElement(TestComponent, { updated: false }))
     let latest
     let updateCount = 0
     governor.subscribe(value => {
       latest = value
       updateCount++
     })
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(state).toEqual({ x: 1 })
     expect(props).toEqual({ updated: false })
     expect(nextState).toEqual({ x: 2 })
@@ -233,7 +243,7 @@ describe('Component', () => {
         }
       }
 
-      createGovernor(createElement(TestComponent))
+      instantiate(createElement(TestComponent))
     }).toThrow()
   })
 
@@ -263,12 +273,14 @@ describe('Component', () => {
       }
     }
 
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     let latest
     governor.subscribe(next => {
       latest = next
     })
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(latest).toEqual({
       updated: true,
       child: {
@@ -278,7 +290,12 @@ describe('Component', () => {
   })
 
   it(`removing a property of a <combine /> connected child removes its value from subs`, () => {
-    let observable = Observable.from('a')
+    class Constant extends Component {
+      publish() {
+        return 'a'
+      }
+    }
+    let observable = instantiate(createElement(Constant))
 
     class TestComponent extends Component<{ updated }> {
       connectChild() {
@@ -290,11 +307,13 @@ describe('Component', () => {
         return this.child
       }
     }
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     let latest
     governor.subscribe(next => { latest = next })
     expect(latest).toEqual({ a: 'a', b: 'a' })
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(latest).toEqual({ a: 'a' })
   })
 
@@ -321,19 +340,20 @@ describe('Component', () => {
         return null
       }
     }
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     expect(childConstructorCount).toEqual(1)
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(childConstructorCount).toEqual(2)
   })
 
   it("events can be received from combined <subscribe /> elements when emitted during `componentWillReceiveProps` ", () => {
-    let subject = new OutletSubject(1)
-    let outlet = new Outlet(subject)
+    let outlet = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       componentWillReceiveProps() {
-        subject.next(2)
+        this.child.inner.increase()
       }
 
       connectChild() {
@@ -343,27 +363,24 @@ describe('Component', () => {
       }
 
       publish() {
-        return this.child
+        return this.child.inner.count
       }
     }
 
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     let latest
     governor.subscribe(next => {
       latest = next
     })
-    expect(latest).toEqual({
-      inner: 1
-    })
+    expect(latest).toEqual(0)
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
-    expect(latest).toEqual({
-      inner: 2
-    })
+    governor.transactionEnd('1')
+    expect(latest).toEqual(1)
   })
 
   it("shouldComponentPublish receives old subs", () => {
-    let subject = new OutletSubject(1)
-    let outlet = new Outlet(subject)
+    let outlet = createCounter()
     let shouldComponentPublishValue
 
     class TestComponent extends Component<{ updated }> {
@@ -382,14 +399,15 @@ describe('Component', () => {
       }
     }
 
-    let governor = createGovernor(createElement(TestComponent))
-    subject.next(2)
+    let governor = instantiate(createElement(TestComponent))
+    outlet.transactionStart('1')
+    outlet.getValue().increase()
+    outlet.transactionEnd('1')
     expect(shouldComponentPublishValue).toEqual(true)
   })
 
   it("events can be received from combined <subscribe /> elements in the same transaction as a setState", () => {
-    let subject = new OutletSubject(1)
-    let outlet = new Outlet(subject)
+    let outlet = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       connectChild() {
@@ -400,26 +418,24 @@ describe('Component', () => {
 
       publish() {
         return {
-          child: this.child,
+          child: this.child.inner.count,
           update: () => {
-            subject.transactionStart()
             this.setState({})
-            subject.next(2)
-            subject.transactionEnd()
+            this.child.inner.increase()
           },
         }
       }
     }
 
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     let latest
     governor.subscribe(next => {
       latest = next
     })
+    governor.transactionStart('1')
     governor.getValue().update()
-    expect(latest.child).toEqual({
-      inner: 2
-    })
+    governor.transactionEnd('1')
+    expect(latest.child).toEqual(1)
   })
 
   it("supports getDerivedStateFromProps", () => {
@@ -435,9 +451,11 @@ describe('Component', () => {
       }
     }
 
-    let governor = createGovernor(createElement(TestComponent))
+    let governor = instantiate(createElement(TestComponent))
     expect(governor.getValue()).toBe(undefined)
+    governor.transactionStart('1')
     governor.setProps({ updated: true })
+    governor.transactionEnd('1')
     expect(governor.getValue()).toBe('world')
   })
 })

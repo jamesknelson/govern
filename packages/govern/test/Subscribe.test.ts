@@ -1,28 +1,38 @@
-import * as Observable from 'zen-observable'
 import { createCounter } from './utils/createCounter'
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
 
-describe("Subscribe", () => {
-    it("outputs intial observable", () => {
-        let observable = Observable.of("red", "green", "blue")
-        let governor = createGovernor(subscribe(observable))
+describe("Subscribing to governors", () => {
+    it("outputs intial value", () => {
+        let Component = () => combine('blue')
+        let observable = instantiate(createElement(Component))
+        let governor = instantiate(subscribe(observable))
         expect(governor.getValue()).toEqual("blue")
     })
 
-    it("outputs changes from observable", () => {
+    it("outputs changes in value", () => {
         let counter = createCounter()
-        let governor = createGovernor(subscribe(counter))
-        expect(governor.getValue().count).toEqual(0)
+        let governor = instantiate(subscribe(counter))
+        let value
+        governor.subscribe(x => { value = x })
+        expect(value.count).toEqual(0)
+        counter.transactionStart('1')
         counter.getValue().increase()
-        expect(governor.getValue().count).toEqual(1)
+        counter.transactionEnd('1')
+        expect(value.count).toEqual(1)
     })
 
-    it("can change observable", () => {
-        let observable1 = Observable.of("red", "green", "blue")
-        let observable2 = Observable.of("purple", "orange")
-        let governor = createGovernor(subscribe(observable1))
+    it("can change governor", () => {
+        let Component1 = () => combine('blue')
+        let observable1 = instantiate(createElement(Component1))
+
+        let Component2 = () => combine('orange')
+        let observable2 = instantiate(createElement(Component2))
+        
+        let governor = instantiate(subscribe(observable1))
         expect(governor.getValue()).toEqual("blue")
+        governor.transactionStart('1')
         governor.setProps({ to: observable2 })
+        governor.transactionEnd('1')
         expect(governor.getValue()).toEqual("orange")
     })
 })

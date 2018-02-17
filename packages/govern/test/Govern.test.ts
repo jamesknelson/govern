@@ -1,7 +1,6 @@
-import * as Observable from 'zen-observable'
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, SFC, StrictComponent } from '../src'
 
-describe('createGovernor', () => {
+describe('instantiate', () => {
   it("creates stateless functional components", () => {
     const TestComponent: SFC<any, { a: number, b: number, c: number }> = ({ a, c }) => {
       return combine({
@@ -16,7 +15,7 @@ describe('createGovernor', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let governor = createGovernor(element)
+    let governor = instantiate(element)
     let output = governor.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
@@ -37,7 +36,7 @@ describe('createGovernor', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let governor = createGovernor(element)
+    let governor = instantiate(element)
     let output = governor.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })

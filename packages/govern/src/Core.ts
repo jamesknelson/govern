@@ -1,4 +1,4 @@
-import { TransactionalObservable } from 'outlets'
+import { TransactionalObservable } from './TransactionalObservable'
 import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
 

@@ -1,52 +1,26 @@
-import { Outlet } from 'outlets'
+import { Outlet } from './Outlet'
 import { Component } from './Component'
 import { GovernElement, isValidElement } from './Element'
 import { Governable } from './Governable'
 import { Subscribe } from './builtins/Subscribe'
-import { OutletSource } from './builtins/OutletSource'
 import { Map } from './builtins/Map'
 import { Combine } from './builtins/Combine'
+import { getUniqueId } from './utils/getUniqueId';
 
 
 const BuiltInComponents = {
     map: Map,
     subscribe: Subscribe,
-    outlet: OutletSource,
     combine: Combine,
 }
 
-// This is the same object, but with some methods extra methods that aren't
-// available on the external interface.
-export interface InternalGovernor<Props, Value> extends Outlet<Value> {
-    dispose(): void;
-    flush(): void;
-    getOutlet(): Outlet<Value>;
-    setPropsWithoutFlush(props: Props): void;
-    setProps(props: Props): void;
-}
-
-export interface Governor<Props, Value> extends Outlet<Value> {
-    dispose(): void;
-    getOutlet(): Outlet<Value>;
-    setProps(props: Props): void;
-}
-
-export function createGovernor<Props, Value>(element: GovernElement<Props, Value>): Governor<Props, Value> {
-    let instance: Governable<Props, Value>
-
-    // Return the component instance's governor.
-    let governor = internalCreateGovernor(element)
-    // TODO: add `setProps`
-    governor.flush()
-    return governor
-}
-
 /**
- * This allows the `flushProps` method to be called manually. It is used
- * internally, but not exposed via the public API as forgetting to flush props
- * is a superb way to waste a couple hours chasing funny bugs.
+ * This allows the initial transaction to be started manually. It is used
+ * internally, but not exposed via the public API, as forgetting to start
+ * an initial transaction is a superb way to waste a couple hours chasing
+ * funny bugs.
  */
-export function internalCreateGovernor<Props, Value>(element: GovernElement<Props, Value>): InternalGovernor<Props, Value> {
+export function instantiateWithManualFlush<Props, Value>(element: GovernElement<Props, Value>, initialTransactionId: string): Outlet<Value, Props> {
     let instance: Governable<Props, Value>
 
     // Create a component instance for the element, with the specified
@@ -58,7 +32,7 @@ export function internalCreateGovernor<Props, Value>(element: GovernElement<Prop
         }
         instance = new constructor(element.props)
     }
-    else if (element.type.prototype.createGovernor) {
+    else if (element.type.prototype.createOutlet) {
         let constructor = element.type as any
         instance = new constructor(element.props)
     }
@@ -82,5 +56,12 @@ export function internalCreateGovernor<Props, Value>(element: GovernElement<Prop
     }
 
     // Return the component instance's governor.
-    return instance.createGovernor()
+    return instance.createOutlet(initialTransactionId)
+}
+
+export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Outlet<Value, Props> {
+    let initialTransactionId = getUniqueId()
+    let outlet = instantiateWithManualFlush(element, initialTransactionId)
+    outlet.transactionEnd(initialTransactionId)
+    return outlet
 }

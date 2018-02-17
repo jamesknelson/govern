@@ -23,8 +23,8 @@ export interface TransactionalObservable<T> extends Observable<T> {
         onNext: (value: T) => void,
         onError?: (error: any) => void,
         onComplete?: () => void,
-        onTransactionStart?: () => void,
-        onTransactionEnd?: () => void
+        onTransactionStart?: (transactionId: string) => void,
+        onTransactionEnd?: (transactionId: string) => void
     ): Subscription;
 }
 
@@ -44,7 +44,6 @@ export interface TransactionalObserver<T> extends Observer<T> {
     //   However, the change events will be wrapped in batch events, allowing
     //   us to only perform the computation once, and only emit a single
     //   change.
-    transactionStart?(): void;
-    transactionEnd?(): void;
+    transactionStart?(transactionId: string): void;
+    transactionEnd?(transactionId: string): void;
 }
-

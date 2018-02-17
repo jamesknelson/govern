@@ -3,13 +3,7 @@ import { Target, TargetClosedError } from './Target'
 import { Subscription, ClosableSubscription } from './Subscription'
 
 
-export class TransactionalObserverTarget<T> extends Target<T> {
-    /**
-     * A subscription object that can be closed by whovever created the
-     * observer.
-     */
-    readonly subscription: ClosableSubscription;
-
+export class OutletSubscriberTarget<T> extends Target<T> {
     /**
      * If an error or complete event has occured, we'll stop propagating
      * further events. This is slightly different to `subscription.closed`,
@@ -22,6 +16,7 @@ export class TransactionalObserverTarget<T> extends Target<T> {
      * the user doesn't provide a transactionEnd handler.
      */
     protected latestValue: any;
+    protected hasChangedSinceTransactionStart: boolean = false;
 
     /**
      * Store the transactionLevel, so we can always push out events that
@@ -30,14 +25,14 @@ export class TransactionalObserverTarget<T> extends Target<T> {
     protected transactionLevel: number = 0;
 
     protected observer: TransactionalObserver<T>;
-    protected subscriptions: Subscription[] = [];
+    protected subscription?: Subscription;
 
     constructor(
         nextOrObserver: TransactionalObserver<T> | ((value: T) => void),
         error?: (error: any) => void,
         complete?: () => void,
-        transactionStart?: () => void,
-        transactionEnd?: () => void
+        transactionStart?: (transactionId: string) => void,
+        transactionEnd?: (transactionId: string) => void
     ) {
         super()
 
@@ -53,43 +48,42 @@ export class TransactionalObserverTarget<T> extends Target<T> {
                 transactionEnd,
             }
         }
-
-        this.subscription = new ClosableSubscription(() => {
-            for (let i = 0; i < this.subscriptions.length; i++) {
-                this.subscriptions[i].unsubscribe()
-            }
-        })
     }
 
     get closed() {
-        return this.subscription.closed
+        return !!(this.subscription && this.subscription.closed)
     }
 
-    // When this target is subscribed to a source, the source will return a
+    // When this target is subscribed to the source, the source will return a
     // `subscription` object. Once this target is closed, we should call the
     // subscription's `unsubscribe` method, so that the source can clean up if
     // required.
     start(subscription: Subscription): void {
-        if (this.subscription.closed) {
+        if (this.closed) {
             throw new TargetClosedError()
         }
 
-        this.subscriptions.push(subscription)
+        if (this.subscription) {
+            throw new Error("A subscription cannot be started more than once.")
+        }
+
+        this.subscription = subscription
     }
 
     next(value: T): void {
-        if (this.subscription.closed) {
+        if (this.closed) {
             throw new TargetClosedError()
         }
 
         this.latestValue = value
+        this.hasChangedSinceTransactionStart = true
         if (!this.isStopped && this.observer.next && (this.observer.transactionEnd || this.transactionLevel === 0)) {
             this.observer.next(value)
         }
     }
 
     error(err?: any): void {
-        if (this.subscription.closed) {
+        if (this.closed) {
             throw new TargetClosedError()
         }
 
@@ -105,7 +99,7 @@ export class TransactionalObserverTarget<T> extends Target<T> {
     }
 
     complete(): void {
-        if (this.subscription.closed) {
+        if (this.closed) {
             throw new TargetClosedError()
         }
 
@@ -115,20 +109,24 @@ export class TransactionalObserverTarget<T> extends Target<T> {
         }
     }
 
-    transactionStart(): void {
-        if (this.subscription.closed) {
+    transactionStart(transactionId: string): void {
+        if (this.closed) {
             throw new TargetClosedError()
+        }
+
+        if (this.transactionLevel === 0) {
+            this.hasChangedSinceTransactionStart = false
         }
 
         this.transactionLevel++
 
         if (!this.isStopped && this.observer.transactionStart) {
-            this.observer.transactionStart()
+            this.observer.transactionStart(transactionId)
         }
     }
 
-    transactionEnd(): void {
-        if (this.subscription.closed) {
+    transactionEnd(transactionId: string): void {
+        if (this.closed) {
             throw new TargetClosedError()
         }
 
@@ -136,9 +134,9 @@ export class TransactionalObserverTarget<T> extends Target<T> {
 
         if (!this.isStopped) {
             if (this.observer.transactionEnd) {
-                this.observer.transactionEnd()
+                this.observer.transactionEnd(transactionId)
             }
-            else if (this.transactionLevel === 0) {
+            else if (this.transactionLevel === 0 && this.hasChangedSinceTransactionStart) {
                 this.observer.next(this.latestValue)
             }
         }

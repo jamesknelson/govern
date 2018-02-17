@@ -1,8 +1,8 @@
-import { InternalGovernor } from './Governor'
+import { Outlet } from './Outlet'
 
 
 export interface Governable<Props, Value> {
-    createGovernor(): InternalGovernor<Props, Value>;
+    createOutlet(initialTransactionId: string): Outlet<Value, Props>;
 }
 
 export interface GovernableClass<Props, Value> {

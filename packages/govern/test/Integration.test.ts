@@ -1,5 +1,4 @@
-import * as Observable from 'zen-observable'
-import { map, outlet, subscribe, combine, createElement, createGovernor, Component, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC, StrictComponent } from '../src'
 
 function createModelClass() {
   class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
@@ -103,17 +102,20 @@ function createDataSourceClass() {
     }
 
     connectChild() {
-      return outlet(combine(this.state.store))
+      return combine(this.state.store)
     }
 
     publish() {
       return {
         receive: this.receive,
-        observable: this.child
+        data: this.child
       }
     }
   }
 }
+
+const DataSourceData = (props: { dataSource: Outlet<{receive, data}> }) =>
+  map(subscribe(props.dataSource), state => state.data)
 
 function createFormControllerClass() {
   const Model = createModelClass()
@@ -159,7 +161,7 @@ describe("Model", () => {
   const Model = createModelClass()
 
   it('returns expected initial value', () => {
-    let governor = createGovernor(
+    let governor = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -176,7 +178,7 @@ describe("Model", () => {
   })
 
   it('notifies changes', () => {
-    let governor = createGovernor(
+    let governor = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -205,8 +207,13 @@ describe("FormController", () => {
 
   it('initializes with empty observable', () => {
     let empty = {}
-    let data = Observable.from([null])
-    let governor = createGovernor(
+    class Constant extends Component {
+      publish() {
+        return null
+      }
+    }
+    let data = instantiate(createElement(Constant))
+    let governor = instantiate(
       createElement(FormController, { data })
     )
     let output = governor.getValue()
@@ -215,9 +222,10 @@ describe("FormController", () => {
   })
 
   it('emits a new model when initial data is received', () => {
-    let dataSource = createGovernor(createElement(DataSource, {})).getValue()
-    let governor = createGovernor(
-      createElement(FormController, { data: dataSource.observable })
+    let dataSource = instantiate(createElement(DataSource, {}))
+    let dataSourceData = instantiate(createElement(DataSourceData, { dataSource }))
+    let governor = instantiate(
+      createElement(FormController, { data: dataSourceData })
     )
     let latest
     governor.subscribe(value => {
@@ -227,7 +235,9 @@ describe("FormController", () => {
       name: 'James',
       email: 'james@jamesknelson.com'
     }
-    dataSource.receive(received)
+    dataSource.transactionStart('1')
+    dataSource.getValue().receive(received)
+    dataSource.transactionEnd('1')
     expect(latest.data).toEqual(received)
     expect(latest.model.error).toBeFalsy()
   })

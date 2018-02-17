@@ -1,7 +1,8 @@
-import { Outlet, TransactionalObservable } from 'outlets'
+import { Outlet } from './Outlet'
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
+import { TransactionalObservable } from './TransactionalObservable'
 
 type Factory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, Value>;
 

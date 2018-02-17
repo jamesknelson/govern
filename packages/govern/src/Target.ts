@@ -18,8 +18,8 @@ export abstract class Target<T> {
     abstract next(value: T): void
     abstract error(err?: any): void
     abstract complete(): void
-    abstract transactionStart(): void
-    abstract transactionEnd(): void
+    abstract transactionStart(transactionId: string): void
+    abstract transactionEnd(transactionId: string): void
 }
 
 export function isValidTarget(target: any): target is Target<any> {
