@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 
 describe('Component', () => {

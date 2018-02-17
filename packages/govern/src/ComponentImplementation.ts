@@ -93,9 +93,6 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // Keep track of whether the user is running "connectChild", so we can
     // prevent them from accessing the existing child.
     isRunningConnectChild: boolean = false
-    
-    // If true, side effects when disallowed will cause an exception.
-    isStrict: boolean
 
     // If our last child was an array or object of further elements, store the
     // type.
@@ -124,8 +121,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     willDispose: boolean = false
 
-    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>, props: Props, isStrict = false) {
-        this.isStrict = isStrict
+    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
 
@@ -159,12 +155,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     dispose = () => {
         if (this.disallowSideEffectsReason[0] && this.transactionLevel !== 0) {
-            if (this.isStrict) {
-                throw new Error(`You cannot call "dispose" on a governor while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
-            else {
-                console.warn(`You should not call "dispose" on a governor while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
+            throw new Error(`You cannot call "dispose" on a governor while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         this.willDispose = true
 
@@ -180,12 +171,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     setProps = (props: Props): void => {
         if (this.disallowSideEffectsReason[0]) {
-            if (this.isStrict) {
-                throw new Error(`You cannot update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
-            else {
-                console.warn(`You should not update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
+            throw new Error(`You cannot update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         else if (this.transactionLevel === 0) {
             throw new Error(`setProps cannot be called outside of a transaction.`)
@@ -213,12 +199,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
         if (this.disallowSideEffectsReason[0]) {
-            if (this.isStrict) {
-                throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
-            else {
-                console.warn(`A Govern component should not call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}"`)
-            }
+            throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         else if (this.transactionLevel === 0) {
             throw new Error(`"setState" cannot be called outside of a transaction.`)
@@ -429,12 +410,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
         let isExpectingChange = this.expectingChildChangeFor === key
 
         if (!isExpectingChange && this.disallowSideEffectsReason[0]) {
-            if (this.isStrict) {
-                throw new Error(`A Govern component cannot receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
-            else if (this.transactionLevel !== 0) {
-                console.warn(`A Govern component should not receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}"`)
-            }
+            throw new Error(`A Govern component cannot receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         if (!isExpectingChange && this.transactionLevel === 0) {
             throw new Error(`A Govern component cannot receive new values from children outside of a transaction.`)
