@@ -1,5 +1,6 @@
 import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
+import { createTestHarness } from './utils/createTestHarness'
 
 describe('Component', () => {
   it("actions with setState throw an error when not in a transaction", () => {
@@ -43,7 +44,7 @@ describe('Component', () => {
 			}
     }
     
-    let governor = instantiate(createElement(TestComponent, null))
+    let outlet = instantiate(createElement(TestComponent, null))
     expect(didCallDidUpdate).toBe(false)
     expect(calledDidInstantiateWith).toEqual({ a: 1 })
   })
@@ -69,12 +70,11 @@ describe('Component', () => {
 			}
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(outlet)
+    harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(1)
-    expect(governor.getValue()).toEqual({ a: 1 })
+    expect(harness.value).toEqual({ a: 1 })
   })
   
   it("setState within componentDidUpdate causes another componentDidUpdate", () => {
@@ -101,11 +101,10 @@ describe('Component', () => {
 			}
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
-    expect(governor.getValue()).toEqual({ a: 2 })
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(outlet)
+    harness.setProps({ updated: true })
+    expect(harness.value).toEqual({ a: 2 })
     expect(didUpdateCallCount).toBe(2)
   })
 
@@ -138,13 +137,12 @@ describe('Component', () => {
 			}
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    let harness = createTestHarness(outlet)
+    harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(2)
-    expect(governor.getValue()).toEqual({ a: 1 })
+    expect(harness.value).toEqual({ a: 1 })
   })
 
   it("setState within componentWillReceiveProps is reflected within the output", () => {
@@ -166,17 +164,13 @@ describe('Component', () => {
       }
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
-    let latest
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    governor.subscribe(value => {
-      latest = value
+    let harness = createTestHarness(outlet, () => {
       updateCount++
     })
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
-    expect(latest).toEqual({ a: 2 })
+    harness.setProps({ updated: true })
+    expect(harness.value).toEqual({ a: 2 })
   })
 
   it("shouldComponentPublish can prevent updates", () => {
@@ -190,17 +184,13 @@ describe('Component', () => {
       }
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
-    let latest
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    governor.subscribe(value => {
-      latest = value
+    let harness = createTestHarness(outlet, () => {
       updateCount++
     })
     expect(updateCount).toBe(1)
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    harness.setProps({ updated: true })
     expect(updateCount).toBe(1)
   })
 
@@ -230,16 +220,9 @@ describe('Component', () => {
       }
     }
     
-    let governor = instantiate(createElement(TestComponent, { updated: false }))
-    let latest
-    let updateCount = 0
-    governor.subscribe(value => {
-      latest = value
-      updateCount++
-    })
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(outlet)
+    harness.setProps({ updated: true })
     expect(state).toEqual({ x: 1 })
     expect(props).toEqual({ updated: false })
     expect(nextState).toEqual({ x: 2 })
@@ -272,16 +255,10 @@ describe('Component', () => {
       }
     }
 
-    let governor = instantiate(createElement(TestComponent))
-    let latest, dispatch
-    governor.subscribe((next, dis) => {
-      dispatch = dis
-      latest = next
-    })
-    dispatch(() => {
-      governor.setProps({ updated: true })
-    })
-    expect(latest).toEqual({
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    harness.setProps({ updated: true })
+    expect(harness.value).toEqual({
       updated: true,
       child: {
         test: "hello"
@@ -307,14 +284,11 @@ describe('Component', () => {
         return this.child
       }
     }
-    let governor = instantiate(createElement(TestComponent))
-    let latest
-    governor.subscribe(next => { latest = next })
-    expect(latest).toEqual({ a: 'a', b: 'a' })
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
-    expect(latest).toEqual({ a: 'a' })
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual({ a: 'a', b: 'a' })
+    harness.setProps({ updated: true })
+    expect(harness.value).toEqual({ a: 'a' })
   })
 
   it("changing a child from an object with numeric keys to an array recreates the children", () => {
@@ -340,16 +314,15 @@ describe('Component', () => {
         return null
       }
     }
-    let governor = instantiate(createElement(TestComponent))
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
     expect(childConstructorCount).toEqual(1)
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    harness.setProps({ updated: true })
     expect(childConstructorCount).toEqual(2)
   })
 
   it("events can be received from combined <subscribe /> elements when emitted during `componentWillReceiveProps` ", () => {
-    let outlet = createCounter()
+    let counterOutlet = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       componentWillReceiveProps() {
@@ -358,7 +331,7 @@ describe('Component', () => {
 
       connectChild() {
         return combine({
-          inner: subscribe(outlet)
+          inner: counterOutlet
         })
       }
 
@@ -367,26 +340,21 @@ describe('Component', () => {
       }
     }
 
-    let governor = instantiate(createElement(TestComponent))
-    let latest
-    governor.subscribe(next => {
-      latest = next
-    })
-    expect(latest).toEqual(0)
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
-    expect(latest).toEqual(1)
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual(0)
+    harness.setProps({ updated: true })
+    expect(harness.value).toEqual(1)
   })
 
   it("shouldComponentPublish receives old subs", () => {
-    let outlet = createCounter()
+    let counterOutlet = createCounter()
     let shouldComponentPublishValue
 
     class TestComponent extends Component<{ updated }> {
       connectChild() {
         return combine({
-          inner: subscribe(outlet)
+          inner: counterOutlet
         })
       }
 
@@ -399,20 +367,21 @@ describe('Component', () => {
       }
     }
 
-    let governor = instantiate(createElement(TestComponent))
-    outlet.transactionStart('1')
-    outlet.getValue().increase()
-    outlet.transactionEnd('1')
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    harness.dispatch(() => {
+      harness.value.inner.increase()
+    })
     expect(shouldComponentPublishValue).toEqual(true)
   })
 
-  it("events can be received from combined <subscribe /> elements in the same transaction as a setState", () => {
-    let outlet = createCounter()
+  it("events can be received from combined outlets in the same transaction as a setState", () => {
+    let counterOutlet = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       connectChild() {
         return combine({
-          inner: subscribe(outlet)
+          inner: counterOutlet
         })
       }
 
@@ -427,15 +396,12 @@ describe('Component', () => {
       }
     }
 
-    let governor = instantiate(createElement(TestComponent))
-    let latest
-    governor.subscribe(next => {
-      latest = next
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    harness.dispatch(() => {
+      harness.value.update()
     })
-    governor.transactionStart('1')
-    governor.getValue().update()
-    governor.transactionEnd('1')
-    expect(latest.child).toEqual(1)
+    expect(harness.value.child).toEqual(1)
   })
 
   it("supports getDerivedStateFromProps", () => {
@@ -451,11 +417,10 @@ describe('Component', () => {
       }
     }
 
-    let governor = instantiate(createElement(TestComponent))
-    expect(governor.getValue()).toBe(undefined)
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
-    expect(governor.getValue()).toBe('world')
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toBe(undefined)
+    harness.setProps({ updated: true })
+    expect(harness.value).toBe('world')
   })
 })

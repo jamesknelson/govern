@@ -1,5 +1,6 @@
 import { createCounter, createCounterClass } from './utils/createCounter'
 import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
+import { createTestHarness } from './utils/createTestHarness'
 
 describe('Combine', () => {
   it("outputs plain objects", () => {
@@ -9,27 +10,28 @@ describe('Combine', () => {
 
   it("outputs embedded elements", () => {
     let Counter = createCounterClass()
-    let governor = instantiate(combine({
+    let outlet = instantiate(combine({
         a: createElement(Counter, null),
         b: 2
     }))
-    expect(governor.getValue().a.count).toEqual(0)
+    let harness = createTestHarness(outlet)
+    expect(harness.value.a.count).toEqual(0)
   })
 
   it("handles addition and removal of elements", () => {
     let Counter = createCounterClass()
-    let governor = instantiate<any, any>(combine({
+    let outlet = instantiate<any, any>(combine({
         a: createElement(Counter, null),
     }))
-    governor.transactionStart('1')
-    governor.setProps({
+    let harness = createTestHarness(outlet)
+
+    harness.setProps({
         children: {
             b: createElement(Counter, null)
         }
     })
-    governor.transactionEnd('1')
-    expect(governor.getValue().a).toEqual(undefined)
-    expect(governor.getValue().b.count).toEqual(0)
+    expect(harness.value.a).toEqual(undefined)
+    expect(harness.value.b.count).toEqual(0)
   })
 
   it("handles changing of child props", () => {
@@ -46,18 +48,17 @@ describe('Combine', () => {
         }
     }
 
-    let governor = instantiate(combine({
+    let outlet = instantiate(combine({
         doubled: createElement(Double, { x: 2 }),
     }))
-    expect(governor.getValue()).toEqual({ doubled: 4 })
-    governor.transactionStart('1')
-    governor.setProps({
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual({ doubled: 4 })
+    harness.setProps({
         children: {
             doubled: createElement(Double, { x: 4 }),
         }
     })
-    governor.transactionEnd('1')
     expect(instantiationCount).toEqual(1)
-    expect(governor.getValue()).toEqual({ doubled: 8 })
+    expect(harness.value).toEqual({ doubled: 8 })
   })
 })

@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, SFC, StrictComponent } from '../../src'
+import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../../src'
 
 export function createModelClass() {
     return class Model<T> extends Component<{ defaultValue: T }, any> {

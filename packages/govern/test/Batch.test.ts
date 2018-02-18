@@ -1,5 +1,6 @@
 import { map, subscribe, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
+import { createTestHarness } from './utils/createTestHarness'
 
 describe('Batching', () => {
   function FirstName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
@@ -54,28 +55,25 @@ describe('Batching', () => {
 
     let firstNameGovernor = instantiate(createElement(FirstName, { userOutlet }))
     let lastNameGovernor = instantiate(createElement(LastName, { userOutlet }))
+    
     let fullNameGovernor = instantiate(createElement(JoinedObservables, {
       firstName: firstNameGovernor,
       lastName: lastNameGovernor
     }))
     
     let updateCount = 0
-    let lastValue = undefined as any
-    let dispatch
-    fullNameGovernor.subscribe((name, dis) => {
-        updateCount++
-        lastValue = name
-        dispatch = dis
+    let harness = createTestHarness(fullNameGovernor, () => {
+      updateCount++
     })
 
     expect(updateCount).toEqual(1)
-    expect(lastValue).toEqual(' ')
+    expect(harness.value).toEqual(' ')
 
-    dispatch(() => {
+    harness.dispatch(() => {
       modelGovernor.getValue().change({ firstName: "James", lastName: "Nelson" })
     })
 
-    expect(lastValue).toEqual('James Nelson')
+    expect(harness.value).toEqual('James Nelson')
     expect(updateCount).toEqual(2)
   })
 })

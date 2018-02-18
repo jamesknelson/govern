@@ -1,88 +1,84 @@
-import { createModelClass } from './utils/createModelClass'
 import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
+import { createModelClass } from './utils/createModelClass'
+import { createTestHarness } from './utils/createTestHarness'
 
 describe('Map', () => {
-  // it("maps initial value", () => {
-  //   class Test extends Component<{a: string}> {
-  //     publish() {
-  //         return { b: this.props.a }
-  //     }
-  //   }
+  class Double extends Component<{x: number}> {
+    publish() {
+        return this.props.x*2
+    }
+  }
 
-  //   let element = map(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
-  //   let governor = instantiate(element)
+  it("maps initial value", () => {
+    class Test extends Component<{a: string}> {
+      publish() {
+          return { b: this.props.a }
+      }
+    }
 
-  //   expect(governor.getValue()).toEqual({ c: 'test' })
-  // })
+    let element = map(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
+    let outlet = instantiate(element)
+    let harness = createTestHarness(outlet)
 
-  // it("accepts changes to from element's props", () => {
-  //   class Double extends Component<{x: number}> {
-  //     publish() {
-  //         return this.props.x*2
-  //     }
-  //   }
+    expect(harness.value).toEqual({ c: 'test' })
+  })
 
-  //   let element = map(
-  //       createElement(Double, { x: 1 }),
-  //       x => combine({ x: createElement(Double, { x }) })
-  //   )
-  //   let governor = instantiate(element)
-  //   let value
-  //   governor.subscribe(x => { value = x })
-  //   expect(value).toEqual({ x: 4 })
-  //   governor.transactionStart('1')
-  //   governor.setProps({
-  //       from: createElement(Double, { x: 2 }),
-  //       to: x => combine({ x: createElement(Double, { x }) })
-  //   })
-  //   expect(value).toEqual({ x: 4 })
-  //   governor.transactionEnd('1')
-  //   expect(value).toEqual({ x: 8 })
-  // })
+  it("accepts changes to from element's props", () => {
+    let element = map(
+        createElement(Double, { x: 1 }),
+        x => combine({ x: createElement(Double, { x }) })
+    )
+    let outlet = instantiate(element)
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual({ x: 4 })
+    harness.dispatch(() => {
+      harness.setProps({
+          from: createElement(Double, { x: 2 }),
+          to: x => combine({ x: createElement(Double, { x }) })
+      })
+      expect(harness.value).toEqual({ x: 4 })
+    })
+    expect(harness.value).toEqual({ x: 8 })
+  })
 
-  // it("accepts changes to map fn", () => {
-  //   class Double extends Component<{x: number}> {
-  //     publish() {
-  //         return this.props.x*2
-  //     }
-  //   }
-
-  //   let element = map(
-  //       createElement(Double, { x: 1 }),
-  //       output => combine({ x: createElement(Double, { x: output }) }),
-  //   )
-  //   let governor = instantiate(element)
-  //   let value
-  //   governor.subscribe(x => { value = x })
-  //   expect(value).toEqual({ x: 4 })
-  //   governor.transactionStart('1')
-  //   governor.setProps({
-  //       from: createElement(Double, { x: 1 }),
-  //       to: output => combine({ x: createElement(Double, { x: output*2 }) }),
-  //   })
-  //   expect(value).toEqual({ x: 4 })
-  //   governor.transactionEnd('1')
-  //   expect(value).toEqual({ x: 8 })
-  // })
+  it("accepts changes to map fn", () => {
+    let element = map(
+        createElement(Double, { x: 1 }),
+        output => combine({ x: createElement(Double, { x: output }) }),
+    )
+    let outlet = instantiate(element)
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual({ x: 4 })
+    harness.dispatch(() => {
+      harness.setProps({
+          from: createElement(Double, { x: 1 }),
+          to: output => combine({ x: createElement(Double, { x: output*2 }) }),
+      })
+      expect(harness.value).toEqual({ x: 4 })
+    })
+    expect(harness.value).toEqual({ x: 8 })
+  })
 
   it("passes changes on subscribed from element", () => {
+    function PickFirstName(props: { name: { firstName: string, lastName: string } }) {
+      return props.name.firstName
+    }
+
     let Model = createModelClass()
     let model = instantiate(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
     let outlet = instantiate(
       map(
-        subscribe(model),
-        model => model.value
+        model,
+        model => createElement(PickFirstName, { name: model.value })
       )
     )
-
-    let value
-    outlet.subscribe(x => { value = x })
-    expect(value).toEqual({ firstName: "", lastName: "" })
-    model.transactionStart('1')
-    model.getValue().change({ firstName: 'James', lastName: 'Nelson' })
-    model.transactionEnd('1')
-    expect(value).toEqual({ firstName: 'James', lastName: 'Nelson' })
+    let harness = createTestHarness(outlet)
+    expect(harness.value).toEqual("")
+    harness.dispatch(() => {
+      model.getValue().change({ firstName: 'James', lastName: 'Nelson' })
+    })
+    expect(harness.value).toEqual('James')
   })
 })

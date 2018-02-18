@@ -15,8 +15,8 @@ describe('instantiate', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let governor = instantiate(element)
-    let output = governor.getValue()
+    let outlet = instantiate(element)
+    let output = outlet.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
 
@@ -36,8 +36,8 @@ describe('instantiate', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let governor = instantiate(element)
-    let output = governor.getValue()
+    let outlet = instantiate(element)
+    let output = outlet.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
 })

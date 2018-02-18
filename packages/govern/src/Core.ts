@@ -1,6 +1,7 @@
 import { TransactionalObservable } from './TransactionalObservable'
 import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
+import { Outlet } from './Outlet'
 
 export type BuiltInType = 'map' | 'subscribe' | 'combine' | 'combineArray' | 'constant'
 export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
@@ -16,7 +17,7 @@ export interface Attributes {
 export type ComponentState = {};
 
 export type MapProps<FromValue, ToValue> = {
-    from: GovernElement<any, FromValue>,
+    from: GovernElement<any, FromValue> | Outlet<FromValue>,
     to: SFC<FromValue, ToValue>,
 }
 

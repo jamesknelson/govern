@@ -1,4 +1,5 @@
 import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
   class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
@@ -74,14 +75,12 @@ function createModelClass() {
     }
 
     change = (value) => {
-      this.transaction(() => {
-        if (value.name) {
-          this.child.name.change(value.name)
-        }
-        if (value.email) {
-          this.child.email.change(value.email)
-        }
-      })
+      if (value.name) {
+        this.child.name.change(value.name)
+      }
+      if (value.email) {
+        this.child.email.change(value.email)
+      }
     }
   }
 }
@@ -148,10 +147,8 @@ function createFormControllerClass() {
 
     receiveDataIfAvailable(output) {
       if (this.awaitingData && output && Object.keys(output).length > 0) {
-        this.transaction(() => {
-          this.awaitingData = false
-          this.child.model.change(output)
-        })
+        this.awaitingData = false
+        this.child.model.change(output)
       }
     }
   }
@@ -161,7 +158,7 @@ describe("Model", () => {
   const Model = createModelClass()
 
   it('returns expected initial value', () => {
-    let governor = instantiate(
+    let outlet = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -169,7 +166,7 @@ describe("Model", () => {
         }
       })
     )
-    let output = governor.getValue()
+    let output = outlet.getValue()
     expect(output.value).toEqual({
       name: 'James',
       email: 'james',
@@ -178,7 +175,7 @@ describe("Model", () => {
   })
 
   it('notifies changes', () => {
-    let governor = instantiate(
+    let outlet = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -186,15 +183,14 @@ describe("Model", () => {
         }
       })
     )
-    let latest
-    governor.subscribe(value => {
-      latest = value
+    let harness = createTestHarness(outlet)
+    harness.dispatch(() => {
+      harness.value.change({
+        email: 'james@jamesknelson.com'
+      })
     })
-    governor.getValue().change({
-      email: 'james@jamesknelson.com'
-    })
-    expect(latest.error).toBeFalsy()
-    expect(latest.value).toEqual({
+    expect(harness.value.error).toBeFalsy()
+    expect(harness.value.value).toEqual({
       name: 'James',
       email: 'james@jamesknelson.com'
     })
@@ -213,33 +209,29 @@ describe("FormController", () => {
       }
     }
     let data = instantiate(createElement(Constant))
-    let governor = instantiate(
+    let outlet = instantiate(
       createElement(FormController, { data })
     )
-    let output = governor.getValue()
-    expect(output.data).toBe(null)
-    expect(output.model.error.email).toBeTruthy()
+    let harness = createTestHarness(outlet)
+    expect(harness.value.data).toBe(null)
+    expect(harness.value.model.error.email).toBeTruthy()
   })
 
   it('emits a new model when initial data is received', () => {
     let dataSource = instantiate(createElement(DataSource, {}))
     let dataSourceData = instantiate(createElement(DataSourceData, { dataSource }))
-    let governor = instantiate(
+    let outlet = instantiate(
       createElement(FormController, { data: dataSourceData })
     )
-    let latest, dispatch
-    governor.subscribe((value, dis) => {
-      latest = value
-      dispatch = dis
-    })
+    let harness = createTestHarness(outlet)
     let received = {
       name: 'James',
       email: 'james@jamesknelson.com'
     }
-    dispatch(() => {
+    harness.dispatch(() => {
       dataSource.getValue().receive(received)
     })
-    expect(latest.data).toEqual(received)
-    expect(latest.model.error).toBeFalsy()
+    expect(harness.value.data).toEqual(received)
+    expect(harness.value.model.error).toBeFalsy()
   })
 })

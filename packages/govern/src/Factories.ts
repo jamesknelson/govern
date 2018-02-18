@@ -25,7 +25,7 @@ export function subscribe<Value>(
 }
 
 export function map<FromValue, ToValue>(
-    from: GovernElement<any, FromValue>,
+    from: GovernElement<any, FromValue> | Outlet<FromValue>,
     to: SFC<FromValue, ToValue>,
     key?: Key
 ): GovernElement<MapProps<FromValue, ToValue>, ToValue> {
