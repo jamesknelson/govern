@@ -28,7 +28,7 @@ describe('isValidElement', () => {
     })
 
     it("returns false for html-like elements", () => {
-        let element = createElement('div' as any, { className: 'test' }) as any
+        let element = React.createElement('div' as any, { className: 'test' }) as any
         expect(isValidElement(element)).toBe(false)
     })
 })

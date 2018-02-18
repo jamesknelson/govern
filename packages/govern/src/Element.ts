@@ -43,8 +43,7 @@ const BUILT_IN_TYPES = [
     'combine',
     'combineArray',
     'constant',
-    'map',
-    'subscribe',
+    'map'
 ]
 
 /**
@@ -162,6 +161,10 @@ export function createElement<Props, Value>(
     else if (children.length > 1) {
         props.children = children;
     }
+
+    if (typeof type === 'string' && BUILT_IN_TYPES.indexOf(type) === -1) {
+        throw new Error(`"${type}" is not a valid type for a Govern Element.`)
+    }
     
     // Resolve default props
     if (type && typeof type !== 'string' && type.defaultProps) {
@@ -187,7 +190,12 @@ export function convertToElement(value): GovernElement<any, any> {
         return value
     }
     else if (isValidOutlet(value)) {
-        return createElement('subscribe', { to: value })
+        return {
+            type: 'subscribe',
+            props: { to: value },
+            key: null,
+            value: <any>undefined,
+        }
     }
     else if (Array.isArray(value)) {
         return createElement('combineArray', { children: value })

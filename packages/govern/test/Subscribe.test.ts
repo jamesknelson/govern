@@ -6,14 +6,16 @@ describe("Subscribing to governors", () => {
     it("outputs intial value", () => {
         let Component = () => constant('blue')
         let outlet1 = instantiate(createElement(Component))
-        let mainOutlet = instantiate(createElement('subscribe', { to: outlet1 }))
+        let TestComponent = () => outlet1
+        let mainOutlet = instantiate(createElement(TestComponent))
         let harness = createTestHarness(mainOutlet)
         expect(harness.value).toEqual("blue")
     })
 
     it("outputs changes in value", () => {
         let counter = createCounter()
-        let outlet = instantiate(createElement('subscribe', { to: counter }))
+        let TestComponent = () => counter
+        let outlet = instantiate(createElement(TestComponent))
         let harness = createTestHarness(outlet)
         expect(harness.value.count).toEqual(0)
         harness.dispatch(() => {
@@ -29,7 +31,8 @@ describe("Subscribing to governors", () => {
         let Component2 = () => constant('orange')
         let outlet2 = instantiate(createElement(Component2))
         
-        let mainOutlet = instantiate(createElement('subscribe', { to: outlet1 }))
+        let Subscribe = ({ to }) => to
+        let mainOutlet = instantiate(createElement(Subscribe, { to: outlet1 }))
         let harness = createTestHarness(mainOutlet)
         expect(harness.value).toEqual("blue")
         harness.setProps({ to: outlet2 })
