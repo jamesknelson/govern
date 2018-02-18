@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 
 function createModelClass() {
   class ModelPrimitive extends Component<{ defaultValue, validate }, any> {
@@ -102,7 +102,7 @@ function createDataSourceClass() {
     }
 
     connectChild() {
-      return combine(this.state.store)
+      return this.state.store && combine(this.state.store)
     }
 
     publish() {
@@ -227,17 +227,18 @@ describe("FormController", () => {
     let governor = instantiate(
       createElement(FormController, { data: dataSourceData })
     )
-    let latest
-    governor.subscribe(value => {
+    let latest, dispatch
+    governor.subscribe((value, dis) => {
       latest = value
+      dispatch = dis
     })
     let received = {
       name: 'James',
       email: 'james@jamesknelson.com'
     }
-    dataSource.transactionStart('1')
-    dataSource.getValue().receive(received)
-    dataSource.transactionEnd('1')
+    dispatch(() => {
+      dataSource.getValue().receive(received)
+    })
     expect(latest.data).toEqual(received)
     expect(latest.model.error).toBeFalsy()
   })

@@ -28,7 +28,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
     protected subscription?: Subscription;
 
     constructor(
-        nextOrObserver: TransactionalObserver<T> | ((value: T) => void),
+        nextOrObserver: TransactionalObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
         error?: (error: any) => void,
         complete?: () => void,
         transactionStart?: (transactionId: string) => void,
@@ -70,7 +70,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
         this.subscription = subscription
     }
 
-    next(value: T): void {
+    next(value: T, dispatch: (runner: () => void) => void): void {
         if (this.closed) {
             throw new TargetClosedError()
         }
@@ -78,7 +78,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
         this.latestValue = value
         this.hasChangedSinceTransactionStart = true
         if (!this.isStopped && this.observer.next && (this.observer.transactionEnd || this.transactionLevel === 0)) {
-            this.observer.next(value)
+            this.observer.next(value, dispatch)
         }
     }
 

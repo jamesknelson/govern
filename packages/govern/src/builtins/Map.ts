@@ -51,6 +51,12 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
                 this.fromOutlet.dispose()
             }
             this.element = fromElement
+            // TODO: need to somehow start/end transactions on `fromOutlet`
+            // when this.impl starts/ends transactions. Maybe need to subscribe
+            // to it? Otherwise we can't dispatch actions on `fromOutlet`.
+            // TODO: perhaps `addChild` and `removeChild` methods can be shaed
+            // between impl.connect and this?
+            // TODO: add a test to Map.test.ts
             this.fromOutlet = instantiateWithManualFlush(fromElement, transactionId)
             this.transactionIds.push(transactionId)
             this.fromOutlet.subscribe(
@@ -69,7 +75,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
     }
 
     handleChange = (fromOut: FromValue) => {
-        if (this.impl.governor) {
+        if (this.impl.outlet) {
             this.impl.setState(() => ({ fromOut }))
         }
         else {

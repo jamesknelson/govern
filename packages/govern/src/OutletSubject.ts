@@ -7,6 +7,7 @@ import { Target, TargetClosedError } from './Target'
 import { closedSubscription, ClosableSubscription, Subscription } from './Subscription'
 
 export class OutletSubject<T> {
+    protected dispatch: (runner: () => void) => void
     protected hasError: boolean
     protected isStopped: boolean;
     protected subscriptionsToSources: Subscription[]
@@ -15,7 +16,8 @@ export class OutletSubject<T> {
     protected transactionId?: string
     protected value: T
     
-    constructor() {
+    constructor(dispatch: (runner: () => void) => void) {
+        this.dispatch = dispatch
         this.hasError = false
         this.isStopped = false
         this.subscriptionsToSources = []
@@ -50,7 +52,7 @@ export class OutletSubject<T> {
             target.transactionStart(this.transactionId)
         }
 
-        target.next(this.value)
+        target.next(this.value, this.dispatch)
 
         return subscription
     }
@@ -71,7 +73,7 @@ export class OutletSubject<T> {
             let len = targets.length
             let copy = targets.slice()
             for (let i = 0; i < len; i++) {
-                copy[i].next(value)
+                copy[i].next(value, this.dispatch)
             }
         }
     }

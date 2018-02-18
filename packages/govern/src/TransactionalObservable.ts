@@ -20,7 +20,7 @@ export interface TransactionalObservable<T> extends Observable<T> {
 
     // Subscribes to the sequence with callbacks
     subscribe(
-        onNext: (value: T) => void,
+        onNext: (value: T, dispatch?: (runner: () => void) => void) => void,
         onError?: (error: any) => void,
         onComplete?: () => void,
         onTransactionStart?: (transactionId: string) => void,
@@ -29,6 +29,11 @@ export interface TransactionalObservable<T> extends Observable<T> {
 }
 
 export interface TransactionalObserver<T> extends Observer<T> {
+    // Any actions which can affect the state of the observable must be
+    // wrapped in a transaction -- and to do so, you'll need to wrap the
+    // actions in the dispatch function.
+    next: (value: T, dispatch?: (runner: () => void) => void) => void;
+
     // While not useful at the level of a single observable, these allow
     // observers to arbitrarily split observables, and then recombine
     // them, and still only emit a single batch (while there will now

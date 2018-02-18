@@ -1,5 +1,5 @@
 import { Outlet } from './Outlet'
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, SubscribeProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './TransactionalObservable'
@@ -32,16 +32,23 @@ export function map<FromValue, ToValue>(
     return createElement('map', { from, to, key })
 }
 
-export function outlet<Value = any>(
-    element: GovernElementLike<any, Value>,
+export function combine<CombinedValue>(
+    children: CombineChildren<keyof CombinedValue, CombinedValue>,
     key?: Key
-): GovernElement<OutletSourceProps<Value>, Outlet<Value>> {
-    return createElement('outlet', { children: element, key })
+): GovernElement<CombineProps<CombinedValue>, CombinedValue> {
+    return createElement('combine', { children, key })
 }
 
-export function combine<Value>(
-    children: CombineChildren<keyof Value, Value>,
+export function combineArray<ItemValue>(
+    children: CombineArrayChildren<ItemValue>,
     key?: Key
-): GovernElement<CombineProps<Value>, Value> {
-    return createElement('combine', { children, key })
+): GovernElement<CombineArrayProps<ItemValue>, ItemValue[]> {
+    return createElement('combineArray', { children, key })
+}
+
+export function constant<Value>(
+    of: Value,
+    key?: Key
+): GovernElement<ConstantProps<Value>, Value> {
+    return createElement('constant', { of, key })
 }

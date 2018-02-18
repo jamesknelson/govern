@@ -15,7 +15,7 @@ export abstract class Target<T> {
     // Receives the subscription object when `subscribe` is called
     abstract start(subscription: Subscription): void
 
-    abstract next(value: T): void
+    abstract next(value: T, dispatch: (runner: () => void) => void): void
     abstract error(err?: any): void
     abstract complete(): void
     abstract transactionStart(transactionId: string): void

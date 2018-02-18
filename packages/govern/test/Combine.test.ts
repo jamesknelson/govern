@@ -33,13 +33,20 @@ describe('Combine', () => {
   })
 
   it("handles changing of child props", () => {
+    let instantiationCount = 0
+
     class Double extends Component<{x: number}> {
+        constructor(props) {
+            super(props)
+            instantiationCount++
+        }
+
         publish() {
             return this.props.x*2
         }
     }
 
-    let governor = instantiate<any, any>(combine({
+    let governor = instantiate(combine({
         doubled: createElement(Double, { x: 2 }),
     }))
     expect(governor.getValue()).toEqual({ doubled: 4 })
@@ -50,6 +57,7 @@ describe('Combine', () => {
         }
     })
     governor.transactionEnd('1')
+    expect(instantiationCount).toEqual(1)
     expect(governor.getValue()).toEqual({ doubled: 8 })
   })
 })

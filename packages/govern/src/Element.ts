@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './Governable'
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineProps, SubscribeProps, OutletSourceProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, SubscribeProps } from './Core'
 import { Outlet } from './Outlet'
 
 const RESERVED_PROPS = {
@@ -40,8 +40,9 @@ function hasValidKey(config) {
 
 const BUILT_IN_TYPES = [
     'combine',
+    'combineArray',
+    'constant',
     'map',
-    'outlet',
     'subscribe',
 ]
 
@@ -53,15 +54,15 @@ const BUILT_IN_TYPES = [
  * the prototype (if a prototype exists), ensuring that `type` refers to a
  * govern component instead of a React component.
  */
-export function isValidElement(object) {
+export function isValidElement(obj): obj is GovernElement<any, any> {
     return (
-        typeof object === 'object' &&
-        object !== null &&
-        object.type &&
-        ((typeof object.type === 'function') ||
-         (typeof object.type === 'string' && BUILT_IN_TYPES.indexOf(object.type) !== -1)) &&
-        ('props' in object) &&
-        ('key' in object)
+        typeof obj === 'object' &&
+        obj !== null &&
+        obj.type &&
+        ((typeof obj.type === 'function') ||
+         (typeof obj.type === 'string' && BUILT_IN_TYPES.indexOf(obj.type) !== -1)) &&
+        ('props' in obj) &&
+        ('key' in obj)
     )
 }
 
@@ -92,17 +93,23 @@ export function createElement<Value>(
     props?: Attributes & SubscribeProps<Value>
 ): GovernElement<SubscribeProps<Value>, Value>
 
-export function createElement<Value>(
-    type: 'outlet',
-    props?: Attributes & OutletSourceProps<Value> | null,
-    children?: GovernElementLike<any, Value>
-): GovernElement<OutletSourceProps<Value>, Outlet<Value>>
-
 export function createElement<CombinedValue>(
     type: 'combine',
     props?: Attributes & CombineProps<CombinedValue> | null,
     children?: CombineChildren<keyof CombinedValue, CombinedValue>
 ): GovernElement<CombineProps<CombinedValue>, CombinedValue>
+
+export function createElement<ItemValue>(
+    type: 'combineArray',
+    props?: Attributes & CombineArrayProps<ItemValue> | null,
+    children?: CombineArrayChildren<ItemValue>
+): GovernElement<CombineArrayProps<ItemValue>, ItemValue[]>
+
+export function createElement<Value>(
+    type: 'constant',
+    props?: Attributes & ConstantProps<Value> | null,
+): GovernElement<ConstantProps<Value>, Value>
+
 
 // Custom components
 export function createElement<Props, Value>(

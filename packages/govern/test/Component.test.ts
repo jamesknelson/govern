@@ -2,6 +2,23 @@ import { map, subscribe, combine, createElement, instantiate, Component, Outlet,
 import { createCounter } from './utils/createCounter'
 
 describe('Component', () => {
+  it("actions with setState throw an error when not in a transaction", () => {
+    class TestComponent extends Component<{}> {
+      publish() {
+        return {
+          action: () => {
+            this.setState({})
+          }
+        }
+      }
+    }
+
+    let outlet = instantiate(createElement(TestComponent))
+    expect(() => {
+      outlet.getValue().action()
+    }).toThrow()
+  })
+
 	it("calls only componentDidInstantiate on instantiation", () => {
     let calledDidInstantiateWith = undefined as any
     let didCallDidUpdate = false
@@ -229,24 +246,6 @@ describe('Component', () => {
     expect(nextProps).toEqual({ updated: true })
   })
 
-  it("throws if 'subscribe' returns a non-node object", () => {
-    expect(() => {
-      class TestComponent extends Component<{}> {
-        connectChild() {
-          return {
-            a: 1
-          }
-        }
-        
-        publish() {
-          return this.child
-        }
-      }
-
-      instantiate(createElement(TestComponent))
-    }).toThrow()
-  })
-
   it("child components with shouldComponentPublish: false still appear in the parent after setting parent props", () => {
     class TestChildComponent extends Component {
       shouldComponentPublish(prevProps, prevState) {
@@ -274,13 +273,14 @@ describe('Component', () => {
     }
 
     let governor = instantiate(createElement(TestComponent))
-    let latest
-    governor.subscribe(next => {
+    let latest, dispatch
+    governor.subscribe((next, dis) => {
+      dispatch = dis
       latest = next
     })
-    governor.transactionStart('1')
-    governor.setProps({ updated: true })
-    governor.transactionEnd('1')
+    dispatch(() => {
+      governor.setProps({ updated: true })
+    })
     expect(latest).toEqual({
       updated: true,
       child: {
@@ -330,7 +330,7 @@ describe('Component', () => {
     }
     class TestComponent extends Component<{ updated }> {
       connectChild() {
-        return combine(
+        return (
           this.props.updated
             ? [createElement(Child)]
             : {'0': createElement(Child)} as any

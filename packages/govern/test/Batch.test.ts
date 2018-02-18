@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Outlet, Component, SFC, StrictComponent } from '../src'
+import { map, subscribe, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 
 describe('Batching', () => {
@@ -61,17 +61,19 @@ describe('Batching', () => {
     
     let updateCount = 0
     let lastValue = undefined as any
-    fullNameGovernor.subscribe(name => {
+    let dispatch
+    fullNameGovernor.subscribe((name, dis) => {
         updateCount++
         lastValue = name
+        dispatch = dis
     })
 
     expect(updateCount).toEqual(1)
     expect(lastValue).toEqual(' ')
 
-    modelGovernor.transactionStart('1')
-    modelGovernor.getValue().change({ firstName: "James", lastName: "Nelson" })
-    modelGovernor.transactionEnd('1')
+    dispatch(() => {
+      modelGovernor.getValue().change({ firstName: "James", lastName: "Nelson" })
+    })
 
     expect(lastValue).toEqual('James Nelson')
     expect(updateCount).toEqual(2)

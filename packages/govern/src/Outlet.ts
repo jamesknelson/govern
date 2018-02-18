@@ -27,7 +27,7 @@ export class Outlet<T, Props=any> implements TransactionalObservable<T> {
     }
     
     subscribe(
-        targetOrNextOrObserver: TransactionalObserver<T> | ((value: T) => void),
+        targetOrNextOrObserver: TransactionalObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
         error?: (error: any) => void,
         complete?: () => void,
         transactionStart?: (transactionId: string) => void,
@@ -72,4 +72,8 @@ export class Outlet<T, Props=any> implements TransactionalObservable<T> {
     // flatMap<U>(transform: (value: T) => GovernElement<any, U>) {
     //     return flatMap(this, transform)
     // }
+}
+
+export function isValidOutlet(x): x is Outlet<any, any> {
+    return x instanceof Outlet
 }

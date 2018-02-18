@@ -1,9 +1,9 @@
 import { createCounter } from './utils/createCounter'
-import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
+import { map, subscribe, combine, constant, createElement, instantiate, Component, SFC } from '../src'
 
 describe("Subscribing to governors", () => {
     it("outputs intial value", () => {
-        let Component = () => combine('blue')
+        let Component = () => constant('blue')
         let observable = instantiate(createElement(Component))
         let governor = instantiate(subscribe(observable))
         expect(governor.getValue()).toEqual("blue")
@@ -22,10 +22,10 @@ describe("Subscribing to governors", () => {
     })
 
     it("can change governor", () => {
-        let Component1 = () => combine('blue')
+        let Component1 = () => constant('blue')
         let observable1 = instantiate(createElement(Component1))
 
-        let Component2 = () => combine('orange')
+        let Component2 = () => constant('orange')
         let observable2 = instantiate(createElement(Component2))
         
         let governor = instantiate(subscribe(observable1))

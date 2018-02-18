@@ -2,13 +2,14 @@ import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
-import { isValidElement } from './Element'
+import { createElement, isValidElement, GovernElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
 import { instantiateWithManualFlush } from './Governor'
 import { Outlet } from './Outlet'
 import { OutletSubject } from './OutletSubject'
 import { Subscription } from './Subscription'
 import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
+import { isValidOutlet } from './index';
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -43,7 +44,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // - during `publish`
     // - while publishing via "transactionStart"
     // - while publishing via "next"
-    disallowSideEffectsReason: (string | null)[] = []
+    disallowChangesReason: (string | null)[] = []
 
     props: Props;
     state: State;
@@ -57,26 +58,23 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     // Arbitrary functions to be run after componentDidUpdate
     callbacks: Function[] = []
-    
-    children: {
-        [key: string]: {
-            node: any,
-            subscription: Subscription,
 
-            // A governor will not exist in the case of a `subscribe` element.
-            governor?: Outlet<any, any>
-        }
-    } = {}
+    // Use a map so we have access to a list of keys, even if it contains
+    // symbols.
+    children: Map<string, {
+        type: 'outlet' | 'element' | 'constant',
+        element: GovernElement<any, any>,
+        subscription?: Subscription,
+        outlet?: Outlet<any, any>
+    }> = new Map()
 
-    // These are stored separately to children, as they may contain a symbol,
-    // which doesn't appear in the result of Object.keys()
-    childrenKeys: any[] = []
+    // A list of children that have been disposed and removed from
+    // this.children, but still haven't had the transaction ended.
+    disposedChildren: Outlet<any, any>[] = []
 
     // If we're running `connect`, we can defer handling of new child values
     // to the end of the connect.
     expectingChildChangeFor?: string
-
-    governor?: Outlet<Value, Props>
 
     // Keep track of whether we need to call componentDidInstantiate on the
     // next flush.
@@ -94,21 +92,15 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // prevent them from accessing the existing child.
     isRunningConnectChild: boolean = false
 
-    // If our last child was an array or object of further elements, store the
-    // type.
-    lastCombinedType?: 'array' | 'object'
+    // The last result of the `subscribe` function
+    lastSubscribeElement?: GovernElement<any, any>
 
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>
 
-    // A queue of side effects that must be run on children
-    queue: {
-        governor: Outlet<any, any>,
-        action: 'endTransaction' | 'dispose',
-        transactionId?: string,
-    }[] = []
+    outlet?: Outlet<Value, Props>
 
     // A pipe for events out of this object
-    subject: OutletSubject<Value> = new OutletSubject()
+    subject: OutletSubject<Value>
 
     // Keep track of what props, state and child were at the start of a
     // transaction, so we can pass them through to componentDidUpdate.
@@ -124,10 +116,11 @@ export class ComponentImplementation<Props, State, Value, Child> {
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
+        this.subject = new OutletSubject(this.dispatch)
 
         // This will be shifted off the stack during `instantiate`, which
         // is guaranteed to run directly after the subclass constructor.
-        this.disallowSideEffectsReason.unshift('in constructor')
+        this.disallowChangesReason.unshift('in constructor')
     }
 
     /**
@@ -153,9 +146,23 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.fixed.shift()
     }
 
+    dispatch = (runner: Function): void => {
+        if (!this.outlet) {
+            throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
+        }
+        if (this.disallowChangesReason[0]) {
+            throw new Error(`You cannot call "transaction" while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
+        }
+
+        let transactionId = getUniqueId()
+        this.transactionStart(transactionId)
+        runner()
+        this.transactionEnd(transactionId)
+    }
+
     dispose = () => {
-        if (this.disallowSideEffectsReason[0] && this.transactionLevel !== 0) {
-            throw new Error(`You cannot call "dispose" on a governor while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+        if (this.disallowChangesReason[0] && this.transactionLevel !== 0) {
+            throw new Error(`You cannot call "dispose" on a governor while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         this.willDispose = true
 
@@ -170,10 +177,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     setProps = (props: Props): void => {
-        if (this.disallowSideEffectsReason[0]) {
-            throw new Error(`You cannot update governor's props while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+        if (this.disallowChangesReason[0]) {
+            throw new Error(`You cannot update governor's props while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
-        else if (this.transactionLevel === 0) {
+        if (this.transactionLevel === 0) {
             throw new Error(`setProps cannot be called outside of a transaction.`)
         }
 
@@ -188,9 +195,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.props = props
 
         if (this.lifecycle.constructor.getDerivedStateFromProps) {
-            this.disallowSideEffectsReason.unshift("running `getDerivedStateFromProps`")
+            this.disallowChangesReason.unshift("running `getDerivedStateFromProps`")
             this.state = Object.assign({}, this.state, this.lifecycle.constructor.getDerivedStateFromProps(props, this.state))
-            this.disallowSideEffectsReason.shift()
+            this.disallowChangesReason.shift()
         }
         
         this.connect()
@@ -198,10 +205,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
-        if (this.disallowSideEffectsReason[0]) {
-            throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+        if (this.disallowChangesReason[0]) {
+            throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
-        else if (this.transactionLevel === 0) {
+        if (this.transactionLevel === 0) {
             throw new Error(`"setState" cannot be called outside of a transaction.`)
         }
 
@@ -209,9 +216,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
             this.callbacks.push(callback)
         }
 
-        this.disallowSideEffectsReason.unshift("running a setState updater")
+        this.disallowChangesReason.unshift("running a setState updater")
         this.state = Object.assign({}, this.state, updater(this.state, this.props))
-        this.disallowSideEffectsReason.shift()
+        this.disallowChangesReason.shift()
 
         // If `setState` is called within `componentWillReceiveProps`, then
         // a `connect` and `publish` is already scheduled immediately
@@ -222,184 +229,162 @@ export class ComponentImplementation<Props, State, Value, Child> {
         }
     }
 
-    // TODO:
-    // this method feels like it could be a lot cleaner.
     connect() {
         if (this.lifecycle.connectChild) {
-            this.disallowSideEffectsReason.unshift("running connectChild")
+            this.disallowChangesReason.unshift("running connectChild")
 
             this.pushFix()
             this.isRunningConnectChild = true
-            let element = this.lifecycle.connectChild()
+            let result = this.lifecycle.connectChild()
             this.isRunningConnectChild = false
             this.popFix()
 
-            if (element === undefined) {
+            if (result === undefined) {
                 console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
             }
-            else if (this.lifecycle instanceof Component && element !== null && !isValidElement(element)) {
-                throw new Error(`You must return an element from "subscribe", but instead received a "${typeof element}". See component "${getDisplayName(this.lifecycle.constructor)}".`)
+
+            let lastRootElement = this.lastSubscribeElement
+            let nextRootElement = convertToElement(result)
+            this.lastSubscribeElement = nextRootElement
+
+            let { keys: lastKeys, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
+            let { keys: nextKeys, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
+
+            // Indicates whether all existing children should be destroyed and
+            // recreated, even if they reconcile. We'll want to do this if the
+            // children move from a `combine` to a `combineArray`, etc.
+            let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
+            let isCombined = nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray'
+
+            // Create a new `subs` object, keeping around appropriate previous
+            // values, so we don't have to rerequest them from subscribed
+            // outlets.
+            if (nextRootElement.type === 'combine') {
+                this.child = typeHasChanged ? {} : Object.assign({}, this.child) as any
+            }
+            else if (nextRootElement.type === 'combineArray') {
+                this.child = typeHasChanged ? [] : (this.child as any).slice(0) as any
             }
 
-            // If the child element has changed between array/object/plain
-            // element, we want to destroy/recreate any chidlren on the same
-            // key.
-            let forceFullUpdate = false
+            // A list of keys on the existing `this.children` that need to be
+            // disposed. We'll start with all of the previous keys, and remove
+            // holdovers as we find them.
+            let childKeysToDispose = new Set(lastKeys)
 
-            let nextChildrenKeys: string[]
-            let nextChildNodes
-            if (isValidElement(element) && element!.type === "combine") {
-                if (Array.isArray(element.props.children)) {
-                    // this will wipe out any changes from directly set stuff
-                    if (this.lastCombinedType !== 'array') {
-                        this.lastCombinedType = 'array'
-                        this.child = [] as any
-                        forceFullUpdate = true
-                    }
-                    else {
-                        this.child = (this.child as any).slice(0)
-                    }
-                        
-                    nextChildNodes = element.props.children
-                    nextChildrenKeys = Object.keys(element.props.children)
-                }
-                else if (isPlainObject(element.props.children)) {
-                    if (this.lastCombinedType !== 'object') {
-                        this.lastCombinedType = 'object'
-                        this.child = {} as any
-                        forceFullUpdate = true
-                    }
-                    else {
-                        this.child = Object.assign({}, this.child)
-                    }
-                    nextChildNodes = element.props.children
-                    nextChildrenKeys = Object.keys(element.props.children)
+            // A list of keys which have new child information, and must be
+            // added to this.children after any previous keys are cleaned up.
+            let childKeysToAdd = [] as string[]
+
+            for (let i = 0; i < nextKeys.length; i++) {
+                let key = nextKeys[i]
+                let nextElement = nextElements[key]
+                if (typeHasChanged || !doNodesReconcile(lastElements[key], nextElement)) {
+                    childKeysToAdd.push(key)
                 }
                 else {
-                    if (this.lastCombinedType) {
-                        delete this.child
-                        delete this.lastCombinedType
-                        forceFullUpdate = true
+                    childKeysToDispose.delete(key)
+
+                    if (nextElement.type === 'constant') {
+                        this.setKey(key, nextElement.props.of)
                     }
-                    nextChildNodes = { [Root]: element.props.children }
-                    nextChildrenKeys = [Root]
-                }
-            }
-            else {
-                if (this.lastCombinedType) {
-                    delete this.child
-                    delete this.lastCombinedType
-                    forceFullUpdate = true
-                }
-                nextChildNodes = { [Root]: element }
-                nextChildrenKeys = [Root]
-            }
-
-            let childrenToDisposeKeys = new Set(this.childrenKeys)
-            let childKeysToRemove = new Set(this.lastCombinedType ? Object.keys(this.child) : [])
-            let nextChildren = {}
-            for (let i = 0; i < nextChildrenKeys.length; i++) {
-                let key = nextChildrenKeys[i]
-                let prevChild = this.children[key]
-                let nextChildNode = nextChildNodes[key]
-                nextChildren[key] = this.children[key]
-                childKeysToRemove.delete(key)
-                if (isValidElement(nextChildNode)) {
-                    if (forceFullUpdate || !doNodesReconcile(prevChild && prevChild.node, nextChildNode)) {
-                        let governor: Outlet<any, any> | undefined
-                        let observable: Outlet<any>
-                        if (nextChildNode.type === 'subscribe') {
-                            observable = nextChildNode.props.to
-                            observable.transactionStart(this.transactionIdPropagatedToChildren!, false)
-                        }
-                        else {
-                            let transactionId = getUniqueId()
-                            governor = instantiateWithManualFlush(nextChildNode, transactionId)
-                            governor.transactionStart(this.transactionIdPropagatedToChildren!, false)
-                            this.addToQueue({
-                                governor: governor,
-                                action: 'endTransaction',
-                                transactionId: transactionId,
-                            })
-                            observable = governor
-                        }
-
-                        // Outlets will immediately emit their current value
-                        // on subscription, ensuring that `child` is updated.
+                    else if (nextElement.type !== 'subscribe') {
+                        // Subscribes never reconcile unless they're identical,
+                        // so they don't have to be handled here.
                         this.expectingChildChangeFor = key
-                        // TODO: pass in a ComponentTarget object
-                        let subscription = observable.subscribe(
-                            value => this.handleChildChange(key, value),
-                            this.handleChildError,
-                            this.handleChildComplete,
-                            this.transactionStart,
-                            this.transactionEnd,
-                        )
+                        this.updateChild(key, nextElement.props)
                         delete this.expectingChildChangeFor
-
-                        nextChildren[key] = {
-                            node: nextChildNode,
-                            subscription: subscription,
-                            governor: observable,
-                        }
-                    }
-                    else {
-                        // Keep around the previous child, and update it if
-                        // necessary
-                        childrenToDisposeKeys.delete(key)
-                        if (nextChildNode.type !== 'subscribe') {
-                            this.expectingChildChangeFor = key
-                            let transactionId = getUniqueId()
-                            prevChild.governor!.transactionStart(transactionId, false)
-                            prevChild.governor!.setProps(nextChildNode.props)
-                            delete this.expectingChildChangeFor
-                            this.addToQueue({
-                                governor: prevChild.governor!,
-                                action: 'endTransaction',
-                                transactionId: transactionId,
-                            })
-                        }
-                    }
-                }
-                else {
-                    delete nextChildren[key]
-                    
-                    if (key === Root) {
-                        this.child = nextChildNode
-                    }
-                    else {
-                        this.child[key as any] = nextChildNode
                     }
                 }
             }
 
-            // Clean up after any previous children that are no longer being
-            // subscribed.
-            let childrenToDisposeArray = Array.from(childrenToDisposeKeys)
-            for (let i = 0; i < childrenToDisposeArray.length; i++) {
-                let key = childrenToDisposeArray[i]
-                let prevChild = this.children[key]
-                if (prevChild) {
-                    prevChild.subscription.unsubscribe()
-                    if (prevChild.governor) {
-                        this.addToQueue({
-                            governor: prevChild.governor,
-                            action: 'dispose'
-                        })
-                    }
+            // Clean up after any previous children that are no longer
+            // subscribed to
+            let childKeysToDisposeArray = Array.from(childKeysToDispose)
+            for (let i = 0; i < childKeysToDisposeArray.length; i++) {
+                let key = childKeysToDisposeArray[i]
+                let child = this.children.get(key)!
+                if (child.type !== 'constant') {
+                    child.subscription!.unsubscribe()
+                    this.disposedChildren.push(child.outlet!)
                 }
-                delete this.children[key]
+                if (child.type === 'element') {
+                    // The child will be disposed when its transaction ends.
+                    // PROBLEM: actually no it won't because I've removed it from
+                    // the children. I need to have a disposedChildren list too.
+                    child.outlet!.dispose()
+                }
+                
+                this.children.delete(key)
+                if (isCombined) {
+                    delete this.child[key]
+                }
             }
 
-            let childrenToRemoveArray = Array.from(childKeysToRemove)
-            for (let i = 0; i < childrenToRemoveArray.length; i++) {
-                delete this.child[childrenToRemoveArray[i]]
+            for (let i = 0; i < childKeysToAdd.length; i++) {
+                let key = childKeysToAdd[i]
+
+                // Outlets will immediately emit their current value
+                // on subscription, ensuring that `child` is updated.
+                this.expectingChildChangeFor = key
+                this.addChild(
+                    key,
+                    nextElements[key],
+                    value => this.handleChildChange(key, value)
+                )
+                delete this.expectingChildChangeFor
             }
 
-            this.children = nextChildren
-            this.childrenKeys = nextChildrenKeys
+            this.disallowChangesReason.shift()
+        }
+    }
 
-            this.disallowSideEffectsReason.shift()
+    addChild(key: string, element: GovernElement<any, any>, changeHandler: Function) {
+        let outlet: Outlet<any> | undefined
+        let subscription
+        let type = 'constant' as 'constant' | 'outlet' | 'element'
+
+        if (element.type === 'subscribe') {
+            type = 'outlet'
+
+            // If the outlet already exists, it must propagate
+            // any transaction starts to other subscribers, so
+            // we pass in `true`
+            outlet = element.props.to
+            outlet!.transactionStart(this.transactionIdPropagatedToChildren!, true)
+        }
+        else if (element.type !== 'constant') {
+            type = 'element'
+
+            outlet = instantiateWithManualFlush(element, this.transactionIdPropagatedToChildren!)
+        }
+
+        if (outlet) {
+            // TODO: pass in a ComponentTarget object
+            subscription = outlet.subscribe(
+                changeHandler as any,
+                this.handleChildError,
+                this.handleChildComplete,
+                this.transactionStart,
+                this.transactionEnd,
+            )
+        }
+        else {
+            this.setKey(key, element.props.of)
+        }
+        
+        this.children.set(key, { type, outlet, subscription, element })
+    }
+
+    updateChild(key: string, nextProps: any) {
+        this.children.get(key)!.outlet!.setProps(nextProps)
+    }
+
+    setKey(key, value) {
+        if (key === Root) {
+            this.child = value
+        }
+        else {
+            this.child[key as any] = value
         }
     }
 
@@ -409,8 +394,8 @@ export class ComponentImplementation<Props, State, Value, Child> {
         // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
 
-        if (!isExpectingChange && this.disallowSideEffectsReason[0]) {
-            throw new Error(`A Govern component cannot receive new values from children while ${this.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
+        if (!isExpectingChange && this.disallowChangesReason[0]) {
+            throw new Error(`A Govern component cannot receive new values from children while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
         }
         if (!isExpectingChange && this.transactionLevel === 0) {
             throw new Error(`A Govern component cannot receive new values from children outside of a transaction.`)
@@ -420,22 +405,17 @@ export class ComponentImplementation<Props, State, Value, Child> {
         // current child is a `<combine />`, we'll need to shallow clone our
         // child before updating it. Otherwise we'll also overwrite our last
         // published child, breaking `shouldComponentPublish`.
-        if (!isExpectingChange) {
-            if (this.lastCombinedType === 'array') {
+        if (!isExpectingChange && this.lastSubscribeElement) {
+            if (this.lastSubscribeElement.type === 'combineArray') {
                 this.child = (this.child as any).slice(0)
             }
-            else if (this.lastCombinedType === 'object') {
+            else if (this.lastSubscribeElement.type === 'combine') {
                 this.child = Object.assign({}, this.child)
             }
         }
 
         // Mutatively update our child
-        if (key === Root) {
-            this.child = value
-        }
-        else {
-            this.child[key as any] = value
-        }
+        this.setKey(key, value)
 
         // We don't need to `publish` if there is already one scheduled.
         if (!isExpectingChange && !this.isReceivingProps) {
@@ -446,12 +426,12 @@ export class ComponentImplementation<Props, State, Value, Child> {
     publish() {
         this.pushFix()
 
-        this.disallowSideEffectsReason.unshift("running shouldComponentPublish")
+        this.disallowChangesReason.unshift("running shouldComponentPublish")
         let shouldComponentPublish =
             !this.previousPublish ||
             !this.lifecycle.shouldComponentPublish ||
             this.lifecycle.shouldComponentPublish(this.previousPublish.props, this.previousPublish.state, this.previousPublish.child)
-        this.disallowSideEffectsReason.shift()
+        this.disallowChangesReason.shift()
         
         // Publish a new value based on the current props, state and child.
         if (shouldComponentPublish) {
@@ -462,9 +442,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     broadcastPublish() {
-        this.disallowSideEffectsReason.unshift("publishing a value")
+        this.disallowChangesReason.unshift("publishing a value")
         this.subject.next(this.lifecycle.publish())
-        this.disallowSideEffectsReason.shift()
+        this.disallowChangesReason.shift()
         this.previousPublish = {
             props: this.props,
             state: this.state,
@@ -474,12 +454,12 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     createOutlet(initialTransactionId: string): Outlet<Value, Props> {
-        if (this.governor) {
+        if (this.outlet) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
         // Side effects were disallowed during the subclass' constructor.
-        this.disallowSideEffectsReason.shift()
+        this.disallowChangesReason.shift()
 
         // Props and any state were set in the constructor, so we can jump
         // directly to `connect`.
@@ -489,9 +469,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.broadcastPublish()
         this.popFix()
 
-        this.governor = new Outlet(this)
+        this.outlet = new Outlet(this)
 
-        return this.governor
+        return this.outlet
     }
 
     transactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
@@ -505,24 +485,20 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
         if (this.transactionLevel === 1) {
             this.transactionIdPropagatedToChildren = transactionId
-            for (let i = 0; i < this.childrenKeys.length; i++) {
-                let key = this.childrenKeys[i]
-                let child = this.children[key]
-
-                // child.governor only exists when the element was instantiated
-                // from an element, and thus we're the only subscriber -- so
-                // we can set `false` for `propagateToSubscribers`.
-                if (child && child.governor) {
-                    child.governor.transactionStart(transactionId, false)
+            let children = Array.from(this.children.values())
+            for (let i = 0; i < children.length; i++) {
+                let child = children[i]
+                if (child.outlet) {
+                    child.outlet.transactionStart(transactionId, child.type === "outlet")
                 }
             }
         }
 
-        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers) {
+        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers && transactionIdLevel === 1) {
             this.transactionIdPropagatedToSubscribers = transactionId
-            this.disallowSideEffectsReason.unshift("publishing transactionStart")
+            this.disallowChangesReason.unshift("publishing transactionStart")
             this.subject.transactionStart(transactionId)
-            this.disallowSideEffectsReason.shift()
+            this.disallowChangesReason.shift()
         }
     }
 
@@ -573,29 +549,61 @@ export class ComponentImplementation<Props, State, Value, Child> {
         }
 
         if (this.transactionLevel === 0) {
+            // Keep the transaction level positive while we're running
+            // lifecycle methods, so they can use `setState`.
             ++this.transactionLevel
+
+            // Run lifecycle methods
+            if (!this.hasCalledComponentDidInstantiate) {
+                this.hasCalledComponentDidInstantiate = true
+                this.hasPublishedSinceLastUpdate = false
+                if (this.lifecycle.componentDidInstantiate) {
+                    this.pushFix()
+                    this.lifecycle.componentDidInstantiate()
+                    this.popFix()
+                }
+            }
+            else if (this.hasPublishedSinceLastUpdate && this.lifecycle.componentDidUpdate) {
+                this.pushFix()
+                this.hasPublishedSinceLastUpdate = false
+                this.lifecycle.componentDidUpdate(
+                    this.lastUpdate.props,
+                    this.lastUpdate.state,
+                    this.lastUpdate.child
+                )
+                this.popFix()
+            }
+            else {
+                this.hasPublishedSinceLastUpdate = false
+            }
+
+            this.lastUpdate = {
+                props: this.props,
+                state: this.state,
+                child: this.child,
+            }
+
             if (this.willDispose) {
-                this.flush()
-                this.disallowSideEffectsReason.unshift('disposed')
-
-                for (let i = 0; i < this.childrenKeys.length; i++) {
-                    let key = this.childrenKeys[i]
-                    let child = this.children[key]
-
-                    if (child) {
+                // The children will be disposed before the parent, so that
+                // children can always assume that they can call callbacks on
+                // the parent during disposal.
+                let children = Array.from(this.children.values())
+                for (let i = 0; i < children.length; i++) {
+                    let child = children[i]
+                    if (child.subscription) {
                         child.subscription.unsubscribe()
-                        if (child.governor) {
-                            this.addToQueue({
-                                governor: child.governor,
-                                action: 'dispose',
-                            })
+                        if (child.type === 'element') {
+                            child.outlet!.dispose()
                         }
-                        delete this.children[key]
                     }
                 }
 
-                // Flush once more to run `componentWillBeDisposed` on children
-                this.flush()
+                this.broadcastTransactionEndToChildren()
+                this.children.clear()
+
+                // Lower the internal transaction level before calling the
+                // lifecycle, so that it can't cause further updates.
+                --this.transactionLevel
 
                 if (this.lifecycle.componentWillBeDisposed) {
                     this.pushFix()
@@ -603,108 +611,63 @@ export class ComponentImplementation<Props, State, Value, Child> {
                     this.popFix()
                 }
 
-                --this.transactionLevel
-                this.broadcastTransactionEnd()
+                // So long, everybody, I've got to go...
+                this.broadcastTransactionEndToSubscribers()
                 this.subject.complete()
-                this.state = {} as any
-                this.child = {} as any
+
+                delete this.state
+                delete this.child
             }
             else {
-                // Lower the transaction level before emitting transactionEnd,
-                // so that any side effects of the flush will be executed
-                // properly. However, leave transactionLevel as 1 for the flush
-                // itself, so that setState can be called.
-                this.flush()
+                this.broadcastTransactionEndToChildren()
+
+                // Only lower transaction level after ending transaction on
+                // subscribers, in case their lifecycle methods cause updates on us.
                 --this.transactionLevel
-                this.broadcastTransactionEnd()
+
+                // Lower the transaction level before emitting transactionEnd,
+                // so that the transactionEnd event itself cannot have any
+                // side effects without opening a new dispatch.
+                let transactionIdPropagatedToSubscribers = this.transactionIdPropagatedToSubscribers
+                this.broadcastTransactionEndToSubscribers()
+
+                // Run callbacks passed into `setState`
+                while (this.callbacks.length) {
+                    let callback = this.callbacks.shift() as Function
+                    callback()
+                }
+
+                // If our `componentDidInstantiate` / `componentDidUpdate` lifecycle
+                // methods caused any further calls to `connect`, we may need to
+                // recursively process the queue.
+                if (this.hasPublishedSinceLastUpdate && this.transactionLevel === 0) {
+                    this.transactionStart(transactionId, !!transactionIdPropagatedToSubscribers)
+                    this.transactionEnd(transactionId)
+                }
             }
         }
     }
 
-    broadcastTransactionEnd() {
-        for (let i = 0; i < this.childrenKeys.length; i++) {
-            let key = this.childrenKeys[i]
-            let child = this.children[key]
-
-            // child.governor only exists when the element was instantiated
-            // from an element, and thus we're the only subscriber -- so
-            // we can set `false` for `propagateToSubscribers`.
-            if (child && child.governor) {
-                this.disallowSideEffectsReason.unshift("publishing transactionEnd")
-                child.governor.transactionEnd(this.transactionIdPropagatedToChildren!)
-                this.disallowSideEffectsReason.shift()
-            }
+    broadcastTransactionEndToChildren() {
+        let outlets: Outlet<any, any>[] =
+            Array.from(this.children.values())
+                .filter(child => child.outlet)
+                .map(child => child.outlet!)
+                .concat(this.disposedChildren))
+        for (let i = 0; i < outlets.length; i++) {
+            this.disallowChangesReason.unshift("publishing transactionEnd")
+            outlets[i].transactionEnd(this.transactionIdPropagatedToChildren!)
+            this.disallowChangesReason.shift()
         }
+        this.disposedChildren.length = 0
+    }
 
+    broadcastTransactionEndToSubscribers() {
         if (this.transactionIdPropagatedToSubscribers) {
-            this.disallowSideEffectsReason.unshift("publishing transactionEnd")
+            this.disallowChangesReason.unshift("publishing transactionEnd")
             this.subject.transactionEnd(this.transactionIdPropagatedToSubscribers)
-            this.disallowSideEffectsReason.shift()
+            this.disallowChangesReason.shift()
             delete this.transactionIdPropagatedToSubscribers
-        }
-    }
-
-    /**
-     * The flush phase is where we work through possible side effects; first
-     * in children, and then in our own lifecycle methods.
-     */
-    flush = () => {
-        // Iterate through children that have been created, updated or
-        // destroyed, calling `flush` or `dispose` to process any side
-        // effects in their children, or their `componentDidUpdate`/
-        // `componentWillBeDisposed` lifecycle methods.
-        let nextItem: { governor: Outlet<any, any>, action: 'endTransaction' | 'dispose', transactionId?: string } | undefined
-        while (nextItem = this.queue.shift()) {
-            if (nextItem.action === 'endTransaction') {
-                nextItem.governor.transactionEnd(nextItem.transactionId!)
-            }
-            else {
-                nextItem.governor.dispose()
-            }
-        }
-        
-        // Once we've emptied the queue of possible side effects in children,
-        // we'll run our own unpure lifecycle methods.
-        if (!this.hasCalledComponentDidInstantiate) {
-            this.hasCalledComponentDidInstantiate = true
-            this.hasPublishedSinceLastUpdate = false
-            if (this.lifecycle.componentDidInstantiate) {
-                this.pushFix()
-                this.lifecycle.componentDidInstantiate()
-                this.popFix()
-            }
-        }
-        else if (this.hasPublishedSinceLastUpdate && this.lifecycle.componentDidUpdate) {
-            this.pushFix()
-            this.hasPublishedSinceLastUpdate = false
-            this.lifecycle.componentDidUpdate(
-                this.lastUpdate.props,
-                this.lastUpdate.state,
-                this.lastUpdate.child
-            )
-            this.popFix()
-        }
-        else {
-            this.hasPublishedSinceLastUpdate = false
-        }
-
-        this.lastUpdate = {
-            props: this.props,
-            state: this.state,
-            child: this.child,
-        }
-
-        // Run callbacks passed into `setState`
-        while (this.callbacks.length) {
-            let callback = this.callbacks.shift() as Function
-            callback()
-        }
-
-        // If our `componentDidInstantiate` / `componentDidUpdate` lifecycle
-        // methods caused any further calls to `connect`, we may need to
-        // recursively process the queue.
-        if ((this.hasPublishedSinceLastUpdate || this.queue.length) && this.transactionLevel === 1) {
-            this.flush()
         }
     }
 
@@ -715,17 +678,66 @@ export class ComponentImplementation<Props, State, Value, Child> {
     handleChildComplete() {
         // noop
     }
+}
 
-    /**
-     * Add to the flush queue if the specified item isn't already there.
-     */
-    addToQueue(item: { governor: Outlet<any, any>, action: 'endTransaction' | 'dispose', transactionId?: string }) {
-        for (let i = 0; i < this.queue.length; i++) {
-            let currentItem = this.queue[i]
-            if (currentItem.governor === item.governor && currentItem.action === item.action && currentItem.transactionId === item.transactionId) {
-                return
+
+function convertToElement(value): GovernElement<any, any> {
+    if (isValidElement(value)) {
+        return value
+    }
+    else if (isValidOutlet(value)) {
+        return createElement('subscribe', { to: value })
+    }
+    else if (Array.isArray(value)) {
+        return createElement('combineArray', { children: value })
+    }
+    else if (isPlainObject(value)) {
+        return createElement('combine', { children: value })
+    }
+    else {
+        return createElement('constant', { of: value })
+    }
+}
+
+// TODO: memoize this with a weakmap
+function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { keys: string[], elements: { [key: string]: GovernElement<any, any> } } {
+    if (!element) {
+        return { keys: [], elements: {} }
+    }
+
+    switch (element.type) {
+        case 'combine':
+            if (typeof element.props.children !== 'object') {
+                throw new Error(`<combine> cannot be used with children of type "${typeof element.props.children}".`)
             }
-        }
-        this.queue.push(item)
+
+            let elements = {}
+            let childNodes = element.props.children
+            let keys = Object.keys(childNodes)
+            for (let i = 0; i < keys.length; i++) {
+                let key = keys[i]
+                elements[key] = convertToElement(childNodes[key])
+            }
+
+            return {
+                keys: Object.keys(element.props.children),
+                elements: elements,
+            }
+
+        case 'combineArray':
+            if (!Array.isArray(element.props.children)) {
+                throw new Error(`<combineArray> can only be used with arrays, but instead received a "${typeof element.props.children}".`)
+            }
+
+            return {
+                keys: Object.keys(element.props.children),
+                elements: element.props.children.map(convertToElement),
+            }
+        
+        default:
+            return {
+                keys: [Root],
+                elements: { [Root]: element }
+            }
     }
 }

@@ -23,7 +23,7 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
     protected impl: ComponentImplementation<Props, State, Value, Child>;
 
     constructor(props: Props, { strict }: { strict?: boolean } = {}) {
-        this.impl = new ComponentImplementation(this, props, !!strict)
+        this.impl = new ComponentImplementation(this, props)
     }
 
     get props() {
@@ -42,7 +42,7 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
     }
 
     set state(state: State) {
-        if (this.impl.governor) {
+        if (this.impl.outlet) {
             throw new Error(`You cannot set a component's state directly outside of the constructor. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -53,11 +53,11 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
         state: ((prevState: Readonly<State>, props: Props) => (Pick<State, K> | State)) | (Pick<State, K> | State),
         callback?: () => void
     ): void {
-        if (!this.impl.governor) {
+        if (!this.impl.outlet) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.disallowSideEffectsReason[0]) {
-            throw new Error(`You cannot call "setState" while ${this.impl.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.constructor)}".`)
+        if (this.impl.disallowChangesReason[0]) {
+            throw new Error(`You cannot call "setState" while ${this.impl.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
         let updater = state as ((prevState: Readonly<State>, props: Props) => any)
@@ -68,17 +68,7 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
     }
 
     transaction(run: Function): void {
-        if (!this.impl.governor) {
-            throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
-        }
-        if (this.impl.disallowSideEffectsReason[0]) {
-            throw new Error(`You cannot call "transaction" while ${this.impl.disallowSideEffectsReason[0]}. See component "${getDisplayName(this.constructor)}".`)
-        }
-
-        let transactionId = getUniqueId()
-        this.impl.transactionStart(transactionId)
-        run()
-        this.impl.transactionEnd(transactionId)
+        this.impl.dispatch(run)
     }
 
     createOutlet(initialTransactionId: string) {
