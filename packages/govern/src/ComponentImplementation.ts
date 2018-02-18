@@ -1,8 +1,7 @@
 import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
-import { doNodesReconcile } from './doNodesReconcile'
-import { createElement, isValidElement, convertToElement, GovernElement } from './Element'
+import { createElement, convertToElement, doElementsReconcile, GovernElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
 import { instantiateWithManualFlush } from './Governor'
 import { Outlet } from './Outlet'
@@ -277,7 +276,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
             for (let i = 0; i < nextKeys.length; i++) {
                 let key = nextKeys[i]
                 let nextElement = nextElements[key]
-                if (typeHasChanged || !doNodesReconcile(lastElements[key], nextElement)) {
+                if (typeHasChanged || !doElementsReconcile(lastElements[key], nextElement)) {
                     childKeysToAdd.push(key)
                 }
                 else {

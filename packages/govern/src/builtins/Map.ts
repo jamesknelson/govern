@@ -1,10 +1,9 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { MapProps } from '../Core'
-import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
 import { instantiateWithManualFlush } from '../Governor'
 import { Outlet } from '../Outlet'
-import { GovernElement, convertToElement } from '../Element'
+import { GovernElement, convertToElement, doElementsReconcile } from '../Element'
 import { getUniqueId } from '../utils/getUniqueId'
 
 export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
@@ -30,7 +29,7 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
     receiveProps(props: MapProps<FromValue, ToValue>) {
         let fromElement = convertToElement(props.from)
 
-        if (!doNodesReconcile(this.element, fromElement)) {
+        if (!doElementsReconcile(this.element, fromElement)) {
             if (this.element) {
                 this.impl.removeChild(this.symbol)
             }

@@ -199,3 +199,16 @@ export function convertToElement(value): GovernElement<any, any> {
         return createElement('constant', { of: value })
     }
 }
+
+
+export function doElementsReconcile(x?: GovernElement<any, any>, y?: GovernElement<any, any>) {
+    if (x === y) return true
+    if (!x && !y) return true
+    if (!x || !y) return false
+    
+    return (
+        x.type === 'subscribe'
+            ? (y.type === 'subscribe' && x.props.to === y.props.to)
+            : (x.type === y.type && x.key === y.key)
+    )
+}
