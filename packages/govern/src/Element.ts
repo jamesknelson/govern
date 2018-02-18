@@ -24,7 +24,8 @@ SOFTWARE.
 
 import { GovernableClass } from './Governable'
 import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, SubscribeProps } from './Core'
-import { Outlet } from './Outlet'
+import { Outlet, isValidOutlet } from './Outlet'
+import { isPlainObject } from './utils/isPlainObject'
 
 const RESERVED_PROPS = {
     key: true,
@@ -177,5 +178,24 @@ export function createElement<Props, Value>(
         props: props as Props,
         key,
         value: <any>undefined,
+    }
+}
+
+
+export function convertToElement(value): GovernElement<any, any> {
+    if (isValidElement(value)) {
+        return value
+    }
+    else if (isValidOutlet(value)) {
+        return createElement('subscribe', { to: value })
+    }
+    else if (Array.isArray(value)) {
+        return createElement('combineArray', { children: value })
+    }
+    else if (isPlainObject(value)) {
+        return createElement('combine', { children: value })
+    }
+    else {
+        return createElement('constant', { of: value })
     }
 }

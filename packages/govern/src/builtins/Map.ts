@@ -4,73 +4,41 @@ import { doNodesReconcile } from '../doNodesReconcile'
 import { Governable } from '../Governable'
 import { instantiateWithManualFlush } from '../Governor'
 import { Outlet } from '../Outlet'
-import { GovernElement, isValidElement } from '../Element'
-import { getUniqueId } from '../utils/getUniqueId';
+import { GovernElement, convertToElement } from '../Element'
+import { getUniqueId } from '../utils/getUniqueId'
 
 export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     element: GovernElement<any, any>
     fromOutlet: Outlet<any, any>
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, any, ToValue, ToValue>;
+    symbol: any;
     transactionIds: string[] = []
     
     constructor(props: MapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)
+
+        // A symbol used as the key of the `from` element when adding it as
+        // a child of impl. We don't use a standard string, as the output is
+        // never handled directly.
+        this.symbol = Symbol('Map') as any
     }
 
     componentWillReceiveProps(nextProps: MapProps<FromValue, ToValue>) {
-        this.receiveProps(nextProps, this.impl.transactionIdPropagatedToChildren!)
+        this.receiveProps(nextProps)
     }
 
-    componentWillBeDisposeed() {
-        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
-        this.transactionIds.length = 0
-        this.fromOutlet.dispose()
-		delete this.fromOutlet
-    }
-
-    componentDidInstantiate() {
-        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
-        this.transactionIds.length = 0
-    }
-
-    componentDidUpdate() {
-        this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
-        this.transactionIds.length = 0
-    }
-
-    receiveProps(props: MapProps<FromValue, ToValue>, transactionId: string) {
-        let fromElement = props.from
-        if (!isValidElement(fromElement)) {
-            throw new Error(`The "from" prop of a Map element must be an element, object, or array.`)
-        }
+    receiveProps(props: MapProps<FromValue, ToValue>) {
+        let fromElement = convertToElement(props.from)
 
         if (!doNodesReconcile(this.element, fromElement)) {
-            if (this.fromOutlet) {
-                this.transactionIds.forEach(id => this.fromOutlet.transactionEnd(id))
-                this.transactionIds.length = 0
-                this.fromOutlet.dispose()
+            if (this.element) {
+                this.impl.removeChild(this.symbol)
             }
+            this.impl.addChild(this.symbol, fromElement, this.handleChange)
             this.element = fromElement
-            // TODO: need to somehow start/end transactions on `fromOutlet`
-            // when this.impl starts/ends transactions. Maybe need to subscribe
-            // to it? Otherwise we can't dispatch actions on `fromOutlet`.
-            // TODO: perhaps `addChild` and `removeChild` methods can be shaed
-            // between impl.connect and this?
-            // TODO: add a test to Map.test.ts
-            this.fromOutlet = instantiateWithManualFlush(fromElement, transactionId)
-            this.transactionIds.push(transactionId)
-            this.fromOutlet.subscribe(
-                this.handleChange,
-                this.impl.handleChildError,
-                this.impl.handleChildComplete,
-                this.impl.transactionStart,
-                this.impl.transactionEnd
-            )
         }
         else {
-            this.transactionIds.push(transactionId)
-            this.fromOutlet.transactionStart(transactionId, false)
-            this.fromOutlet.setProps(fromElement.props)
+            this.impl.updateChild(this.symbol, fromElement.props)
         }
     }
 
@@ -92,7 +60,8 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
     }
 
     createOutlet(initialTransactionId: string): Outlet<ToValue, MapProps<FromValue, ToValue>> {
-        this.receiveProps(this.impl.props, initialTransactionId)
-        return this.impl.createOutlet(initialTransactionId)
+        this.impl.transactionStart(initialTransactionId, false)
+        this.receiveProps(this.impl.props)
+        return this.impl.createOutlet()
     }
 }

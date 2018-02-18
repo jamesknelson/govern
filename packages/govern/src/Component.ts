@@ -72,7 +72,8 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
     }
 
     createOutlet(initialTransactionId: string) {
-        return this.impl.createOutlet(initialTransactionId)
+        this.impl.transactionStart(initialTransactionId, false)
+        return this.impl.createOutlet()
     }
 
     abstract publish(): Value;

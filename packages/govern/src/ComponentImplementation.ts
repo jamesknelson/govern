@@ -2,7 +2,7 @@ import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { doNodesReconcile } from './doNodesReconcile'
-import { createElement, isValidElement, GovernElement } from './Element'
+import { createElement, isValidElement, convertToElement, GovernElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
 import { instantiateWithManualFlush } from './Governor'
 import { Outlet } from './Outlet'
@@ -254,8 +254,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
             // recreated, even if they reconcile. We'll want to do this if the
             // children move from a `combine` to a `combineArray`, etc.
             let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
-            let isCombined = nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray'
-
+            
             // Create a new `subs` object, keeping around appropriate previous
             // values, so we don't have to rerequest them from subscribed
             // outlets.
@@ -283,17 +282,9 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 }
                 else {
                     childKeysToDispose.delete(key)
-
-                    if (nextElement.type === 'constant') {
-                        this.setKey(key, nextElement.props.of)
-                    }
-                    else if (nextElement.type !== 'subscribe') {
-                        // Subscribes never reconcile unless they're identical,
-                        // so they don't have to be handled here.
-                        this.expectingChildChangeFor = key
-                        this.updateChild(key, nextElement.props)
-                        delete this.expectingChildChangeFor
-                    }
+                    this.expectingChildChangeFor = key
+                    this.updateChild(key, nextElement.props)
+                    delete this.expectingChildChangeFor
                 }
             }
 
@@ -302,20 +293,8 @@ export class ComponentImplementation<Props, State, Value, Child> {
             let childKeysToDisposeArray = Array.from(childKeysToDispose)
             for (let i = 0; i < childKeysToDisposeArray.length; i++) {
                 let key = childKeysToDisposeArray[i]
-                let child = this.children.get(key)!
-                if (child.type !== 'constant') {
-                    child.subscription!.unsubscribe()
-                    this.disposedChildren.push(child.outlet!)
-                }
-                if (child.type === 'element') {
-                    // The child will be disposed when its transaction ends.
-                    // PROBLEM: actually no it won't because I've removed it from
-                    // the children. I need to have a disposedChildren list too.
-                    child.outlet!.dispose()
-                }
-                
-                this.children.delete(key)
-                if (isCombined) {
+                this.removeChild(key)
+                if (nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray') {
                     delete this.child[key]
                 }
             }
@@ -376,7 +355,28 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     updateChild(key: string, nextProps: any) {
-        this.children.get(key)!.outlet!.setProps(nextProps)
+        // Note that outlets never need updating.
+        let child = this.children.get(key)!
+        if (child.type === 'constant') {
+            this.setKey(key, nextProps.of)
+        }
+        else if (child.type === 'element') {
+            this.children.get(key)!.outlet!.setProps(nextProps)
+        }
+    }
+
+    removeChild(key) {
+        let child = this.children.get(key)!
+        if (child.type !== 'constant') {
+            child.subscription!.unsubscribe()
+            this.disposedChildren.push(child.outlet!)
+        }
+        if (child.type === 'element') {
+            // The child will be disposed when its transaction ends.
+            child.outlet!.dispose()
+        }
+        
+        this.children.delete(key)
     }
 
     setKey(key, value) {
@@ -453,7 +453,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.hasPublishedSinceLastUpdate = true
     }
 
-    createOutlet(initialTransactionId: string): Outlet<Value, Props> {
+    createOutlet(): Outlet<Value, Props> {
         if (this.outlet) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
@@ -463,7 +463,6 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
         // Props and any state were set in the constructor, so we can jump
         // directly to `connect`.
-        this.transactionStart(initialTransactionId, false)
         this.connect()
         this.pushFix()
         this.broadcastPublish()
@@ -653,7 +652,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
             Array.from(this.children.values())
                 .filter(child => child.outlet)
                 .map(child => child.outlet!)
-                .concat(this.disposedChildren))
+                .concat(this.disposedChildren)
         for (let i = 0; i < outlets.length; i++) {
             this.disallowChangesReason.unshift("publishing transactionEnd")
             outlets[i].transactionEnd(this.transactionIdPropagatedToChildren!)
@@ -680,24 +679,6 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 }
 
-
-function convertToElement(value): GovernElement<any, any> {
-    if (isValidElement(value)) {
-        return value
-    }
-    else if (isValidOutlet(value)) {
-        return createElement('subscribe', { to: value })
-    }
-    else if (Array.isArray(value)) {
-        return createElement('combineArray', { children: value })
-    }
-    else if (isPlainObject(value)) {
-        return createElement('combine', { children: value })
-    }
-    else {
-        return createElement('constant', { of: value })
-    }
-}
 
 // TODO: memoize this with a weakmap
 function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { keys: string[], elements: { [key: string]: GovernElement<any, any> } } {
