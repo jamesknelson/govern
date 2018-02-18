@@ -17,19 +17,19 @@ export interface Attributes {
 export type ComponentState = {};
 
 export type MapProps<FromValue, ToValue> = {
-    from: GovernElement<any, FromValue> | Outlet<FromValue>,
+    from: Outlet<FromValue> | GovernElement<any, FromValue>,
     to: SFC<FromValue, ToValue>,
 }
 
 export type CombineChildren<Keys extends keyof CombinedValue, CombinedValue> = {
-    [K in Keys]: GovernElement<any, CombinedValue[K]> | CombinedValue[K]
+    [K in Keys]: Outlet<CombinedValue[K]> | GovernElement<any, CombinedValue[K]> | CombinedValue[K]
 }
 export type CombineProps<CombinedValue> = {
     children: CombineChildren<keyof CombinedValue, CombinedValue>
 }
 
 export type CombineArrayChildren<ItemValue> = {
-    [index: number]: GovernElement<any, ItemValue> | ItemValue
+    [index: number]: Outlet<ItemValue> | GovernElement<any, ItemValue> | ItemValue
 }
 export type CombineArrayProps<ItemValue> = {
     children: CombineArrayChildren<ItemValue>
@@ -43,11 +43,11 @@ export type SubscribeProps<Value> = {
     to: TransactionalObservable<Value>,
 }
 
-export type GovernElementLike<Props, Value> =
+export type GovernNode<Props = any, Value = any> =
+    Outlet<Value> | 
     GovernElement<Props, Value> |
-    CombineChildren<keyof Value, Value>
-
-export type GovernNode<Props = any, Value = any> = GovernElementLike<Props, Value> | Value
+    CombineChildren<keyof Value, Value> |
+    Value
 
 export type SFC<Props, Value> = StatelessComponent<Props, Value>;
 export interface StatelessComponent<Props, Value> {

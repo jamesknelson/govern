@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
+import { map, combine, createElement, instantiate, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 

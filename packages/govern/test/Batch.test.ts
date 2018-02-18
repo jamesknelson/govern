@@ -1,18 +1,18 @@
-import { map, subscribe, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
+import { map, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Batching', () => {
   function FirstName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
     return map(
-      subscribe(props.userOutlet),
+      props.userOutlet,
       state => state.firstName
     )
   }
 
   function LastName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
     return map(
-      subscribe(props.userOutlet),
+      props.userOutlet,
       state => state.lastName
     )
   }
@@ -21,8 +21,8 @@ describe('Batching', () => {
     connectChild() {
       let { firstName, lastName } = this.props
       return combine({
-        firstName: subscribe(firstName),
-        lastName: subscribe(lastName),
+        firstName: firstName,
+        lastName: lastName,
       })
     }
     get child() {
@@ -48,7 +48,7 @@ describe('Batching', () => {
     )
     let userOutlet = instantiate(
       map(
-        subscribe(modelGovernor),
+        modelGovernor,
         model => model.value
       )
     )

@@ -1,5 +1,5 @@
 import { Outlet } from './Outlet'
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, SubscribeProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, SubscribeProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './TransactionalObservable'
@@ -15,13 +15,6 @@ function createFactory<Props, Value>(type: SFC<Props, Value>): SFCFactory<Props,
 function createFactory<Props, Value>(type: GovernableClass<Props, Value>): Factory<Props, Value>
 function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
     return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
-}
-
-export function subscribe<Value>(
-    to: TransactionalObservable<Value>,
-    key?: Key
-): GovernElement<SubscribeProps<Value>, Value> {
-    return createElement('subscribe', { to, key })
 }
 
 export function map<FromValue, ToValue>(

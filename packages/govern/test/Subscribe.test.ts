@@ -1,19 +1,19 @@
 import { createCounter } from './utils/createCounter'
-import { map, subscribe, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { map, combine, constant, createElement, instantiate, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe("Subscribing to governors", () => {
     it("outputs intial value", () => {
         let Component = () => constant('blue')
         let outlet1 = instantiate(createElement(Component))
-        let mainOutlet = instantiate(subscribe(outlet1))
+        let mainOutlet = instantiate(createElement('subscribe', { to: outlet1 }))
         let harness = createTestHarness(mainOutlet)
         expect(harness.value).toEqual("blue")
     })
 
     it("outputs changes in value", () => {
         let counter = createCounter()
-        let outlet = instantiate(subscribe(counter))
+        let outlet = instantiate(createElement('subscribe', { to: counter }))
         let harness = createTestHarness(outlet)
         expect(harness.value.count).toEqual(0)
         harness.dispatch(() => {
@@ -29,7 +29,7 @@ describe("Subscribing to governors", () => {
         let Component2 = () => constant('orange')
         let outlet2 = instantiate(createElement(Component2))
         
-        let mainOutlet = instantiate(subscribe(outlet1))
+        let mainOutlet = instantiate(createElement('subscribe', { to: outlet1 }))
         let harness = createTestHarness(mainOutlet)
         expect(harness.value).toEqual("blue")
         harness.setProps({ to: outlet2 })

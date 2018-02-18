@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './Governable'
-import { Attributes, BuiltInType, Key, GovernElementLike, GovernNode, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, SubscribeProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, SubscribeProps } from './Core'
 import { Outlet, isValidOutlet } from './Outlet'
 import { isPlainObject } from './utils/isPlainObject'
 

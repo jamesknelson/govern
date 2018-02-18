@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { map, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -114,7 +114,7 @@ function createDataSourceClass() {
 }
 
 const DataSourceData = (props: { dataSource: Outlet<{receive, data}> }) =>
-  map(subscribe(props.dataSource), state => state.data)
+  map(props.dataSource, state => state.data)
 
 function createFormControllerClass() {
   const Model = createModelClass()
@@ -128,7 +128,7 @@ function createFormControllerClass() {
 
     connectChild() {
       return combine({
-        data: subscribe(this.props.data),
+        data: this.props.data,
         model: createElement(Model, null)
       })
     }

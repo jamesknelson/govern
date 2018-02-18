@@ -1,5 +1,5 @@
 import { createCounter, createCounterClass } from './utils/createCounter'
-import { map, subscribe, combine, createElement, instantiate, Component, SFC } from '../src'
+import { map, combine, createElement, instantiate, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Combine', () => {

@@ -1,4 +1,4 @@
-import { map, subscribe, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { map, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -119,7 +119,7 @@ describe('Component', () => {
 
       connectChild() {
 			  return combine({
-          a: subscribe(counter),
+          a: counter,
         })
       }
       
@@ -276,7 +276,7 @@ describe('Component', () => {
 
     class TestComponent extends Component<{ updated }> {
       connectChild() {
-        let children = { a: subscribe(observable), b: subscribe(observable) }
+        let children = { a: observable, b: observable }
         if (this.props.updated) delete children.b
         return combine(children)
       }
