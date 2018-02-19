@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as Govern from 'govern'
 import * as ReactTestRenderer from 'react-test-renderer'
 
-import { connect } from '../src/Connect'
+import { subscribe } from '../src'
 
 
 class TestController extends Govern.Component<any, any> {
@@ -24,7 +24,7 @@ class TestComponent extends React.Component<any> {
 
 
 test('injects initial value', () => {
-  let decorator = connect(
+  let decorator = subscribe(
     props => Govern.createElement(TestController, { defaultValue: props.defaultValue }),
   )
   let DecoratedComponent = decorator(TestComponent)
@@ -35,7 +35,7 @@ test('injects initial value', () => {
 })
 
 test('allows for elements as first argument', () => {
-  let decorator = connect(
+  let decorator = subscribe(
     Govern.createElement(TestController, { defaultValue: 1 })
   )
   let DecoratedComponent = decorator(TestComponent)
@@ -46,7 +46,7 @@ test('allows for elements as first argument', () => {
 })
 
 test('allows for components as first argument', () => {
-  let decorator = connect(TestController)
+  let decorator = subscribe(TestController)
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />
@@ -55,15 +55,18 @@ test('allows for components as first argument', () => {
 })
 
 test('injects subsequent outputs', () => {
-  let governor = Govern.createGovernor(
+  let outlet = Govern.instantiate(
     Govern.createElement(TestController, { defaultValue: 1 }),
   )
-  let decorator = connect(props => Govern.subscribe(governor))
+  let decorator = subscribe(props => outlet)
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />
   )
   expect(renderer.toJSON()).toEqual("1")
-  governor.getValue().change(2)
+  let transactionId = Govern.getUniqueId()
+  outlet.transactionStart('1')
+  outlet.getValue().change(2)
+  outlet.transactionEnd('1')
   expect(renderer.toJSON()).toEqual("2")
 })

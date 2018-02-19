@@ -1,2 +1,2 @@
-export { Connect, connect, govern } from './Connect'
-export { Source } from './Source'
+export * from './Subscribe'
+export * from './subscribeHOC'

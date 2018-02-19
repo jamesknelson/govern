@@ -162,76 +162,20 @@ initially, as they'd be missing from elements created with React.createElement.
 TODO
 ----
 
-clean up (and get tests working)
-
-o remove plain observables from tests
-o as `setProps` shouldn't be available on the public API, governor doesn't
-  need to be typed on props, or at least, props should be the second type arg
-  and it should default to any
-o remove all references to <outlet> from existing tests
-o remove all references to outlet.map, outlet.lift from existing tests
-o remove references to getOutlet, replace with raw governor
-
-transactions
-
-- remove flush in favor of transactions, get tests to pass
-
-note: no renaming just yet.
-
-- test: setState outside of transaction fails
-- test: setState works as expected within callback to component.prototype.transaction
-- test: outlet.subscribe's first callback receives dispatch as second argument
-- test: setState works as expected within dispatch from `outlet.subscribe`
-- remove manual transactionStart/transactionEnd from outlet in favor of dispatch where possible
-
-connectChild (don't rename yet)
-
-- test: setState on children fails outside of parent's dispatch
-- test: setState on children works within component.prototype.dispatch
-- test: setState on children works within `outlet.subscribe's` dispatch
-
-- test: component.prototype.dispatch is a getter that cannot be accessed
-        outside of the constructor, and lifecycle methods (so that the user
-        can only use it when creating async subscriptions, but not in actions)
-
-- test: outlets can be added as-is to connectChild's return object to subscribe to them
-- test: outlets can be added as-is to `<combine>` to subscribe to them
-- remove `<subscribe />` built-in, get tests passing
-
-note: these don't all need to type check, but they should be supported for raw js
-- test: elements can be returned from connectChild
-- test: objects can be returned from connectChild, and their properties will be subscribed to
-- test: nested objects can be returned from cnonectChild, and their propreties will be subscribed to
-- test: arrays can be returned from connectChild, and their properties will be subscribed to as arrays
-- test: array elements with same `key` prop but different index share instances
-  (arrays allow <OperationTracker /> that is just a list of operation governors or elements)
-- test: a <constant of={<element />} /> can be returned from connectChild, and the value will not be subscribed to.
-- test: strings/numbers can be returned and are treated as constants
-
-- test: `<flatMap>` doesn't emit a new value when the element returned by the `to` function doesn't
-  (allowing shouldComponentPublish to work inside the from function's returned component)
-
-- test: `<get>` component works as expected
-
-- rename `connectChild` to `subscribe`
-- rename `child` to `subs`
-- rename component.prototype.transaction -> `dispatch`
-- rename createGovernor -> Govern.instantiate
-
-- merge <Subscribe /> code back into react-govern, stop exporting raw `<Subscribe />`
-- test: <Subscribe /> binds actions to dispatch and injects into children function
+o subscribe HoC
+o merge <Subscribe /> code back into react-govern, stop exporting raw `<Subscribe />`
+- test: <Subscribe /> injects `dispatch` function
 - test: <Subscribe /> accepts governors as well as elements
 
-- subscribe HoC: 
-
-subscribe(
-  mapOwnPropsToElement,
-  mapValueToProps, // receives ownProps and dispatch too
-  mapDispatchToProps, // receives value and ownProps too
-  merge
-)
-
 - test: rewrite tests with JSX types
+
+- test: array elements with same `key` prop but different index share instances
+  (arrays allow <OperationTracker /> that is just a list of operation governors or elements)
+- test: two array elements can "swap" index by swapping key
+  * this requires that we have two `subs` objects; an internal one indexed by
+    key, and an external one indexed by index. This would required significant
+    work, so leaving it for now.
+
 
 OTHER
 
