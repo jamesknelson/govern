@@ -2,16 +2,18 @@ import { Outlet } from './Outlet'
 import { Component } from './Component'
 import { GovernElement, isValidElement } from './Element'
 import { Governable } from './Governable'
-import { Subscribe } from './builtins/Subscribe'
+import { FlatMap } from './builtins/FlatMap'
 import { Map } from './builtins/Map'
 import { Combine } from './builtins/Combine'
-import { getUniqueId } from './utils/getUniqueId';
+import { CombineArray } from './builtins/CombineArray'
+import { getUniqueId } from './utils/getUniqueId'
 
 
 const BuiltInComponents = {
-    map: Map,
-    subscribe: Subscribe,
     combine: Combine,
+    combineArray: CombineArray,
+    flatMap: FlatMap,
+    map: Map,
 }
 
 /**
@@ -41,12 +43,12 @@ export function instantiateWithManualFlush<Props, Value>(element: GovernElement<
         // an anonymous Component class.
         let sfc = element.type as any
         let constructor = class extends Component<any, any> {
-            connectChild() {
+            subscribe() {
                 return sfc(this.props)
             }
 
             publish() {
-                return this.child
+                return this.subs
             }
         }
         instance = new constructor(element.props)

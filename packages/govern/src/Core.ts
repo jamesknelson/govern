@@ -3,7 +3,7 @@ import { GovernElement } from './Element'
 import { GovernableClass } from './Governable'
 import { Outlet } from './Outlet'
 
-export type BuiltInType = 'map' | 'subscribe' | 'combine' | 'combineArray' | 'constant'
+export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'flatMap' | 'map' | 'subscribe'
 export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
 export type GovernType<Props = any, Value = any> = BuiltInType | ComponentType<Props, Value>;
 
@@ -18,7 +18,12 @@ export type ComponentState = {};
 
 export type MapProps<FromValue, ToValue> = {
     from: Outlet<FromValue> | GovernElement<any, FromValue>,
-    to: SFC<FromValue, ToValue>,
+    to: (props: FromValue) => ToValue
+}
+
+export type FlatMapProps<FromValue, ToValue> = {
+    from: Outlet<FromValue> | GovernElement<any, FromValue>,
+    to: (props: FromValue) => GovernNode<any, ToValue>
 }
 
 export type CombineChildren<Keys extends keyof CombinedValue, CombinedValue> = {

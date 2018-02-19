@@ -1,4 +1,4 @@
-import { map, combine, createElement, instantiate, Component, SFC } from '../../src'
+import { combine, createElement, instantiate, Component, SFC } from '../../src'
 
 export function createCounter() {
     const Counter = createCounterClass()

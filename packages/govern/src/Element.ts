@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './Governable'
-import { Attributes, BuiltInType, Key, GovernNode, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, SubscribeProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps } from './Core'
 import { Outlet, isValidOutlet } from './Outlet'
 import { isPlainObject } from './utils/isPlainObject'
 
@@ -43,6 +43,7 @@ const BUILT_IN_TYPES = [
     'combine',
     'combineArray',
     'constant',
+    'flatMap',
     'map'
 ]
 
@@ -85,13 +86,14 @@ export interface ComponentElement<Props, Value> extends GovernElement<Props, Val
 }
 
 export function createElement<FromValue, ToValue>(
+    type: 'flatMap',
+    props?: Attributes & FlatMapProps<FromValue, ToValue>
+): GovernElement<FlatMapProps<FromValue, ToValue>, ToValue>
+
+export function createElement<FromValue, ToValue>(
     type: 'map',
     props?: Attributes & MapProps<FromValue, ToValue>
 ): GovernElement<MapProps<FromValue, ToValue>, ToValue>
-export function createElement<Value>(
-    type: 'subscribe',
-    props?: Attributes & SubscribeProps<Value>
-): GovernElement<SubscribeProps<Value>, Value>
 
 export function createElement<CombinedValue>(
     type: 'combine',

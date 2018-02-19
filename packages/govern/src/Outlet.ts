@@ -1,3 +1,5 @@
+import { GovernElement } from './Element'
+import { constant, flatMap, map } from './Factories'
 import { OutletSubject } from './OutletSubject'
 import { TransactionalObserver, TransactionalObservable } from './TransactionalObservable'
 import { ComponentImplementation } from './ComponentImplementation'
@@ -65,13 +67,13 @@ export class Outlet<T, Props=any> implements TransactionalObservable<T> {
         this.impl.transactionEnd(transactionId)
     }
 
-    // map<U>(transform: (value: T) => U) {
-    //     return map(this, transform)
-    // }
+    map<U>(transform: (value: T) => U): GovernElement<any, U> {
+        return map(this, transform)
+    }
 
-    // flatMap<U>(transform: (value: T) => GovernElement<any, U>) {
-    //     return flatMap(this, transform)
-    // }
+    flatMap<U>(transform: (value: T) => GovernElement<any, U>): GovernElement<any, U> {
+        return flatMap(this, transform)
+    }
 }
 
 export function isValidOutlet(x): x is Outlet<any, any> {

@@ -1,4 +1,4 @@
-import { map, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { flatMap, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -25,18 +25,18 @@ describe('Component', () => {
     let didCallDidUpdate = false
 
 		class TestComponent extends Component<{}> {
-			connectChild() {
+			subscribe() {
 			  return combine({
 				  a: 1
 			  })
       }
 
       publish() {
-        return this.child
+        return this.subs
       }
 		
 			componentDidInstantiate() {
-			  calledDidInstantiateWith = this.child
+			  calledDidInstantiateWith = this.subs
 			}
 		
 			componentDidUpdate(nextProps, nextState, nextComp) {
@@ -55,14 +55,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			connectChild() {
+			subscribe() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
       publish() {
-        return this.child
+        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -83,14 +83,14 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			connectChild() {
+			subscribe() {
         return combine({
 				  a: this.state.a
 			  })
       }
       
       publish() {
-        return this.child
+        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -113,11 +113,11 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      get child() {
-        return this.getTypedChild(this)
+      get subs() {
+        return this.getTypedSubs(this)
       }
 
-      connectChild() {
+      subscribe() {
 			  return combine({
           a: counter,
         })
@@ -125,14 +125,14 @@ describe('Component', () => {
       
       publish() {
         return {
-          a: this.child.a.count
+          a: this.subs.a.count
         }
       }
 		
 			componentDidUpdate(prevProps, prevState, prevSubs) {
         didUpdateCallCount += 1
-        if (this.child.a.count === 0) {
-          this.child.a.increase()
+        if (this.subs.a.count === 0) {
+          this.subs.a.increase()
         }
 			}
     }
@@ -153,14 +153,14 @@ describe('Component', () => {
         this.setState({ a: 2 })
 			}
 
-			connectChild() {
+			subscribe() {
 			  return combine({
 				  a: this.state.a
 			  })
       }
       
       publish() {
-        return this.child
+        return this.subs
       }
     }
     
@@ -241,7 +241,7 @@ describe('Component', () => {
     }
 
     class TestComponent extends Component<{ updated }> {
-      connectChild() {
+      subscribe() {
         return combine({
           test: createElement(TestChildComponent)
         })
@@ -249,7 +249,7 @@ describe('Component', () => {
 
       publish() {
         return {
-          child: this.child,
+          child: this.subs,
           updated: this.props.updated,
         }
       }
@@ -275,13 +275,13 @@ describe('Component', () => {
     let observable = instantiate(createElement(Constant))
 
     class TestComponent extends Component<{ updated }> {
-      connectChild() {
+      subscribe() {
         let children = { a: observable, b: observable }
         if (this.props.updated) delete children.b
         return combine(children)
       }
       publish() {
-        return this.child
+        return this.subs
       }
     }
     let outlet = instantiate(createElement(TestComponent))
@@ -303,7 +303,7 @@ describe('Component', () => {
       }
     }
     class TestComponent extends Component<{ updated }> {
-      connectChild() {
+      subscribe() {
         return (
           this.props.updated
             ? [createElement(Child)]
@@ -326,17 +326,17 @@ describe('Component', () => {
 
     class TestComponent extends Component<{ updated }> {
       componentWillReceiveProps() {
-        this.child.inner.increase()
+        this.subs.inner.increase()
       }
 
-      connectChild() {
+      subscribe() {
         return combine({
           inner: counterOutlet
         })
       }
 
       publish() {
-        return this.child.inner.count
+        return this.subs.inner.count
       }
     }
 
@@ -352,18 +352,18 @@ describe('Component', () => {
     let shouldComponentPublishValue
 
     class TestComponent extends Component<{ updated }> {
-      connectChild() {
+      subscribe() {
         return combine({
           inner: counterOutlet
         })
       }
 
       shouldComponentPublish(prevProps, prevState, prevSubs) {
-        shouldComponentPublishValue = prevSubs.inner !== this.child.inner
+        shouldComponentPublishValue = prevSubs.inner !== this.subs.inner
       }
 
       publish() {
-        return this.child
+        return this.subs
       }
     }
 
@@ -379,7 +379,7 @@ describe('Component', () => {
     let counterOutlet = createCounter()
 
     class TestComponent extends Component<{ updated }> {
-      connectChild() {
+      subscribe() {
         return combine({
           inner: counterOutlet
         })
@@ -387,10 +387,10 @@ describe('Component', () => {
 
       publish() {
         return {
-          child: this.child.inner.count,
+          child: this.subs.inner.count,
           update: () => {
             this.setState({})
-            this.child.inner.increase()
+            this.subs.inner.increase()
           },
         }
       }
@@ -422,5 +422,62 @@ describe('Component', () => {
     expect(harness.value).toBe(undefined)
     harness.setProps({ updated: true })
     expect(harness.value).toBe('world')
+  })
+
+  it("can subscribe to nested outlets", () => {
+    let counterOutlet = createCounter()
+
+    class TestComponent extends Component<{ updated }, any> {
+      state = {} as any
+
+      subscribe() {
+        return {
+          outer: {
+            inner: counterOutlet
+          }
+        } as any
+      }
+
+      publish() {
+        return this.subs.outer.inner
+      }
+    }
+
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    expect(harness.value.count).toBe(0)
+    harness.dispatch(() => {
+      harness.value.increase()
+    })
+    expect(harness.value.count).toBe(1)
+  })
+
+  it("can subscribe to arrays of outlets", () => {
+    let counter1Outlet = createCounter()
+    let counter2Outlet = createCounter()
+
+    class TestComponent extends Component<{ updated }, any> {
+      state = {} as any
+
+      subscribe() {
+        return [
+          counter1Outlet,
+          counter2Outlet,
+        ] as any
+      }
+
+      publish() {
+        return this.subs
+      }
+    }
+
+    let outlet = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(outlet)
+    expect(harness.value[0].count).toBe(0)
+    harness.dispatch(() => {
+      harness.value[0].increase()
+    })
+    expect(harness.value[0].count).toBe(1)
+    expect(harness.value[1].count).toBe(0)
   })
 })

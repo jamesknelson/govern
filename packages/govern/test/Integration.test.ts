@@ -1,4 +1,4 @@
-import { map, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { flatMap, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -32,11 +32,11 @@ function createModelClass() {
       defaultValue: {},
     }
 
-    get child() {
-      return this.getTypedChild(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
-    connectChild() {
+    subscribe() {
       return combine({
         name: createElement(ModelPrimitive, {
           defaultValue: this.props.defaultValue.name as string,
@@ -59,15 +59,15 @@ function createModelClass() {
 
     publish() {
       let error = {} as any
-      if (this.child.name.error) error.name = this.child.name.error
-      if (this.child.email.error) error.email = this.child.email.error
+      if (this.subs.name.error) error.name = this.subs.name.error
+      if (this.subs.email.error) error.email = this.subs.email.error
       if (!Object.keys(error).length) error = undefined
 
       return {
-        children: this.child,
+        children: this.subs,
         value: {
-          name: this.child.name.value,
-          email: this.child.email.value,
+          name: this.subs.name.value,
+          email: this.subs.email.value,
         },
         error: error,
         change: this.change,
@@ -76,10 +76,10 @@ function createModelClass() {
 
     change = (value) => {
       if (value.name) {
-        this.child.name.change(value.name)
+        this.subs.name.change(value.name)
       }
       if (value.email) {
-        this.child.email.change(value.email)
+        this.subs.email.change(value.email)
       }
     }
   }
@@ -92,29 +92,29 @@ function createDataSourceClass() {
       this.state = { store: null }
     }
 
-    get child() {
-      return this.getTypedChild(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
     receive = (store) => {
       this.setState({ store })
     }
 
-    connectChild() {
+    subscribe() {
       return this.state.store && combine(this.state.store)
     }
 
     publish() {
       return {
         receive: this.receive,
-        data: this.child
+        data: this.subs
       }
     }
   }
 }
 
 const DataSourceData = (props: { dataSource: Outlet<{receive, data}> }) =>
-  map(props.dataSource, state => state.data)
+  flatMap(props.dataSource, state => state.data)
 
 function createFormControllerClass() {
   const Model = createModelClass()
@@ -122,11 +122,11 @@ function createFormControllerClass() {
   return class FormController extends Component<{ data }> {
     awaitingData: boolean = true
 
-    get child() {
-      return this.getTypedChild(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
 
-    connectChild() {
+    subscribe() {
       return combine({
         data: this.props.data,
         model: createElement(Model, null)
@@ -134,21 +134,21 @@ function createFormControllerClass() {
     }
 
     publish() {
-      return this.child
+      return this.subs
     }
 
     componentDidInstantiate() {
-      this.receiveDataIfAvailable(this.child.data)
+      this.receiveDataIfAvailable(this.subs.data)
     }
 
     componentDidUpdate(prevProps, prevState, prevSubs) {
-      this.receiveDataIfAvailable(this.child.data)
+      this.receiveDataIfAvailable(this.subs.data)
     }
 
     receiveDataIfAvailable(output) {
       if (this.awaitingData && output && Object.keys(output).length > 0) {
         this.awaitingData = false
-        this.child.model.change(output)
+        this.subs.model.change(output)
       }
     }
   }

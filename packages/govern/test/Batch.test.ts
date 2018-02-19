@@ -1,35 +1,35 @@
-import { map, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
+import { flatMap, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Batching', () => {
   function FirstName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
-    return map(
+    return flatMap(
       props.userOutlet,
       state => state.firstName
     )
   }
 
   function LastName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
-    return map(
+    return flatMap(
       props.userOutlet,
       state => state.lastName
     )
   }
 
   class JoinedObservables extends Component<{ firstName: Outlet<string>, lastName: Outlet<string> }> {
-    connectChild() {
+    subscribe() {
       let { firstName, lastName } = this.props
       return combine({
         firstName: firstName,
         lastName: lastName,
       })
     }
-    get child() {
-      return this.getTypedChild(this)
+    get subs() {
+      return this.getTypedSubs(this)
     }
     publish() {
-      let { firstName, lastName } = this.child
+      let { firstName, lastName } = this.subs
       return firstName + ' ' + lastName
     }
   }
@@ -47,7 +47,7 @@ describe('Batching', () => {
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
     let userOutlet = instantiate(
-      map(
+      flatMap(
         modelGovernor,
         model => model.value
       )

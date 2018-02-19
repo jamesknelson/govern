@@ -1,17 +1,17 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
-import { CombineChildren, CombineProps } from '../Core'
+import { CombineArrayChildren, CombineArrayProps } from '../Core'
 import { createElement } from '../Element'
 import { Governable } from '../Governable'
 
-export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
-    impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
+export class CombineArray<ItemValue> implements Governable<CombineArrayProps<ItemValue>, ItemValue[]>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
+    impl: ComponentImplementation<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]>;
     
-    constructor(props: CombineProps<CombinedValue>) {
+    constructor(props: CombineArrayProps<ItemValue>) {
         this.impl = new ComponentImplementation(this, props)
     }
 
     subscribe() {
-        return createElement('combine', this.impl.props)
+        return createElement('combineArray', this.impl.props)
     }
 
     publish() {

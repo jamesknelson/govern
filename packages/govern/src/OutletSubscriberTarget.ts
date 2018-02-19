@@ -15,6 +15,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
      * Store the latest value, so we can send it before transactionEnd if
      * the user doesn't provide a transactionEnd handler.
      */
+    protected latestDispatch: any;
     protected latestValue: any;
     protected hasChangedSinceTransactionStart: boolean = false;
 
@@ -75,6 +76,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
             throw new TargetClosedError()
         }
 
+        this.latestDispatch = dispatch
         this.latestValue = value
         this.hasChangedSinceTransactionStart = true
         if (!this.isStopped && this.observer.next && (this.observer.transactionEnd || this.transactionLevel === 0)) {
@@ -137,7 +139,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
                 this.observer.transactionEnd(transactionId)
             }
             else if (this.transactionLevel === 0 && this.hasChangedSinceTransactionStart) {
-                this.observer.next(this.latestValue)
+                this.observer.next(this.latestValue, this.latestDispatch)
             }
         }
     }

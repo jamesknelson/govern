@@ -1,4 +1,4 @@
-import { map, combine, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, combine, createElement, instantiate, Component, SFC } from '../src'
 
 describe('instantiate', () => {
   it("creates stateless functional components", () => {

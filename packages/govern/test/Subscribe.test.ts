@@ -1,5 +1,5 @@
 import { createCounter } from './utils/createCounter'
-import { map, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, combine, constant, createElement, instantiate, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe("Subscribing to governors", () => {

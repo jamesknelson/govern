@@ -10,17 +10,17 @@ export interface ComponentClass<Props, Value=any> extends GovernableClass<Props,
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Value=any, Child=any> extends ComponentImplementationLifecycle<Props, State, Value, Child> {
+export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> extends ComponentImplementationLifecycle<Props, State, Value, Subs> {
     // While `ComponentImplementation` allows us to "subscribe" to any value,
     // it only makes sense for components to subscribe to elements (as other
     // values are treated as constants.)
-    connectChild?(): GovernElement<any, Child> | null;
+    subscribe?(): GovernElement<any, Subs> | null;
 }
 
-export interface Component<Props={}, State={}, Value=any, Child=any> extends ComponentLifecycle<Props, State, Value, Child> { }
+export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
 
-export abstract class Component<Props, State={}, Value=any, Child=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Child> {
-    protected impl: ComponentImplementation<Props, State, Value, Child>;
+export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
+    protected impl: ComponentImplementation<Props, State, Value, Subs>;
 
     constructor(props: Props, { strict }: { strict?: boolean } = {}) {
         this.impl = new ComponentImplementation(this, props)
@@ -30,11 +30,11 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
         return this.impl.getFix().props
     }
 
-    get child() {
-        if (this.impl.isRunningConnectChild) {
-            throw new Error(`You cannot access a component's "child" property within its "connectChild" method. See component "${getDisplayName(this.constructor)}".`)
+    get subs() {
+        if (this.impl.isRunningSubscribe) {
+            throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.getTypedChild(this as this)
+        return this.getTypedSubs(this as this)
     }
 
     get state() {
@@ -67,7 +67,7 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
         this.impl.setState(updater, callback)
     }
 
-    transaction(run: Function): void {
+    dispatch(run: Function): void {
         this.impl.dispatch(run)
     }
 
@@ -79,10 +79,10 @@ export abstract class Component<Props, State={}, Value=any, Child=any> implement
     abstract publish(): Value;
 
     // TypeScript isn't able to infer the output of the subclass's
-    // `connectChild` function by just accessing `this`, so we need to pass
+    // `subscribe` function by just accessing `this`, so we need to pass
     // in the subclass if we want access to a correctly typed output :-(
-    getTypedChild<Child>(component: { connectChild?: () => GovernElement<any, Child> | null }): Child {
-        return this.impl.getFix().child as any
+    getTypedSubs<Subs>(component: { subscribe?: () => GovernElement<any, Subs> | null }): Subs {
+        return this.impl.getFix().subs as any
     }
 
     getTypedValue<Value>(component: { publish: () => Value }): Value {

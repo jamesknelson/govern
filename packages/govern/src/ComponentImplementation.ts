@@ -3,7 +3,7 @@ import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { createElement, convertToElement, doElementsReconcile, GovernElement } from './Element'
 import { Governable, GovernableClass } from './Governable'
-import { instantiateWithManualFlush } from './Governor'
+import { instantiateWithManualFlush } from './instantiate'
 import { Outlet } from './Outlet'
 import { OutletSubject } from './OutletSubject'
 import { Subscription } from './Subscription'
@@ -15,25 +15,25 @@ import { isValidOutlet } from './index';
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Child=any> {
+export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Subs=any> {
     constructor: Function & {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
     }
 
     componentDidInstantiate?();
     componentWillReceiveProps?(nextProps: Props);
-    connectChild?(): any;
-    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevChild?: Child);
+    subscribe?(): any;
+    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
     publish(): Value;
-    componentDidUpdate?(prevProps?: Props, prevState?: State, prevChild?: Child);
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
     componentWillBeDisposed?();
 }
 
-export class ComponentImplementation<Props, State, Value, Child> {
+export class ComponentImplementation<Props, State, Value, Subs> {
     // Keep track of whether side effects are allowed to help keep
     // components responsible.
     //
-    // general side effects (setstate, setprops, dispose, child changes, starting a transaction) are not allowed:
+    // general side effects (setstate, setprops, dispose, subs changes, starting a transaction) are not allowed:
     //
     // - after disposing
     // - during getDerivedStateFromProps
@@ -47,13 +47,13 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     props: Props;
     state: State;
-    child: Child;
+    subs: Subs;
 
     // What the associated Component instance sees.
-    fixed: { props: Props, state: State, child: Child }[] = [];
+    fixed: { props: Props, state: State, subs: Subs }[] = [];
 
     // Keep the previously published values around for shouldComponentPublish
-    previousPublish: { props: Props, state: State, child: Child };
+    previousPublish: { props: Props, state: State, subs: Subs };
 
     // Arbitrary functions to be run after componentDidUpdate
     callbacks: Function[] = []
@@ -71,7 +71,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // this.children, but still haven't had the transaction ended.
     disposedChildren: Outlet<any, any>[] = []
 
-    // If we're running `connect`, we can defer handling of new child values
+    // If we're running `connect`, we can defer handling of new subs values
     // to the end of the connect.
     expectingChildChangeFor?: string
 
@@ -87,23 +87,23 @@ export class ComponentImplementation<Props, State, Value, Child> {
     // method, so that we don't double connect/double publish.
     isReceivingProps: boolean = false
 
-    // Keep track of whether the user is running "connectChild", so we can
+    // Keep track of whether the user is running "subscribe", so we can
     // prevent them from accessing the existing child.
-    isRunningConnectChild: boolean = false
+    isRunningSubscribe: boolean = false
 
     // The last result of the `subscribe` function
     lastSubscribeElement?: GovernElement<any, any>
 
-    lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>
+    lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
 
     outlet?: Outlet<Value, Props>
 
     // A pipe for events out of this object
     subject: OutletSubject<Value>
 
-    // Keep track of what props, state and child were at the start of a
+    // Keep track of what props, state and subs were at the start of a
     // transaction, so we can pass them through to componentDidUpdate.
-    lastUpdate: { props: Props, state: State, child: Child }
+    lastUpdate: { props: Props, state: State, subs: Subs }
 
     transactionIdLevels: Map<string, number> = new Map()
     transactionIdPropagatedToChildren?: string
@@ -112,7 +112,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     willDispose: boolean = false
 
-    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Child>, props: Props) {
+    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
         this.subject = new OutletSubject(this.dispatch)
@@ -123,7 +123,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     /**
-     * Create a fixed set of props/state/child that can be used
+     * Create a fixed set of props/state/subs that can be used
      * within one method of a component instance.
      */
     fix(wrappedFn: Function) {
@@ -132,13 +132,13 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.popFix()
     }
     getFix() {
-        return this.fixed[0] || { props: this.props, state: this.state, child: this.child }
+        return this.fixed[0] || { props: this.props, state: this.state, subs: this.subs }
     }
     pushFix() {
         this.fixed.unshift({
             props: this.props,
             state: this.state,
-            child: this.child,
+            subs: this.subs,
         })
     }
     popFix() {
@@ -229,13 +229,13 @@ export class ComponentImplementation<Props, State, Value, Child> {
     }
 
     connect() {
-        if (this.lifecycle.connectChild) {
-            this.disallowChangesReason.unshift("running connectChild")
+        if (this.lifecycle.subscribe) {
+            this.disallowChangesReason.unshift("running subscribe")
 
             this.pushFix()
-            this.isRunningConnectChild = true
-            let result = this.lifecycle.connectChild()
-            this.isRunningConnectChild = false
+            this.isRunningSubscribe = true
+            let result = this.lifecycle.subscribe()
+            this.isRunningSubscribe = false
             this.popFix()
 
             if (result === undefined) {
@@ -258,10 +258,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
             // values, so we don't have to rerequest them from subscribed
             // outlets.
             if (nextRootElement.type === 'combine') {
-                this.child = typeHasChanged ? {} : Object.assign({}, this.child) as any
+                this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
             }
             else if (nextRootElement.type === 'combineArray') {
-                this.child = typeHasChanged ? [] : (this.child as any).slice(0) as any
+                this.subs = typeHasChanged ? [] : (this.subs as any).slice(0) as any
             }
 
             // A list of keys on the existing `this.children` that need to be
@@ -294,7 +294,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 let key = childKeysToDisposeArray[i]
                 this.removeChild(key)
                 if (nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray') {
-                    delete this.child[key]
+                    delete this.subs[key]
                 }
             }
 
@@ -302,7 +302,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 let key = childKeysToAdd[i]
 
                 // Outlets will immediately emit their current value
-                // on subscription, ensuring that `child` is updated.
+                // on subscription, ensuring that `subs` is updated.
                 this.expectingChildChangeFor = key
                 this.addChild(
                     key,
@@ -380,16 +380,16 @@ export class ComponentImplementation<Props, State, Value, Child> {
 
     setKey(key, value) {
         if (key === Root) {
-            this.child = value
+            this.subs = value
         }
         else {
-            this.child[key as any] = value
+            this.subs[key as any] = value
         }
     }
 
     // Handle each published value from our children.
     handleChildChange(key: string, value) {
-        // Was this called as part of a `connectChild` or `setProps` call
+        // Was this called as part of a `subscribe` or `setProps` call
         // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
 
@@ -406,14 +406,14 @@ export class ComponentImplementation<Props, State, Value, Child> {
         // published child, breaking `shouldComponentPublish`.
         if (!isExpectingChange && this.lastSubscribeElement) {
             if (this.lastSubscribeElement.type === 'combineArray') {
-                this.child = (this.child as any).slice(0)
+                this.subs = (this.subs as any).slice(0)
             }
             else if (this.lastSubscribeElement.type === 'combine') {
-                this.child = Object.assign({}, this.child)
+                this.subs = Object.assign({}, this.subs)
             }
         }
 
-        // Mutatively update our child
+        // Mutatively update `subs`
         this.setKey(key, value)
 
         // We don't need to `publish` if there is already one scheduled.
@@ -429,10 +429,10 @@ export class ComponentImplementation<Props, State, Value, Child> {
         let shouldComponentPublish =
             !this.previousPublish ||
             !this.lifecycle.shouldComponentPublish ||
-            this.lifecycle.shouldComponentPublish(this.previousPublish.props, this.previousPublish.state, this.previousPublish.child)
+            this.lifecycle.shouldComponentPublish(this.previousPublish.props, this.previousPublish.state, this.previousPublish.subs)
         this.disallowChangesReason.shift()
         
-        // Publish a new value based on the current props, state and child.
+        // Publish a new value based on the current props, state and subs.
         if (shouldComponentPublish) {
             this.broadcastPublish()
         }
@@ -447,7 +447,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
         this.previousPublish = {
             props: this.props,
             state: this.state,
-            child: Object.assign({}, this.child),
+            subs: Object.assign({}, this.subs),
         }
         this.hasPublishedSinceLastUpdate = true
     }
@@ -567,7 +567,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 this.lifecycle.componentDidUpdate(
                     this.lastUpdate.props,
                     this.lastUpdate.state,
-                    this.lastUpdate.child
+                    this.lastUpdate.subs
                 )
                 this.popFix()
             }
@@ -578,7 +578,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
             this.lastUpdate = {
                 props: this.props,
                 state: this.state,
-                child: this.child,
+                subs: this.subs,
             }
 
             if (this.willDispose) {
@@ -614,7 +614,7 @@ export class ComponentImplementation<Props, State, Value, Child> {
                 this.subject.complete()
 
                 delete this.state
-                delete this.child
+                delete this.subs
             }
             else {
                 this.broadcastTransactionEndToChildren()

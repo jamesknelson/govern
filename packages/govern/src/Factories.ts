@@ -1,5 +1,5 @@
 import { Outlet } from './Outlet'
-import { Attributes, BuiltInType, Key, GovernNode, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, SubscribeProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './Governable'
 import { TransactionalObservable } from './TransactionalObservable'
@@ -17,9 +17,17 @@ function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<P
     return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
 }
 
+export function flatMap<FromValue, ToValue>(
+    from: GovernElement<any, FromValue> | Outlet<FromValue>,
+    to: (props: FromValue) => GovernNode<any, ToValue>,
+    key?: Key
+): GovernElement<FlatMapProps<FromValue, ToValue>, ToValue> {
+    return createElement('flatMap', { from, to, key })
+}
+
 export function map<FromValue, ToValue>(
     from: GovernElement<any, FromValue> | Outlet<FromValue>,
-    to: SFC<FromValue, ToValue>,
+    to: (props: FromValue) => ToValue,
     key?: Key
 ): GovernElement<MapProps<FromValue, ToValue>, ToValue> {
     return createElement('map', { from, to, key })
