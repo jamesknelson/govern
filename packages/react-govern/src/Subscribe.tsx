@@ -1,23 +1,23 @@
 import * as React from 'react'
-import { createElement, getUniqueId, instantiate, GovernElement, GovernNode, Outlet, Subscription } from 'govern'
+import { createElement, getUniqueId, instantiate, GovernElement, GovernNode, Store, Subscription } from 'govern'
 
 
 export interface SubscribeProps<T> {
-  to: GovernElement<any, T> | Outlet<T>,
+  to: GovernElement<any, T> | Store<T>,
   children: (value: T, dispatch: Function) => React.ReactNode,
 }
 
 
 /**
  * A factory to create a `<Subscribe to>` React element, with typing.
- * @param outlet The outlet to subscribe to
- * @param children A function to render each of the outlet's values.
+ * @param store The store to subscribe to
+ * @param children A function to render each of the store's values.
  */
 export function createSubscribe<T>(
-  outlet: GovernElement<any, T> | Outlet<T>,
+  store: GovernElement<any, T> | Store<T>,
   children: (value: T, dispatch: Function) => React.ReactNode
 ): React.ReactElement<SubscribeProps<T>> {
-  return React.createElement(Subscribe, { to: outlet, children })
+  return React.createElement(Subscribe, { to: store, children })
 }
 
 
@@ -33,7 +33,7 @@ export function createSubscribe<T>(
  */
 export class Subscribe extends React.Component<SubscribeProps<any>, { output: any, dummy: any, dispatch: any }> {
   isSubscribing: boolean
-  outlet: Outlet<any>
+  store: Store<any>
   subscription: Subscription
 
   // Keep track of whteher our observable is in a transaction, and thus may
@@ -60,14 +60,14 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     // Create controllers within `componentWillMount` instead of in
     // `constructor`, as we can't rule out the possibility that
     // the controller will have some side effects on initialization.
-    this.outlet = instantiate(createElement(Flatten, { children: this.props.to }))
+    this.store = instantiate(createElement(Flatten, { children: this.props.to }))
     
     // Set `isSubscribing` to true around our call to subscribe, so that the
     // initial change handler knows it doesn't need to start a wrapper
     // transaction
     this.isSubscribing = true
 
-    this.subscription = this.outlet.subscribe({
+    this.subscription = this.store.subscribe({
       next: this.handleChange,
       error: this.receiveError,
       complete: undefined,
@@ -80,11 +80,11 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
 
   componentWillReceiveProps(nextProps: SubscribeProps<any>) {
     let transactionId = getUniqueId()
-    this.outlet.transactionStart(transactionId)
-    this.outlet.setProps({
+    this.store.transactionStart(transactionId)
+    this.store.setProps({
       children: nextProps.to,
     })
-    this.outlet.transactionEnd(transactionId)
+    this.store.transactionEnd(transactionId)
 
     // Ensure that re-rendering this component causes a re-render when we're
     // not in a transaction.
@@ -104,17 +104,17 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   receiveError(error) {
     this.cleanup()
 
-    // Grab errors from the outlet, and throw them so a higher level React
+    // Grab errors from the store, and throw them so a higher level React
     // component can handle it with componentDidCatch.
     throw error
   }
 
   cleanup() {
-    if (this.outlet) {
+    if (this.store) {
       this.subscription.unsubscribe()
-      this.outlet.dispose()
+      this.store.dispose()
       delete this.subscription
-      delete this.outlet
+      delete this.store
     }
   }
 
@@ -188,7 +188,7 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
 }
 
 /**
- * A Govern component that accepts an element or outlet, instantiates and
+ * A Govern component that accepts an element or store, instantiates and
  * updates props if required, and returns the output.
  */
 function Flatten(props: { children: GovernNode }) {
