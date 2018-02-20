@@ -2,7 +2,7 @@ import { Instantiable, InstantiableClass } from './Instantiable'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './Element'
-import { getUniqueId } from './utils/getUniqueId';
+import { getUniqueId } from './utils/getUniqueId'
 
 export interface ComponentClass<Props, Value=any> extends InstantiableClass<Props, Value> {
     new (props: Props): Component<Props, ComponentState, Value>;

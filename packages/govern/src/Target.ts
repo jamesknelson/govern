@@ -1,4 +1,5 @@
 import { Subscription } from './Subscription'
+import { ComponentImplementation } from './ComponentImplementation';
 
 /**
  * Target objects represent a single location where observable events can be
@@ -9,9 +10,6 @@ import { Subscription } from './Subscription'
  * resources used to push to the target.
  */
 export abstract class Target<T> {
-    // A boolean value indicating whether the subscription is closed
-    readonly closed: boolean
-
     // Receives the subscription object when `subscribe` is called
     abstract start(subscription: Subscription): void
 

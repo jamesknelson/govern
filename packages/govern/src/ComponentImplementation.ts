@@ -6,6 +6,7 @@ import { instantiateWithManualFlush, Instantiable, InstantiableClass } from './I
 import { Store } from './Store'
 import { StoreSubject } from './StoreSubject'
 import { Subscription } from './Subscription'
+import { Target } from './Target'
 import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
 import { isValidStore } from './index';
 
@@ -166,7 +167,6 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
         // If we're not in a transaction, bumping the level will run the end
         // transaction handler and trigger disposal.
-        // TODO: flush without transaction
         if (!this.transactionLevel) {
             let transactionId = getUniqueId()
             this.transactionStart(transactionId, false)
@@ -315,7 +315,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    addChild(key: string, element: GovernElement<any, any>, changeHandler: Function) {
+    addChild(key: string, element: GovernElement<any, any>, changeHandler: (value: any, dispatch: (runner: () => void) => void) => void) {
         let store: Store<any> | undefined
         let subscription
         let type = 'constant' as 'constant' | 'store' | 'element'
@@ -336,14 +336,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
 
         if (store) {
-            // TODO: pass in a ComponentTarget object
-            subscription = store.subscribe(
-                changeHandler as any,
-                this.handleChildError,
-                this.handleChildComplete,
-                this.transactionStart,
-                this.transactionEnd,
-            )
+            subscription = store.subscribe(new ComponentTarget(this, changeHandler))
         }
         else {
             this.setKey(key, element.props.of)
@@ -719,4 +712,27 @@ function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { 
                 elements: { [Root]: element }
             }
     }
+}
+
+
+export class ComponentTarget<T> extends Target<T> {
+    constructor(impl: ComponentImplementation<any, any, any, any>, handler: (value: T, dispatch: (runner: () => void) => void) => void) {
+        super()
+        
+        this.next = handler
+        this.error = impl.handleChildError
+        this.complete = impl.handleChildComplete
+        this.transactionStart = impl.transactionStart
+        this.transactionEnd = impl.transactionEnd
+    }
+
+    start(subscription: Subscription): void {}
+
+    // These will be replaced in the constructor. Unfortuantely it still needs
+    // to be provided to satisfy typescript's types.
+    next(value: T, dispatch: (runner: () => void) => void): void {}
+    error(err?: any): void {}
+    complete(): void {}
+    transactionStart(transactionId: string, propagateToSubscribers?: boolean): void {}
+    transactionEnd(transactionId: string): void {}
 }

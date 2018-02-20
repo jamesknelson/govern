@@ -141,4 +141,7 @@ popular, they can be added as built-ins later.
 
 While `map`, `flatMap`, etc. could be methods of Element, I won't add them
 initially, as they'd be missing from elements created with React.createElement.
+However, this makes it impossible to chain `flatMap` calls from a store. If
+this turns out to be a problem, elements can have `map` and `flatMap` added to
+them at a later date.
 
