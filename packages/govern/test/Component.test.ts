@@ -1,4 +1,4 @@
-import { flatMap, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 

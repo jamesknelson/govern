@@ -1,17 +1,17 @@
-import { flatMap, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
+import { map, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Batching', () => {
   function FirstName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
-    return flatMap(
+    return map(
       props.userOutlet,
       state => state.firstName
     )
   }
 
   function LastName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
-    return flatMap(
+    return map(
       props.userOutlet,
       state => state.lastName
     )
@@ -47,7 +47,7 @@ describe('Batching', () => {
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
     let userOutlet = instantiate(
-      flatMap(
+      map(
         modelGovernor,
         model => model.value
       )

@@ -89,8 +89,8 @@ describe('FlatMap', () => {
     class TestComponent extends Component {
       subscribe() {
         return combine({
-          decrease: flatMap(counterOutlet, value => value.increase),
-          count: flatMap(counterOutlet, value => 0-value.count)
+          decrease: flatMap(counterOutlet, value => constant(value.increase)),
+          count: flatMap(counterOutlet, value => constant(0-value.count))
         })
       }
 

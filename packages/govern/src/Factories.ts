@@ -19,7 +19,7 @@ function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<P
 
 export function flatMap<FromValue, ToValue>(
     from: GovernElement<any, FromValue> | Outlet<FromValue>,
-    to: (props: FromValue) => GovernNode<any, ToValue>,
+    to: (props: FromValue) => Outlet<ToValue> | GovernElement<any, ToValue>,
     key?: Key
 ): GovernElement<FlatMapProps<FromValue, ToValue>, ToValue> {
     return createElement('flatMap', { from, to, key })

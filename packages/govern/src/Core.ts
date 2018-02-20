@@ -23,7 +23,7 @@ export type MapProps<FromValue, ToValue> = {
 
 export type FlatMapProps<FromValue, ToValue> = {
     from: Outlet<FromValue> | GovernElement<any, FromValue>,
-    to: (props: FromValue) => GovernNode<any, ToValue>
+    to: (props: FromValue) => Outlet<ToValue> | GovernElement<any, ToValue>
 }
 
 export type CombineChildren<Keys extends keyof CombinedValue, CombinedValue> = {

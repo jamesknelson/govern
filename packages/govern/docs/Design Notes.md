@@ -44,8 +44,8 @@ Requests are a PITA. They:
 Requests should receive:
 
 - an id
-- the env state at the time of request
-- actions that can be dispatched
+- important parts of env *state* at the time of request (not the outlet itself)
+- a `dispatch` function
 
 This way, the request can be created *within* the env controller, ensuring
 that a `dispatch` call on the request controller will result in a transaction
@@ -104,6 +104,12 @@ as they're just elements until they're instantiated, you can embed them
 in `subscribe` methods and it just works. And if you really want to
 create a lifted governor outside of a component (which you probably
 don't, you just pass it to Govern.instantiate).
+
+
+## typing
+
+- if you're using types, you can use the types to make stricter code
+- if you're *not* using types, things can be a little looser (e.g. overloading flatMap with map)
 
 
 ### built-in elements

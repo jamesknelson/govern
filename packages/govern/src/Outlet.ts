@@ -71,7 +71,7 @@ export class Outlet<T, Props=any> implements TransactionalObservable<T> {
         return map(this, transform)
     }
 
-    flatMap<U>(transform: (value: T) => GovernElement<any, U>): GovernElement<any, U> {
+    flatMap<U>(transform: (value: T) => Outlet<U> | GovernElement<any, U>): GovernElement<any, U> {
         return flatMap(this, transform)
     }
 }
