@@ -715,6 +715,9 @@ function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { 
 }
 
 
+// Use a custom Target class for parent components without the sanity checks.
+// This cleans up a number of transactionStart/transactionEnd/next calls from
+// stack traces, and also prevents significant unnecessary work.
 export class ComponentTarget<T> extends Target<T> {
     constructor(impl: ComponentImplementation<any, any, any, any>, handler: (value: T, dispatch: (runner: () => void) => void) => void) {
         super()
@@ -733,6 +736,6 @@ export class ComponentTarget<T> extends Target<T> {
     next(value: T, dispatch: (runner: () => void) => void): void {}
     error(err?: any): void {}
     complete(): void {}
-    transactionStart(transactionId: string, propagateToSubscribers?: boolean): void {}
+    transactionStart(transactionId: string): void {}
     transactionEnd(transactionId: string): void {}
 }
