@@ -36,4 +36,40 @@ describe('key', () => {
     harness.setProps({ updated: false })
     expect(harness.value.secondCount).toBe(0)
   })
+
+  it("removes old indexes from subs", () => {
+    let Counter = createCounterClass()
+
+    class TestComponent extends Component<{ updated }> {
+      subscribe() {
+        let el = combineArray((this.props.updated ? [] : [
+          createElement(Counter, { key: 'a' }),
+        ]).concat([
+          createElement(Counter, { key: 'b' }),
+        ]))
+        return el
+      }
+
+      publish() {
+        return {
+          increaseLast: () => {
+            this.subs[1].increase()
+          },
+          firstCount: this.subs[0].count,
+          secondCount: this.subs[1] && this.subs[1].count,
+        }
+      }
+    }
+
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
+
+    harness.dispatch(() => {
+      harness.value.increaseLast()
+    })
+    expect(harness.value.secondCount).toBe(1)
+    harness.setProps({ updated: true })
+    expect(harness.value.secondCount).toBe(undefined)
+    expect(harness.value.firstCount).toBe(1)
+  })
 })

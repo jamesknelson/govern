@@ -273,6 +273,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             // added to this.children after any previous keys are cleaned up.
             let childKeysToAdd = [] as string[]
 
+            // A list of known indexes, which we'll use to decide whether to
+            // remove old values from `subs`
+            let knownIndexes = new Set(Object.values(nextIndexes))
+
             for (let i = 0; i < nextKeys.length; i++) {
                 let key = nextKeys[i]
                 let nextElement = nextElements[key]
@@ -281,7 +285,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 }
                 else {
                     childKeysToDispose.delete(key)
-                    this.updateChild(key, nextIndexes[key], nextElement.props)
+                    this.updateChild(key, nextIndexes[key], nextElement.props, knownIndexes)
                 }
             }
 
@@ -289,12 +293,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             // subscribed to
             let childKeysToDisposeArray = Array.from(childKeysToDispose)
             for (let i = 0; i < childKeysToDisposeArray.length; i++) {
-                let key = childKeysToDisposeArray[i]
-
-                if (nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray') {
-                    delete this.subs[key]
-                }
-                this.removeChild(key)
+                this.removeChild(childKeysToDisposeArray[i], knownIndexes)
             }
 
             for (let i = 0; i < childKeysToAdd.length; i++) {
@@ -345,15 +344,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    updateChild(key: string, index: string, nextProps: any) {
+    updateChild(key: string, index: string, nextProps: any, knownIndexes: Set<string>) {
         // Note that stores never need updating.
         let child = this.children.get(key)!
-
-        if (index !== child.index) {
+        let oldIndex = child.index
+        if (index !== oldIndex) {
             child.index = index
             this.subs[index] = child.value
-
-            // todo: delete old value from `subs` *if it hasn't already been overwritte by a new one*
+            if (!knownIndexes.has(oldIndex)) {
+                delete this.subs[oldIndex]
+            }
         }
 
         if (child.type === 'constant') {
@@ -366,7 +366,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    removeChild(key) {
+    removeChild(key, knownIndexes: Set<string>) {
         let child = this.children.get(key)!
 
         if (child.type !== 'constant') {
@@ -377,6 +377,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         if (child.type === 'element') {
             // The child will be disposed when its transaction ends.
             child.store!.dispose()
+        }
+
+        if (child.index !== Root && !knownIndexes.has(child.index)) {
+            delete this.subs[child.index]
         }
         
         this.children.delete(key)

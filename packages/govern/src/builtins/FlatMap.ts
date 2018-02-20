@@ -10,6 +10,7 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
     fromStore: Store<any, any>
     hasUnpublishedChanges: boolean = true
     impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue, { from: any, to: ToValue }>;
+    knownIndexes = new Set(['to', 'from'])
     transactionIds: string[] = []
     
     constructor(props: FlatMapProps<FromValue, ToValue>) {
@@ -43,13 +44,13 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
 
         if (!doElementsReconcile(this.element, fromElement)) {
             if (this.element) {
-                this.impl.removeChild('from')
+                this.impl.removeChild('from', this.knownIndexes)
             }
             this.impl.addChild('from', 'from', fromElement, this.handleChange)
             this.element = fromElement
         }
         else {
-            this.impl.updateChild('from', 'from', fromElement.props)
+            this.impl.updateChild('from', 'from', fromElement.props, this.knownIndexes)
         }
     }
 
