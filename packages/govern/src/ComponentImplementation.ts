@@ -1,14 +1,13 @@
 import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
-import { createElement, convertToElement, doElementsReconcile, GovernElement } from './Element'
+import { createElement, convertToElement, doElementsReconcile, isValidElement, GovernElement } from './Element'
 import { instantiateWithManualFlush, Instantiable, InstantiableClass } from './Instantiable'
-import { Store } from './Store'
+import { isValidStore, Store } from './Store'
 import { StoreSubject } from './StoreSubject'
 import { Subscription } from './Subscription'
 import { Target } from './Target'
 import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
-import { isValidStore } from './index';
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -64,7 +63,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         type: 'store' | 'element' | 'constant',
         element: GovernElement<any, any>,
         subscription?: Subscription,
-        store?: Store<any, any>
+        store?: Store<any, any>,
+        index: string,
+        value: any
     }> = new Map()
 
     // A list of children that have been disposed and removed from
@@ -245,8 +246,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             let nextRootElement = convertToElement(result)
             this.lastSubscribeElement = nextRootElement
 
-            let { keys: lastKeys, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
-            let { keys: nextKeys, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
+            let { keys: lastKeys, indexes: lastIndexes, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
+            let { keys: nextKeys, indexes: nextIndexes, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
 
             // Indicates whether all existing children should be destroyed and
             // recreated, even if they reconcile. We'll want to do this if the
@@ -280,9 +281,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 }
                 else {
                     childKeysToDispose.delete(key)
-                    this.expectingChildChangeFor = key
-                    this.updateChild(key, nextElement.props)
-                    delete this.expectingChildChangeFor
+                    this.updateChild(key, nextIndexes[key], nextElement.props)
                 }
             }
 
@@ -291,33 +290,29 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             let childKeysToDisposeArray = Array.from(childKeysToDispose)
             for (let i = 0; i < childKeysToDisposeArray.length; i++) {
                 let key = childKeysToDisposeArray[i]
-                this.removeChild(key)
+
                 if (nextRootElement.type === 'combine' || nextRootElement.type === 'combineArray') {
                     delete this.subs[key]
                 }
+                this.removeChild(key)
             }
 
             for (let i = 0; i < childKeysToAdd.length; i++) {
                 let key = childKeysToAdd[i]
-
-                // Stores will immediately emit their current value
-                // on subscription, ensuring that `subs` is updated.
-                this.expectingChildChangeFor = key
                 this.addChild(
                     key,
+                    nextIndexes[key],
                     nextElements[key],
                     value => this.handleChildChange(key, value)
                 )
-                delete this.expectingChildChangeFor
             }
 
             this.disallowChangesReason.shift()
         }
     }
 
-    addChild(key: string, element: GovernElement<any, any>, changeHandler: (value: any, dispatch: (runner: () => void) => void) => void) {
+    addChild(key: string, index: string, element: GovernElement<any, any>, changeHandler: (value: any, dispatch: (runner: () => void) => void) => void) {
         let store: Store<any> | undefined
-        let subscription
         let type = 'constant' as 'constant' | 'store' | 'element'
 
         if (element.type === 'subscribe') {
@@ -335,33 +330,50 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             store = instantiateWithManualFlush(element, this.transactionIdPropagatedToChildren!)
         }
 
+        let child = { type, index, store, element, subscription: undefined as any, value: undefined }
+        this.children.set(key, child)
+
         if (store) {
-            subscription = store.subscribe(new ComponentTarget(this, changeHandler))
+            // Stores will immediately emit their current value
+            // on subscription, ensuring that `subs` is updated.
+            this.expectingChildChangeFor = key
+            child.subscription = store.subscribe(new ComponentTarget(this, changeHandler))
+            delete this.expectingChildChangeFor
         }
         else {
             this.setKey(key, element.props.of)
         }
-        
-        this.children.set(key, { type, store, subscription, element })
     }
 
-    updateChild(key: string, nextProps: any) {
+    updateChild(key: string, index: string, nextProps: any) {
         // Note that stores never need updating.
         let child = this.children.get(key)!
+
+        if (index !== child.index) {
+            child.index = index
+            this.subs[index] = child.value
+
+            // todo: delete old value from `subs` *if it hasn't already been overwritte by a new one*
+        }
+
         if (child.type === 'constant') {
             this.setKey(key, nextProps.of)
         }
         else if (child.type === 'element') {
+            this.expectingChildChangeFor = key
             this.children.get(key)!.store!.setProps(nextProps)
+            delete this.expectingChildChangeFor
         }
     }
 
     removeChild(key) {
         let child = this.children.get(key)!
+
         if (child.type !== 'constant') {
             child.subscription!.unsubscribe()
             this.disposedChildren.push(child.store!)
         }
+
         if (child.type === 'element') {
             // The child will be disposed when its transaction ends.
             child.store!.dispose()
@@ -370,12 +382,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.children.delete(key)
     }
 
-    setKey(key, value) {
-        if (key === Root) {
+    setKey(key: string, value: any) {
+        let child = this.children.get(key)!
+
+        child.value = value
+
+        if (child.index === Root) {
             this.subs = value
         }
         else {
-            this.subs[key as any] = value
+            this.subs[child.index] = value
         }
     }
 
@@ -523,7 +539,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 this.transactionIdLevels.set(transactionId, 1 - transactionIdLevel)
 
                 // TODO: figure out something more useful to do than just whinging
-                // to the developer. Also, only do it in dev mode.
+                // to the developer. Also, only do this in dev mode.
                 setTimeout(() => {
                     if (this.transactionIdLevels.get(transactionId) !== undefined) {
                         console.error('A Govern transaction did not complete successfully!')
@@ -671,46 +687,58 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 }
 
 
-// TODO: memoize this with a weakmap
-function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { keys: string[], elements: { [key: string]: GovernElement<any, any> } } {
+// TODO: memoize this with a weakmap if it results in significantly improved perf
+function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { keys: string[], indexes: { [key: string]: string }, elements: { [key: string]: GovernElement<any, any> } } {
     if (!element) {
-        return { keys: [], elements: {} }
+        return { keys: [], indexes: {}, elements: {} }
     }
 
-    switch (element.type) {
-        case 'combine':
-            if (typeof element.props.children !== 'object') {
-                throw new Error(`<combine> cannot be used with children of type "${typeof element.props.children}".`)
-            }
+    if (element.type === 'combine') {
+        if (typeof element.props.children !== 'object') {
+            throw new Error(`<combine> cannot be used with children of type "${typeof element.props.children}".`)
+        }
 
-            let elements = {}
-            let childNodes = element.props.children
-            let keys = Object.keys(childNodes)
-            for (let i = 0; i < keys.length; i++) {
-                let key = keys[i]
-                elements[key] = convertToElement(childNodes[key])
-            }
+        let elements = {}
+        let indexes = {}
+        let childNodes = element.props.children
+        let indexesArray = Object.keys(childNodes)
+        let keys = [] as string[]
+        for (let i = 0; i < indexesArray.length; i++) {
+            let index = indexesArray[i]
+            let node = childNodes[index]
+            let key = (isValidElement(node) && node.key) ? String(node.key) : index
+            elements[key] = convertToElement(node)
+            indexes[key] = index
+            keys.push(key)
+        }
 
-            return {
-                keys: Object.keys(element.props.children),
-                elements: elements,
-            }
+        return { keys, indexes, elements }
+    }
+    else if (element.type === 'combineArray') {
+        if (!Array.isArray(element.props.children)) {
+            throw new Error(`<combineArray> can only be used with arrays, but instead received a "${typeof element.props.children}".`)
+        }
 
-        case 'combineArray':
-            if (!Array.isArray(element.props.children)) {
-                throw new Error(`<combineArray> can only be used with arrays, but instead received a "${typeof element.props.children}".`)
-            }
+        let elements = {}
+        let indexes = {}
+        let childNodes = element.props.children
+        let keys = [] as string[]
+        for (let i = 0; i < childNodes.length; i++) {
+            let node = childNodes[i]
+            let key = isValidElement(node) ? (String(node.key) || String(i)) : String(i)
+            elements[key] = convertToElement(node)
+            indexes[key] = i
+            keys.push(key)
+        }
 
-            return {
-                keys: Object.keys(element.props.children),
-                elements: element.props.children.map(convertToElement),
-            }
-        
-        default:
-            return {
-                keys: [Root],
-                elements: { [Root]: element }
-            }
+        return { keys, indexes, elements }
+    }
+    else {
+        return {
+            keys: [Root],
+            indexes: { [Root]: Root },
+            elements: { [Root]: element }
+        }
     }
 }
 

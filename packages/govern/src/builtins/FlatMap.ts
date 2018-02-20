@@ -45,22 +45,20 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
             if (this.element) {
                 this.impl.removeChild('from')
             }
-            this.impl.addChild('from', fromElement, this.handleChange)
+            this.impl.addChild('from', 'from', fromElement, this.handleChange)
             this.element = fromElement
         }
         else {
-            this.impl.updateChild('from', fromElement.props)
+            this.impl.updateChild('from', 'from', fromElement.props)
         }
     }
 
     handleChange = (fromOut: FromValue) => {
-        this.impl.expectingChildChangeFor = 'from'
-        this.impl.handleChildChange('from', fromOut)
-        delete this.impl.expectingChildChangeFor
+        this.impl.setKey('from', fromOut)
 
-        // Trigger a re-connect
-        if (this.impl.store) {
-            this.impl.setState(() => ({}))
+        if (this.impl.store && !this.impl.isReceivingProps) {
+            this.impl.connect()
+            this.impl.publish()
         }
     }
 
