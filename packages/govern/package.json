@@ -1,7 +1,7 @@
 {
   "name": "govern",
   "version": "0.5.0-2",
-  "description": "Components for state.",
+  "description": "Component-based state management.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
   "main": "./dist/commonjs/index.js",
