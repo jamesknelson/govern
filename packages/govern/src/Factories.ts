@@ -1,7 +1,7 @@
-import { Outlet } from './Outlet'
+import { Store } from './Store'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
-import { GovernableClass } from './Governable'
+import { InstantiableClass } from './Instantiable'
 import { TransactionalObservable } from './TransactionalObservable'
 
 type Factory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, Value>;
@@ -12,21 +12,21 @@ type ComponentFactory<Props, Value> = (props?: Attributes & Props, ...children: 
 
 // Custom components
 function createFactory<Props, Value>(type: SFC<Props, Value>): SFCFactory<Props, Value>;
-function createFactory<Props, Value>(type: GovernableClass<Props, Value>): Factory<Props, Value>
-function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
+function createFactory<Props, Value>(type: InstantiableClass<Props, Value>): Factory<Props, Value>
+function createFactory<Props, Value>(type: InstantiableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
     return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
 }
 
 export function flatMap<FromValue, ToValue>(
-    from: GovernElement<any, FromValue> | Outlet<FromValue>,
-    to: (props: FromValue) => Outlet<ToValue> | GovernElement<any, ToValue>,
+    from: GovernElement<any, FromValue> | Store<FromValue>,
+    to: (props: FromValue) => Store<ToValue> | GovernElement<any, ToValue>,
     key?: Key
 ): GovernElement<FlatMapProps<FromValue, ToValue>, ToValue> {
     return createElement('flatMap', { from, to, key })
 }
 
 export function map<FromValue, ToValue>(
-    from: GovernElement<any, FromValue> | Outlet<FromValue>,
+    from: GovernElement<any, FromValue> | Store<FromValue>,
     to: (props: FromValue) => ToValue,
     key?: Key
 ): GovernElement<MapProps<FromValue, ToValue>, ToValue> {

@@ -1,9 +1,9 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { MapProps } from '../Core'
 import { createElement } from '../Element'
-import { Governable } from '../Governable'
+import { Instantiable } from '../Instantiable'
 
-export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, ToValue> {
+export class Map<FromValue, ToValue> implements Instantiable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, ToValue> {
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue, ToValue>;
     
     constructor(props: MapProps<FromValue, ToValue>) {
@@ -21,8 +21,8 @@ export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, T
         return this.impl.subs
     }
 
-    createOutlet(initialTransactionId: string) {
+    instantiate(initialTransactionId: string) {
         this.impl.transactionStart(initialTransactionId, false)
-        return this.impl.createOutlet()
+        return this.impl.createStore()
     }
 }

@@ -1,14 +1,13 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { FlatMapProps } from '../Core'
-import { Governable } from '../Governable'
-import { instantiateWithManualFlush } from '../instantiate'
-import { Outlet } from '../Outlet'
+import { instantiateWithManualFlush, Instantiable } from '../Instantiable'
+import { Store } from '../Store'
 import { GovernElement, createElement, convertToElement, doElementsReconcile } from '../Element'
 import { getUniqueId } from '../utils/getUniqueId'
 
-export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
+export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     element: GovernElement<any, any>
-    fromOutlet: Outlet<any, any>
+    fromStore: Store<any, any>
     hasUnpublishedChanges: boolean = true
     impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue, { from: any, to: ToValue }>;
     transactionIds: string[] = []
@@ -60,7 +59,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<From
         delete this.impl.expectingChildChangeFor
 
         // Trigger a re-connect
-        if (this.impl.outlet) {
+        if (this.impl.store) {
             this.impl.setState(() => ({}))
         }
     }
@@ -82,9 +81,9 @@ export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<From
         return this.impl.subs.to
     }
 
-    createOutlet(initialTransactionId: string): Outlet<ToValue, FlatMapProps<FromValue, ToValue>> {
+    instantiate(initialTransactionId: string): Store<ToValue, FlatMapProps<FromValue, ToValue>> {
         this.impl.transactionStart(initialTransactionId, false)
         this.receiveProps(this.impl.props)
-        return this.impl.createOutlet()
+        return this.impl.createStore()
     }
 }

@@ -1,9 +1,9 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { CombineChildren, CombineProps } from '../Core'
 import { createElement } from '../Element'
-import { Governable } from '../Governable'
+import { Instantiable } from '../Instantiable'
 
-export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
+export class Combine<CombinedValue> implements Instantiable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
     impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
     
     constructor(props: CombineProps<CombinedValue>) {
@@ -18,8 +18,8 @@ export class Combine<CombinedValue> implements Governable<CombineProps<CombinedV
         return this.impl.subs
     }
 
-    createOutlet(initialTransactionId: string) {
+    instantiate(initialTransactionId: string) {
         this.impl.transactionStart(initialTransactionId, false)
-        return this.impl.createOutlet()
+        return this.impl.createStore()
     }
 }

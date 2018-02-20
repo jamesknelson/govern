@@ -44,7 +44,7 @@ Requests are a PITA. They:
 Requests should receive:
 
 - an id
-- important parts of env *state* at the time of request (not the outlet itself)
+- important parts of env *state* at the time of request (not the store itself)
 - a `dispatch` function
 
 This way, the request can be created *within* the env controller, ensuring
@@ -61,7 +61,7 @@ If you're happy with requests being disposed/cancelled along with the form
 that creates it, you can just add it as a child of the controller itself.
 
 
-### monadic governors?
+### monadic stores?
 
 governors / elements can be treated as a monad, where governors are "eager",
 and elements are "lazy".
@@ -81,19 +81,19 @@ I feel like plain objects / primitives should be treated as <constant>
 elements, just for usability / making it easier for beginners. But this could
 be disallowed when using TypeScript.
 
-`Govern.instantiate` can turn an element into an outlet.
+`Govern.instantiate` can turn an element into an store.
 
 
-### mapping outlet
+### mapping stores
 
-The problem with allowing `map` on an outlet is that it would encourage
+The problem with allowing `map` on an store is that it would encourage
 users to use `.map` within a component's `subscribe` method with
 anonymous functions. As each call to `.map` receives a new function,
-a new outlet will be returned. This would require re-subscribing on
+a new store will be returned. This would require re-subscribing on
 each call to `connect`, possibly creating/destroying flatMapped
 components.
 
-I think `map`, `flatMap`, etc. on an outlet should return an element,
+I think `map`, `flatMap`, etc. on an store should return an element,
 giving the user control over when it is instantiated. Otherwise the
 user would need to manually dispose every lifted governor, or governors
 would be auto-disposed on unsubscribe/getValue - and both of these are
@@ -106,10 +106,25 @@ create a lifted governor outside of a component (which you probably
 don't, you just pass it to Govern.instantiate).
 
 
-## typing
+### typing
 
 - if you're using types, you can use the types to make stricter code
 - if you're *not* using types, things can be a little looser (e.g. overloading flatMap with map)
+
+
+### `instantiate`
+
+Why not overload name it `createStore`, and overload it to take same arguments
+as createElement? After all, stores and elements can be used interchangeably,
+this function creates a store, and it would just make sense?
+
+The thing is, you generally don't want to create a store. You want to create an
+element. By making it too easy to create a store, it is likely that users will
+abuse it. Naming it this way makes the user think about whether they want to
+create a new instance instead of just an element.
+
+Additionally, you'll likely only need to create one or two stores manually in
+an entire app, so the additional step won't get in the way.
 
 
 ### built-in elements

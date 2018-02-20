@@ -1,10 +1,10 @@
 import { TransactionalObservable } from './TransactionalObservable'
 import { GovernElement } from './Element'
-import { GovernableClass } from './Governable'
-import { Outlet } from './Outlet'
+import { InstantiableClass } from './Instantiable'
+import { Store } from './Store'
 
 export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'flatMap' | 'map' | 'subscribe'
-export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
+export type ComponentType<Props, Value> = InstantiableClass<Props, Value> | StatelessComponent<Props, Value>;
 export type GovernType<Props = any, Value = any> = BuiltInType | ComponentType<Props, Value>;
 
 export type Key = string | number;
@@ -17,24 +17,24 @@ export interface Attributes {
 export type ComponentState = {};
 
 export type MapProps<FromValue, ToValue> = {
-    from: Outlet<FromValue> | GovernElement<any, FromValue>,
+    from: Store<FromValue> | GovernElement<any, FromValue>,
     to: (props: FromValue) => ToValue
 }
 
 export type FlatMapProps<FromValue, ToValue> = {
-    from: Outlet<FromValue> | GovernElement<any, FromValue>,
-    to: (props: FromValue) => Outlet<ToValue> | GovernElement<any, ToValue>
+    from: Store<FromValue> | GovernElement<any, FromValue>,
+    to: (props: FromValue) => Store<ToValue> | GovernElement<any, ToValue>
 }
 
 export type CombineChildren<Keys extends keyof CombinedValue, CombinedValue> = {
-    [K in Keys]: Outlet<CombinedValue[K]> | GovernElement<any, CombinedValue[K]> | CombinedValue[K]
+    [K in Keys]: Store<CombinedValue[K]> | GovernElement<any, CombinedValue[K]> | CombinedValue[K]
 }
 export type CombineProps<CombinedValue> = {
     children: CombineChildren<keyof CombinedValue, CombinedValue>
 }
 
 export type CombineArrayChildren<ItemValue> = {
-    [index: number]: Outlet<ItemValue> | GovernElement<any, ItemValue> | ItemValue
+    [index: number]: Store<ItemValue> | GovernElement<any, ItemValue> | ItemValue
 }
 export type CombineArrayProps<ItemValue> = {
     children: CombineArrayChildren<ItemValue>
@@ -49,7 +49,7 @@ export type SubscribeProps<Value> = {
 }
 
 export type GovernNode<Props = any, Value = any> =
-    Outlet<Value> | 
+    Store<Value> | 
     GovernElement<Props, Value> |
     CombineChildren<keyof Value, Value> |
     Value

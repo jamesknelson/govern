@@ -18,8 +18,8 @@ describe('FlatMap', () => {
     }
 
     let element = flatMap(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
-    let outlet = instantiate(element)
-    let harness = createTestHarness(outlet)
+    let store = instantiate(element)
+    let harness = createTestHarness(store)
 
     expect(harness.value).toEqual({ c: 'test' })
   })
@@ -29,8 +29,8 @@ describe('FlatMap', () => {
         createElement(Double, { x: 1 }),
         x => combine({ x: createElement(Double, { x }) })
     )
-    let outlet = instantiate(element)
-    let harness = createTestHarness(outlet)
+    let store = instantiate(element)
+    let harness = createTestHarness(store)
     expect(harness.value).toEqual({ x: 4 })
     harness.dispatch(() => {
       harness.setProps({
@@ -47,8 +47,8 @@ describe('FlatMap', () => {
         createElement(Double, { x: 1 }),
         output => combine({ x: createElement(Double, { x: output }) }),
     )
-    let outlet = instantiate(element)
-    let harness = createTestHarness(outlet)
+    let store = instantiate(element)
+    let harness = createTestHarness(store)
     expect(harness.value).toEqual({ x: 4 })
     harness.dispatch(() => {
       harness.setProps({
@@ -69,13 +69,13 @@ describe('FlatMap', () => {
     let model = instantiate(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
-    let outlet = instantiate(
+    let store = instantiate(
       flatMap(
         model,
         model => createElement(PickFirstName, { name: model.value })
       )
     )
-    let harness = createTestHarness(outlet)
+    let harness = createTestHarness(store)
     expect(harness.value).toEqual("")
     harness.dispatch(() => {
       model.getValue().change({ firstName: 'James', lastName: 'Nelson' })
@@ -84,13 +84,13 @@ describe('FlatMap', () => {
   })
 
   it("allows actions on `from` to be called when parent is in dispatch", () => {
-    let counterOutlet = createCounter()
+    let counterStore = createCounter()
 
     class TestComponent extends Component {
       subscribe() {
         return combine({
-          decrease: flatMap(counterOutlet, value => constant(value.increase)),
-          count: flatMap(counterOutlet, value => constant(0-value.count))
+          decrease: flatMap(counterStore, value => constant(value.increase)),
+          count: flatMap(counterStore, value => constant(0-value.count))
         })
       }
 
@@ -160,14 +160,14 @@ describe('FlatMap', () => {
       }
     }
 
-    let counterOutlet = instantiate(createElement(CounterWithSelector))
-    let selectorOutlet = instantiate(flatMap(counterOutlet, value => value.selectOdd()))
+    let counterStore = instantiate(createElement(CounterWithSelector))
+    let selectorStore = instantiate(flatMap(counterStore, value => value.selectOdd()))
 
     let counterUpdates = -1
-    let counterHarness = createTestHarness(counterOutlet, () => { counterUpdates++ })
+    let counterHarness = createTestHarness(counterStore, () => { counterUpdates++ })
 
     let selectorUpdates = -1
-    let selectorHarness = createTestHarness(selectorOutlet, () => { selectorUpdates++ })
+    let selectorHarness = createTestHarness(selectorStore, () => { selectorUpdates++ })
 
     expect(selectorHarness.value).toEqual(100)
 

@@ -1,17 +1,17 @@
-import { Outlet, getUniqueId } from '../../src'
+import { Store, getUniqueId } from '../../src'
 
-export function createTestHarness<Value>(outlet: Outlet<Value, any>, onChange?: () => void): { dispatch: Function, value: Value, setProps: Function } {
+export function createTestHarness<Value>(store: Store<Value, any>, onChange?: () => void): { dispatch: Function, value: Value, setProps: Function } {
     let harness = {
         dispatch: undefined as any,
         value: undefined as any,
         setProps: (props) => {
             let id = getUniqueId()
-            outlet.transactionStart(id)
-            outlet.setProps(props)
-            outlet.transactionEnd(id)
+            store.transactionStart(id)
+            store.setProps(props)
+            store.transactionEnd(id)
         }
     }
-    outlet.subscribe((value, dispatch) => {
+    store.subscribe((value, dispatch) => {
         harness.value = value
         harness.dispatch = dispatch
         if (onChange) {

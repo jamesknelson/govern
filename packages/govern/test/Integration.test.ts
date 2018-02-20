@@ -1,4 +1,4 @@
-import { flatMap, combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { flatMap, combine, createElement, instantiate, Component, Store, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -113,7 +113,7 @@ function createDataSourceClass() {
   }
 }
 
-const DataSourceData = (props: { dataSource: Outlet<{receive, data}> }) =>
+const DataSourceData = (props: { dataSource: Store<{receive, data}> }) =>
   flatMap(props.dataSource, state => state.data)
 
 function createFormControllerClass() {
@@ -158,7 +158,7 @@ describe("Model", () => {
   const Model = createModelClass()
 
   it('returns expected initial value', () => {
-    let outlet = instantiate(
+    let store = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -166,7 +166,7 @@ describe("Model", () => {
         }
       })
     )
-    let output = outlet.getValue()
+    let output = store.getValue()
     expect(output.value).toEqual({
       name: 'James',
       email: 'james',
@@ -175,7 +175,7 @@ describe("Model", () => {
   })
 
   it('notifies changes', () => {
-    let outlet = instantiate(
+    let store = instantiate(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -183,7 +183,7 @@ describe("Model", () => {
         }
       })
     )
-    let harness = createTestHarness(outlet)
+    let harness = createTestHarness(store)
     harness.dispatch(() => {
       harness.value.change({
         email: 'james@jamesknelson.com'
@@ -209,10 +209,10 @@ describe("FormController", () => {
       }
     }
     let data = instantiate(createElement(Constant))
-    let outlet = instantiate(
+    let store = instantiate(
       createElement(FormController, { data })
     )
-    let harness = createTestHarness(outlet)
+    let harness = createTestHarness(store)
     expect(harness.value.data).toBe(null)
     expect(harness.value.model.error.email).toBeTruthy()
   })
@@ -220,10 +220,10 @@ describe("FormController", () => {
   it('emits a new model when initial data is received', () => {
     let dataSource = instantiate(createElement(DataSource, {}))
     let dataSourceData = instantiate(createElement(DataSourceData, { dataSource }))
-    let outlet = instantiate(
+    let store = instantiate(
       createElement(FormController, { data: dataSourceData })
     )
-    let harness = createTestHarness(outlet)
+    let harness = createTestHarness(store)
     let received = {
       name: 'James',
       email: 'james@jamesknelson.com'

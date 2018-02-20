@@ -6,7 +6,7 @@
 import { Target, TargetClosedError } from './Target'
 import { closedSubscription, ClosableSubscription, Subscription } from './Subscription'
 
-export class OutletSubject<T> {
+export class StoreSubject<T> {
     protected dispatch: (runner: () => void) => void
     protected hasError: boolean
     protected isStopped: boolean;

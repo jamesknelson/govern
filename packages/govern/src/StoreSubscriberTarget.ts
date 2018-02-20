@@ -3,7 +3,7 @@ import { Target, TargetClosedError } from './Target'
 import { Subscription, ClosableSubscription } from './Subscription'
 
 
-export class OutletSubscriberTarget<T> extends Target<T> {
+export class StoreSubscriberTarget<T> extends Target<T> {
     /**
      * If an error or complete event has occured, we'll stop propagating
      * further events. This is slightly different to `subscription.closed`,
@@ -95,7 +95,7 @@ export class OutletSubscriberTarget<T> extends Target<T> {
                 this.observer.error(err)
             }
             else {
-                console.error(`An error went handled by an outlet's observer:`, err)
+                console.error(`An error went handled by an store's observer:`, err)
             }
         }
     }

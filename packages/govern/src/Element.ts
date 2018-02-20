@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { GovernableClass } from './Governable'
+import { InstantiableClass } from './Instantiable'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps } from './Core'
-import { Outlet, isValidOutlet } from './Outlet'
+import { Store, isValidStore } from './Store'
 import { isPlainObject } from './utils/isPlainObject'
 
 const RESERVED_PROPS = {
@@ -69,7 +69,7 @@ export function isValidElement(obj): obj is GovernElement<any, any> {
 
 
 export interface GovernElement<Props, Value> {
-    type: string | GovernableClass<Props, Value> | SFC<Props, Value>;
+    type: string | InstantiableClass<Props, Value> | SFC<Props, Value>;
     props: Props;
     key: Key | null;
 
@@ -82,7 +82,7 @@ export interface SFCElement<Props, Value> extends GovernElement<Props, Value> {
     type: SFC<Props, Value>;
 }
 export interface ComponentElement<Props, Value> extends GovernElement<Props, Value> {
-    type: GovernableClass<Props, Value>;
+    type: InstantiableClass<Props, Value>;
 }
 
 export function createElement<FromValue, ToValue>(
@@ -191,7 +191,7 @@ export function convertToElement(value): GovernElement<any, any> {
     if (isValidElement(value)) {
         return value
     }
-    else if (isValidOutlet(value)) {
+    else if (isValidStore(value)) {
         return {
             type: 'subscribe',
             props: { to: value },

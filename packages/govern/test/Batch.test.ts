@@ -1,23 +1,23 @@
-import { map, combine, createElement, instantiate, Outlet, Component, SFC } from '../src'
+import { map, combine, createElement, instantiate, Store, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Batching', () => {
-  function FirstName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
+  function FirstName(props: { userStore: Store<{ firstName: string, lastName: string }> }) {
     return map(
-      props.userOutlet,
+      props.userStore,
       state => state.firstName
     )
   }
 
-  function LastName(props: { userOutlet: Outlet<{ firstName: string, lastName: string }> }) {
+  function LastName(props: { userStore: Store<{ firstName: string, lastName: string }> }) {
     return map(
-      props.userOutlet,
+      props.userStore,
       state => state.lastName
     )
   }
 
-  class JoinedObservables extends Component<{ firstName: Outlet<string>, lastName: Outlet<string> }> {
+  class JoinedObservables extends Component<{ firstName: Store<string>, lastName: Store<string> }> {
     subscribe() {
       let { firstName, lastName } = this.props
       return combine({
@@ -46,15 +46,15 @@ describe('Batching', () => {
     let modelGovernor = instantiate(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
-    let userOutlet = instantiate(
+    let userStore = instantiate(
       map(
         modelGovernor,
         model => model.value
       )
     )
 
-    let firstNameGovernor = instantiate(createElement(FirstName, { userOutlet }))
-    let lastNameGovernor = instantiate(createElement(LastName, { userOutlet }))
+    let firstNameGovernor = instantiate(createElement(FirstName, { userStore }))
+    let lastNameGovernor = instantiate(createElement(LastName, { userStore }))
     
     let fullNameGovernor = instantiate(createElement(JoinedObservables, {
       firstName: firstNameGovernor,

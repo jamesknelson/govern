@@ -10,7 +10,7 @@ import { Subscription } from './Subscription'
  *   has completed. The values from the `onNext` calls won't be processed
  *   until this is sent.
  * 
- * Transactions allow individual events on an outlet to be split into
+ * Transactions allow individual events on an store to be split into
  * multiple events during processing, while still only resulting in a single
  * update to the UI.
  */

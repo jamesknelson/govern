@@ -18,8 +18,8 @@ describe('Map', () => {
     }
 
     let element = map(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
-    let outlet = instantiate(element)
-    let harness = createTestHarness(outlet)
+    let store = instantiate(element)
+    let harness = createTestHarness(store)
 
     expect(harness.value).toEqual(combine({ c: 'test' }))
   })

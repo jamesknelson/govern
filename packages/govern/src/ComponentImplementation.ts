@@ -2,13 +2,12 @@ import { getUniqueId } from './utils/getUniqueId'
 import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
 import { createElement, convertToElement, doElementsReconcile, GovernElement } from './Element'
-import { Governable, GovernableClass } from './Governable'
-import { instantiateWithManualFlush } from './instantiate'
-import { Outlet } from './Outlet'
-import { OutletSubject } from './OutletSubject'
+import { instantiateWithManualFlush, Instantiable, InstantiableClass } from './Instantiable'
+import { Store } from './Store'
+import { StoreSubject } from './StoreSubject'
 import { Subscription } from './Subscription'
 import { TransactionalObservable, TransactionalObserver } from './TransactionalObservable'
-import { isValidOutlet } from './index';
+import { isValidStore } from './index';
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -61,15 +60,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     // Use a map so we have access to a list of keys, even if it contains
     // symbols.
     children: Map<string, {
-        type: 'outlet' | 'element' | 'constant',
+        type: 'store' | 'element' | 'constant',
         element: GovernElement<any, any>,
         subscription?: Subscription,
-        outlet?: Outlet<any, any>
+        store?: Store<any, any>
     }> = new Map()
 
     // A list of children that have been disposed and removed from
     // this.children, but still haven't had the transaction ended.
-    disposedChildren: Outlet<any, any>[] = []
+    disposedChildren: Store<any, any>[] = []
 
     // If we're running `connect`, we can defer handling of new subs values
     // to the end of the connect.
@@ -96,10 +95,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
 
-    outlet?: Outlet<Value, Props>
+    store?: Store<Value, Props>
 
     // A pipe for events out of this object
-    subject: OutletSubject<Value>
+    subject: StoreSubject<Value>
 
     // Keep track of what props, state and subs were at the start of a
     // transaction, so we can pass them through to componentDidUpdate.
@@ -115,7 +114,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
-        this.subject = new OutletSubject(this.dispatch)
+        this.subject = new StoreSubject(this.dispatch)
 
         // This will be shifted off the stack during `instantiate`, which
         // is guaranteed to run directly after the subclass constructor.
@@ -146,7 +145,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     dispatch = (runner: Function): void => {
-        if (!this.outlet) {
+        if (!this.store) {
             throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.disallowChangesReason[0]) {
@@ -256,7 +255,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             
             // Create a new `subs` object, keeping around appropriate previous
             // values, so we don't have to rerequest them from subscribed
-            // outlets.
+            // stores.
             if (nextRootElement.type === 'combine') {
                 this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
             }
@@ -301,7 +300,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             for (let i = 0; i < childKeysToAdd.length; i++) {
                 let key = childKeysToAdd[i]
 
-                // Outlets will immediately emit their current value
+                // Stores will immediately emit their current value
                 // on subscription, ensuring that `subs` is updated.
                 this.expectingChildChangeFor = key
                 this.addChild(
@@ -317,28 +316,28 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     addChild(key: string, element: GovernElement<any, any>, changeHandler: Function) {
-        let outlet: Outlet<any> | undefined
+        let store: Store<any> | undefined
         let subscription
-        let type = 'constant' as 'constant' | 'outlet' | 'element'
+        let type = 'constant' as 'constant' | 'store' | 'element'
 
         if (element.type === 'subscribe') {
-            type = 'outlet'
+            type = 'store'
 
-            // If the outlet already exists, it must propagate
+            // If the store already exists, it must propagate
             // any transaction starts to other subscribers, so
             // we pass in `true`
-            outlet = element.props.to
-            outlet!.transactionStart(this.transactionIdPropagatedToChildren!, true)
+            store = element.props.to
+            store!.transactionStart(this.transactionIdPropagatedToChildren!, true)
         }
         else if (element.type !== 'constant') {
             type = 'element'
 
-            outlet = instantiateWithManualFlush(element, this.transactionIdPropagatedToChildren!)
+            store = instantiateWithManualFlush(element, this.transactionIdPropagatedToChildren!)
         }
 
-        if (outlet) {
+        if (store) {
             // TODO: pass in a ComponentTarget object
-            subscription = outlet.subscribe(
+            subscription = store.subscribe(
                 changeHandler as any,
                 this.handleChildError,
                 this.handleChildComplete,
@@ -350,17 +349,17 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             this.setKey(key, element.props.of)
         }
         
-        this.children.set(key, { type, outlet, subscription, element })
+        this.children.set(key, { type, store, subscription, element })
     }
 
     updateChild(key: string, nextProps: any) {
-        // Note that outlets never need updating.
+        // Note that stores never need updating.
         let child = this.children.get(key)!
         if (child.type === 'constant') {
             this.setKey(key, nextProps.of)
         }
         else if (child.type === 'element') {
-            this.children.get(key)!.outlet!.setProps(nextProps)
+            this.children.get(key)!.store!.setProps(nextProps)
         }
     }
 
@@ -368,11 +367,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         let child = this.children.get(key)!
         if (child.type !== 'constant') {
             child.subscription!.unsubscribe()
-            this.disposedChildren.push(child.outlet!)
+            this.disposedChildren.push(child.store!)
         }
         if (child.type === 'element') {
             // The child will be disposed when its transaction ends.
-            child.outlet!.dispose()
+            child.store!.dispose()
         }
         
         this.children.delete(key)
@@ -452,8 +451,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.hasPublishedSinceLastUpdate = true
     }
 
-    createOutlet(): Outlet<Value, Props> {
-        if (this.outlet) {
+    createStore(): Store<Value, Props> {
+        if (this.store) {
             throw new Error('You cannot create multiple governors for a single Component')
         }
 
@@ -467,9 +466,9 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         this.broadcastPublish()
         this.popFix()
 
-        this.outlet = new Outlet(this)
+        this.store = new Store(this)
 
-        return this.outlet
+        return this.store
     }
 
     transactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
@@ -486,8 +485,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             let children = Array.from(this.children.values())
             for (let i = 0; i < children.length; i++) {
                 let child = children[i]
-                if (child.outlet) {
-                    child.outlet.transactionStart(transactionId, child.type === "outlet")
+                if (child.store) {
+                    child.store.transactionStart(transactionId, child.type === "store")
                 }
             }
         }
@@ -591,7 +590,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                     if (child.subscription) {
                         child.subscription.unsubscribe()
                         if (child.type === 'element') {
-                            child.outlet!.dispose()
+                            child.store!.dispose()
                         }
                     }
                 }
@@ -647,14 +646,14 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     broadcastTransactionEndToChildren() {
-        let outlets: Outlet<any, any>[] =
+        let stores: Store<any, any>[] =
             Array.from(this.children.values())
-                .filter(child => child.outlet)
-                .map(child => child.outlet!)
+                .filter(child => child.store)
+                .map(child => child.store!)
                 .concat(this.disposedChildren)
-        for (let i = 0; i < outlets.length; i++) {
+        for (let i = 0; i < stores.length; i++) {
             this.disallowChangesReason.unshift("publishing transactionEnd")
-            outlets[i].transactionEnd(this.transactionIdPropagatedToChildren!)
+            stores[i].transactionEnd(this.transactionIdPropagatedToChildren!)
             this.disallowChangesReason.shift()
         }
         this.disposedChildren.length = 0

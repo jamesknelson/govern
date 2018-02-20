@@ -1,9 +1,9 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { CombineArrayChildren, CombineArrayProps } from '../Core'
 import { createElement } from '../Element'
-import { Governable } from '../Governable'
+import { Instantiable } from '../Instantiable'
 
-export class CombineArray<ItemValue> implements Governable<CombineArrayProps<ItemValue>, ItemValue[]>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
+export class CombineArray<ItemValue> implements Instantiable<CombineArrayProps<ItemValue>, ItemValue[]>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
     impl: ComponentImplementation<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]>;
     
     constructor(props: CombineArrayProps<ItemValue>) {
@@ -18,8 +18,8 @@ export class CombineArray<ItemValue> implements Governable<CombineArrayProps<Ite
         return this.impl.subs
     }
 
-    createOutlet(initialTransactionId: string) {
+    instantiate(initialTransactionId: string) {
         this.impl.transactionStart(initialTransactionId, false)
-        return this.impl.createOutlet()
+        return this.impl.createStore()
     }
 }

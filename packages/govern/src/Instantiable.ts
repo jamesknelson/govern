@@ -1,12 +1,22 @@
-import { Outlet } from './Outlet'
+import { Store } from './Store'
 import { Component } from './Component'
 import { GovernElement, isValidElement } from './Element'
-import { Governable } from './Governable'
 import { FlatMap } from './builtins/FlatMap'
 import { Map } from './builtins/Map'
 import { Combine } from './builtins/Combine'
 import { CombineArray } from './builtins/CombineArray'
 import { getUniqueId } from './utils/getUniqueId'
+
+
+export interface Instantiable<Props, Value> {
+    instantiate(initialTransactionId: string): Store<Value, Props>;
+}
+
+export interface InstantiableClass<Props, Value> {
+    new (props: Props): Instantiable<Props, Value>;
+    defaultProps?: Partial<Props>;
+    displayName?: string;
+}
 
 
 const BuiltInComponents = {
@@ -16,14 +26,15 @@ const BuiltInComponents = {
     map: Map,
 }
 
+
 /**
  * This allows the initial transaction to be started manually. It is used
  * internally, but not exposed via the public API, as forgetting to start
  * an initial transaction is a superb way to waste a couple hours chasing
  * funny bugs.
  */
-export function instantiateWithManualFlush<Props, Value>(element: GovernElement<Props, Value>, initialTransactionId: string): Outlet<Value, Props> {
-    let instance: Governable<Props, Value>
+export function instantiateWithManualFlush<Props, Value>(element: GovernElement<Props, Value>, initialTransactionId: string): Store<Value, Props> {
+    let instance: Instantiable<Props, Value>
 
     // Create a component instance for the element, with the specified
     // initial props.
@@ -34,7 +45,7 @@ export function instantiateWithManualFlush<Props, Value>(element: GovernElement<
         }
         instance = new constructor(element.props)
     }
-    else if (element.type.prototype.createOutlet) {
+    else if (element.type.prototype.instantiate) {
         let constructor = element.type as any
         instance = new constructor(element.props)
     }
@@ -58,12 +69,13 @@ export function instantiateWithManualFlush<Props, Value>(element: GovernElement<
     }
 
     // Return the component instance's governor.
-    return instance.createOutlet(initialTransactionId)
+    return instance.instantiate(initialTransactionId)
 }
 
-export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Outlet<Value, Props> {
+
+export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Store<Value, Props> {
     let initialTransactionId = getUniqueId()
-    let outlet = instantiateWithManualFlush(element, initialTransactionId)
-    outlet.transactionEnd(initialTransactionId)
-    return outlet
+    let store = instantiateWithManualFlush(element, initialTransactionId)
+    store.transactionEnd(initialTransactionId)
+    return store
 }

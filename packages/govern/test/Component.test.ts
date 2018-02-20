@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, Outlet, SFC } from '../src'
+import { combine, createElement, instantiate, Component, Store, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -14,9 +14,9 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
+    let store = instantiate(createElement(TestComponent))
     expect(() => {
-      outlet.getValue().action()
+      store.getValue().action()
     }).toThrow()
   })
 
@@ -44,7 +44,7 @@ describe('Component', () => {
 			}
     }
     
-    let outlet = instantiate(createElement(TestComponent, null))
+    let store = instantiate(createElement(TestComponent, null))
     expect(didCallDidUpdate).toBe(false)
     expect(calledDidInstantiateWith).toEqual({ a: 1 })
   })
@@ -70,8 +70,8 @@ describe('Component', () => {
 			}
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(1)
     expect(harness.value).toEqual({ a: 1 })
@@ -101,8 +101,8 @@ describe('Component', () => {
 			}
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({ a: 2 })
     expect(didUpdateCallCount).toBe(2)
@@ -137,9 +137,9 @@ describe('Component', () => {
 			}
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let store = instantiate(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
-    let harness = createTestHarness(outlet)
+    let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(2)
     expect(harness.value).toEqual({ a: 1 })
@@ -164,9 +164,9 @@ describe('Component', () => {
       }
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let store = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    let harness = createTestHarness(outlet, () => {
+    let harness = createTestHarness(store, () => {
       updateCount++
     })
     harness.setProps({ updated: true })
@@ -184,9 +184,9 @@ describe('Component', () => {
       }
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
+    let store = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    let harness = createTestHarness(outlet, () => {
+    let harness = createTestHarness(store, () => {
       updateCount++
     })
     expect(updateCount).toBe(1)
@@ -220,8 +220,8 @@ describe('Component', () => {
       }
     }
     
-    let outlet = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent, { updated: false }))
+    let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(state).toEqual({ x: 1 })
     expect(props).toEqual({ updated: false })
@@ -255,8 +255,8 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({
       updated: true,
@@ -284,8 +284,8 @@ describe('Component', () => {
         return this.subs
       }
     }
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(harness.value).toEqual({ a: 'a', b: 'a' })
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({ a: 'a' })
@@ -314,15 +314,15 @@ describe('Component', () => {
         return null
       }
     }
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(childConstructorCount).toEqual(1)
     harness.setProps({ updated: true })
     expect(childConstructorCount).toEqual(2)
   })
 
   it("events can be received from combined <subscribe /> elements when emitted during `componentWillReceiveProps` ", () => {
-    let counterOutlet = createCounter()
+    let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       componentWillReceiveProps() {
@@ -331,7 +331,7 @@ describe('Component', () => {
 
       subscribe() {
         return combine({
-          inner: counterOutlet
+          inner: counterStore
         })
       }
 
@@ -340,21 +340,21 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(harness.value).toEqual(0)
     harness.setProps({ updated: true })
     expect(harness.value).toEqual(1)
   })
 
   it("shouldComponentPublish receives old subs", () => {
-    let counterOutlet = createCounter()
+    let counterStore = createCounter()
     let shouldComponentPublishValue
 
     class TestComponent extends Component<{ updated }> {
       subscribe() {
         return combine({
-          inner: counterOutlet
+          inner: counterStore
         })
       }
 
@@ -367,21 +367,21 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     harness.dispatch(() => {
       harness.value.inner.increase()
     })
     expect(shouldComponentPublishValue).toEqual(true)
   })
 
-  it("events can be received from combined outlets in the same transaction as a setState", () => {
-    let counterOutlet = createCounter()
+  it("events can be received from combined stores in the same transaction as a setState", () => {
+    let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }> {
       subscribe() {
         return combine({
-          inner: counterOutlet
+          inner: counterStore
         })
       }
 
@@ -396,8 +396,8 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     harness.dispatch(() => {
       harness.value.update()
     })
@@ -417,15 +417,15 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(harness.value).toBe(undefined)
     harness.setProps({ updated: true })
     expect(harness.value).toBe('world')
   })
 
-  it("can subscribe to nested outlets", () => {
-    let counterOutlet = createCounter()
+  it("can subscribe to nested stores", () => {
+    let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }, any> {
       state = {} as any
@@ -433,7 +433,7 @@ describe('Component', () => {
       subscribe() {
         return {
           outer: {
-            inner: counterOutlet
+            inner: counterStore
           }
         } as any
       }
@@ -443,8 +443,8 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(harness.value.count).toBe(0)
     harness.dispatch(() => {
       harness.value.increase()
@@ -452,17 +452,17 @@ describe('Component', () => {
     expect(harness.value.count).toBe(1)
   })
 
-  it("can subscribe to arrays of outlets", () => {
-    let counter1Outlet = createCounter()
-    let counter2Outlet = createCounter()
+  it("can subscribe to arrays of stores", () => {
+    let counter1Store = createCounter()
+    let counter2Store = createCounter()
 
     class TestComponent extends Component<{ updated }, any> {
       state = {} as any
 
       subscribe() {
         return [
-          counter1Outlet,
-          counter2Outlet,
+          counter1Store,
+          counter2Store,
         ] as any
       }
 
@@ -471,8 +471,8 @@ describe('Component', () => {
       }
     }
 
-    let outlet = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(outlet)
+    let store = instantiate(createElement(TestComponent))
+    let harness = createTestHarness(store)
     expect(harness.value[0].count).toBe(0)
     harness.dispatch(() => {
       harness.value[0].increase()
