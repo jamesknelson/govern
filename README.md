@@ -13,7 +13,7 @@ If you've used React, you already know the API. Just replace `render` with `subs
 
 Create components for your forms, data store, authentication, etc, and then combine them with govern's built-in components.
 
-See a [live demo](https://codesandbox.io/s/9jlor73wro) at Code Sandbox.
+See a [live demo](https://codesandbox.io/s/w6j1xk8nvw) at Code Sandbox.
 
 
 Example with React
