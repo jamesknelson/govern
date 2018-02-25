@@ -95,7 +95,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
 
   let element = createElement(TestComponent)
   let store = instantiate(element)
-  let mapStore = instantiate(store.map(x => x))
+  let mapStore = instantiate(store.flatMap(x => constant(x)))
   let harness = createTestHarness(mapStore)  
   
   harness.dispatch(() => {
@@ -104,6 +104,48 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
 
   expect(harness.value.model.value).toEqual('test')
 
+  // Wait for any exceptions thrown by the transaction checker
+  return new Promise(resolve => {
+    setTimeout(resolve, 0)
+  })
+})
+
+
+test("can dispose mapped items", async () => {
+  class Model<T> extends Component {
+    state = { value: undefined }
+
+    publish() {
+      return {
+        value: this.state.value,
+        change: value => {
+          this.dispatch(() => {
+            this.setState({ value }) 
+          })
+        },
+      }
+    }
+  }
+
+  class TestComponent extends Component {
+    subscribe() {
+      return combine({
+        model: createElement(Model),
+      })
+    }
+
+    publish() {
+      return this.subs
+    }
+  }
+
+  let element = createElement(TestComponent)
+  let store = instantiate(element)
+  let mapStore = instantiate(store.flatMap(x => constant(x)))
+
+  mapStore.dispose()
+
+  // Wait for any exceptions thrown by the transaction checker
   return new Promise(resolve => {
     setTimeout(resolve, 0)
   })

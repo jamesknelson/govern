@@ -106,10 +106,12 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     // transaction, so we can pass them through to componentDidUpdate.
     lastUpdate: { props: Props, state: State, subs: Subs }
 
+
     transactionIdLevels: Map<string, number> = new Map()
     transactionIdPropagatedToChildren?: string
     transactionIdPropagatedToSubscribers?: string
     transactionLevel: number = 0
+    nonChildTransactions: Set<string> = new Set()
 
     willDispose: boolean = false
 
@@ -488,13 +490,32 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         return this.store
     }
 
-    transactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
+    childTransactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
+        this.transactionStart(transactionId, propagateToSubscribers, true)
+    }
+
+    transactionStart = (transactionId: string, propagateToSubscribers: boolean = true, receivedFromChild: boolean = false) => {
         if (!transactionId) {
             throw new Error('You must pass a transactionId to "transactionStart"')
         }
 
-        this.transactionLevel += 1
         let transactionIdLevel = (this.transactionIdLevels.get(transactionId) || 0) + 1
+
+        if (!receivedFromChild) {
+            // If we already know about the transaction and it isn't on the
+            // ignore list, it means that it originated from a child, and
+            // we don't want to add it to the ignore list.
+            if (transactionIdLevel === 1) {
+                this.nonChildTransactions.add(transactionId)
+            }
+        }
+        else if (this.nonChildTransactions.has(transactionId)) {
+            // Ignore child transactions when we already know about them from
+            // somewhere else.
+            return
+        }
+
+        this.transactionLevel += 1
         this.transactionIdLevels.set(transactionId, transactionIdLevel)
 
         if (this.transactionLevel === 1) {
@@ -516,8 +537,18 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    transactionEnd = (transactionId: string) => {
+    childTransactionEnd = (transactionId: string) => {
+        this.transactionEnd(transactionId, true)
+    }
+
+    transactionEnd = (transactionId: string, receivedFromChild: boolean = false) => {
         let transactionIdLevel: number = this.transactionIdLevels.get(transactionId)!
+
+        if (receivedFromChild && this.nonChildTransactions.has(transactionId)) {
+            // Ignore child transactions when we already know about them from
+            // somewhere else.
+            return
+        }
         
         // Negative transaction levels are used to denote transactions that
         // have already been ended from one subscriber or child, but still
@@ -550,6 +581,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 // to the developer. Also, only do this in dev mode.
                 setTimeout(() => {
                     if (this.transactionIdLevels.get(transactionId) !== undefined) {
+                        debugger
                         throw new Error('A Govern transaction did not complete successfully!')
                     }
                 })
@@ -604,15 +636,22 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 let children = Array.from(this.children.values())
                 for (let i = 0; i < children.length; i++) {
                     let child = children[i]
-                    if (child.subscription) {
-                        child.subscription.unsubscribe()
-                        if (child.type === 'element') {
-                            child.store!.dispose()
-                        }
+                    if (child.type === 'element') {
+                        child.store!.dispose()
                     }
                 }
 
                 this.broadcastTransactionEndToChildren()
+
+                // Don't unsubscribe until after broadcasting the end
+                // transaction, in case it repropagates back to us.
+                for (let i = 0; i < children.length; i++) {
+                    let child = children[i]
+                    if (child.subscription) {
+                        child.subscription.unsubscribe()
+                    }
+                }
+
                 this.children.clear()
 
                 // Lower the internal transaction level before calling the
@@ -629,11 +668,13 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 this.broadcastTransactionEndToSubscribers()
                 this.subject.complete()
 
+                delete this.nonChildTransactions
                 delete this.state
                 delete this.subs
             }
             else {
                 this.broadcastTransactionEndToChildren()
+                this.nonChildTransactions.delete(this.transactionIdPropagatedToChildren!)
                 delete this.transactionIdPropagatedToChildren
 
                 // Only lower transaction level after ending transaction on
@@ -762,14 +803,16 @@ function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { 
 // This cleans up a number of transactionStart/transactionEnd/next calls from
 // stack traces, and also prevents significant unnecessary work.
 export class ComponentTarget<T> extends Target<T> {
+    impl: ComponentImplementation<any, any, any, any>
+
     constructor(impl: ComponentImplementation<any, any, any, any>, handler: (value: T, dispatch: (runner: () => void) => void) => void) {
         super()
         
         this.next = handler
         this.error = impl.handleChildError
         this.complete = impl.handleChildComplete
-        this.transactionStart = impl.transactionStart
-        this.transactionEnd = impl.transactionEnd
+        this.transactionStart = impl.childTransactionStart
+        this.transactionEnd = impl.childTransactionEnd
     }
 
     start(subscription: Subscription): void {}
