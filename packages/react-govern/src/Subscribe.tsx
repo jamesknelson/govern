@@ -57,6 +57,10 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   componentWillMount() {
+    if (!this.props.to) {
+      console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
+    }
+
     // Create controllers within `componentWillMount` instead of in
     // `constructor`, as we can't rule out the possibility that
     // the controller will have some side effects on initialization.
@@ -79,6 +83,10 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   componentWillReceiveProps(nextProps: SubscribeProps<any>) {
+    if (!nextProps.to) {
+      console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
+    }
+
     let transactionId = getUniqueId()
     this.store.transactionStart(transactionId)
     this.store.setProps({
@@ -101,9 +109,7 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     this.cleanup()
   }
 
-  receiveError(error) {
-    this.cleanup()
-
+  receiveError = (error) => {
     // Grab errors from the store, and throw them so a higher level React
     // component can handle it with componentDidCatch.
     throw error
