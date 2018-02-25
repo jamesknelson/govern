@@ -154,7 +154,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             throw new Error(`You cannot call "transaction" while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
-        let transactionId = getUniqueId()
+        // If we're already in a transaction, re-use the id, as otherwise we
+        // won't know which transaction id to use to notify subscribers that
+        // we're done.
+        let transactionId = this.transactionIdPropagatedToChildren || getUniqueId()
+
         this.transactionStart(transactionId)
         runner()
         this.transactionEnd(transactionId)
@@ -504,7 +508,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
 
-        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers && transactionIdLevel === 1) {
+        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers) {
             this.transactionIdPropagatedToSubscribers = transactionId
             this.disallowChangesReason.unshift("publishing transactionStart")
             this.subject.transactionStart(transactionId)
@@ -546,7 +550,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 // to the developer. Also, only do this in dev mode.
                 setTimeout(() => {
                     if (this.transactionIdLevels.get(transactionId) !== undefined) {
-                        console.error('A Govern transaction did not complete successfully!')
+                        throw new Error('A Govern transaction did not complete successfully!')
                     }
                 })
             }
@@ -630,6 +634,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
             else {
                 this.broadcastTransactionEndToChildren()
+                delete this.transactionIdPropagatedToChildren
 
                 // Only lower transaction level after ending transaction on
                 // subscribers, in case their lifecycle methods cause updates on us.
@@ -674,7 +679,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     broadcastTransactionEndToSubscribers() {
         if (this.transactionIdPropagatedToSubscribers) {
-            let transactionId =this.transactionIdPropagatedToSubscribers
+            let transactionId = this.transactionIdPropagatedToSubscribers
 
             // Delete before publishing transactionEnd, as otherwise any
             // subscriptions which are made in response to transactionEnd
