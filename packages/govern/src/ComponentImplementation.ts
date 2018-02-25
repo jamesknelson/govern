@@ -171,7 +171,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         if (!this.transactionLevel) {
             let transactionId = getUniqueId()
             this.transactionStart(transactionId, false)
-            this.transactionEnd(transactionId, false)
+            this.transactionEnd(transactionId)
         }
     }
 
@@ -512,7 +512,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    transactionEnd = (transactionId: string, propagateToSubscribers: boolean = true) => {
+    transactionEnd = (transactionId: string) => {
         let transactionIdLevel: number = this.transactionIdLevels.get(transactionId)!
         
         // Negative transaction levels are used to denote transactions that
@@ -674,10 +674,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     broadcastTransactionEndToSubscribers() {
         if (this.transactionIdPropagatedToSubscribers) {
-            this.disallowChangesReason.unshift("publishing transactionEnd")
-            this.subject.transactionEnd(this.transactionIdPropagatedToSubscribers)
-            this.disallowChangesReason.shift()
+            let transactionId =this.transactionIdPropagatedToSubscribers
+
+            // Delete before publishing transactionEnd, as otherwise any
+            // subscriptions which are made in response to transactionEnd
+            // will publish to old subscribers.
             delete this.transactionIdPropagatedToSubscribers
+
+            this.disallowChangesReason.unshift("publishing transactionEnd")
+            this.subject.transactionEnd(transactionId)
+            this.disallowChangesReason.shift()
         }
     }
 

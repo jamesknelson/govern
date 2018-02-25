@@ -27,7 +27,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     get props() {
-        return this.impl.getFix().props || {}
+        return (this.impl.getFix().props || {}) as Props
     }
 
     get subs() {

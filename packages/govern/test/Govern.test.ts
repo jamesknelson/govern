@@ -40,4 +40,26 @@ describe('instantiate', () => {
     let output = store.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
+
+  it("can be called during the end of a previous transaction", () => {
+    function TestComponent(props) {
+      return {
+        a: props.a,
+      }
+    }
+
+    let element = createElement(TestComponent, { a: 1 })
+    let store = instantiate(element)
+    let mapStore
+    
+    store.subscribe((state, dispatch) => {
+      mapStore = instantiate(store.map(x => x.a))
+    })
+
+    store.transactionStart('1')
+    store.setProps({ a: 2 })
+    store.transactionEnd('1')
+
+    expect(mapStore.getValue()).toBe(2)
+  })
 })
