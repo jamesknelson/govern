@@ -1,3 +1,5 @@
+/// <reference path="./globals.d.ts" />
+
 export * from './Component'
 export * from './Core'
 export * from './Element'

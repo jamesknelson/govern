@@ -33,7 +33,6 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
 }
 
 interface Child {
-    type: 'store' | 'element' | 'constant',
     element: GovernElement<any, any>,
     subscription?: Subscription,
     target?: ComponentTarget<any>,
@@ -161,9 +160,6 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     dispatch = (runner: Function): void => {
-        if (!this.store) {
-            throw new Error(`You cannot call "dispatch" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
-        }
         if (this.disallowChangesReason[0]) {
             throw new Error(`You cannot call "dispatch" while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
@@ -340,18 +336,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         // a transaction that has been propagated to children, we must also
         // start a transaction on subscriptions.
         if (element.type === 'subscribe') {
-            type = 'store'
             target = new ComponentTarget(this, key)
             store = element.props.to
             store!.transactionStart(this.transactionId!, target)
         }
         else if (element.type !== 'constant') {
-            type = 'element'
             target = new ComponentTarget(this, key)
             store = instantiateWithManualFlush(element, this.transactionId!, target)
         }
 
-        let child = { type, index, store, element, target: undefined as any, subscription: undefined as any, value: undefined }
+        let child = { index, store, element, target: undefined as any, subscription: undefined as any, value: undefined }
         this.children.set(key, child)
 
         if (store) {
@@ -379,10 +373,10 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
 
         // Note that subscriptions never need updating.
-        if (child.type === 'constant') {
+        if (child.element.type === 'constant') {
             this.setKey(key, nextProps.of)
         }
-        else if (child.type === 'element') {
+        else if (child.element.type !== 'subscribe') {
             this.expectingChildChangeFor = key
             this.children.get(key)!.store!.setProps(nextProps)
             delete this.expectingChildChangeFor
@@ -392,12 +386,12 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     removeChild(key, knownIndexes: Set<string>) {
         let child = this.children.get(key)!
 
-        if (child.type === 'element') {
-            // The child will be disposed when its transaction ends.
-            child.store!.dispose()
-        }
+        if (child.store) {
+            if (child.element.type !== 'subscribe') {
+                // The child will be disposed when its transaction ends.
+                child.store.dispose()
+            }
 
-        if (child.type !== 'constant') {
             if (child === this.transactionOriginChild) {
                 child.target!.markAsRemovedOrigin()
                 this.wasOriginChildRemoved = true
@@ -435,23 +429,25 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
 
-        if (!isExpectingChange && this.disallowChangesReason[0]) {
-            throw new Error(`A Govern component cannot receive new values from children while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-        }
-        if (!isExpectingChange && this.transactionLevel === 0) {
-            throw new Error(`A Govern component cannot receive new values from children outside of a transaction.`)
-        }
- 
-        // If this method wasn't called while wrapped in `connect`, and our
-        // current child is a `<combine />`, we'll need to shallow clone our
-        // child before updating it. Otherwise we'll also overwrite our last
-        // published child, breaking `shouldComponentPublish`.
-        if (!isExpectingChange && this.lastSubscribeElement) {
-            if (this.lastSubscribeElement.type === 'combineArray') {
-                this.subs = (this.subs as any).slice(0)
+        if (!isExpectingChange) {
+            if (this.disallowChangesReason[0]) {
+                throw new Error(`A Govern component cannot receive new values from children while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
             }
-            else if (this.lastSubscribeElement.type === 'combine') {
-                this.subs = Object.assign({}, this.subs)
+            if (this.transactionLevel === 0) {
+                throw new Error(`A Govern component cannot receive new values from children outside of a transaction.`)
+            }
+ 
+            // This method wasn't called while wrapped in `connect`, so if our
+            // current child is a `<combine />`, we'll need to shallow clone our
+            // child before updating it. Otherwise we'll also overwrite our last
+            // published child, breaking `shouldComponentPublish`.
+            if (this.lastSubscribeElement) {
+                if (this.lastSubscribeElement.type === 'combineArray') {
+                    this.subs = (this.subs as any).slice(0)
+                }
+                else if (this.lastSubscribeElement.type === 'combine') {
+                    this.subs = Object.assign({}, this.subs)
+                }
             }
         }
 
@@ -522,15 +518,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         let transactionIdLevel = (this.transactionIdLevels.get(transactionId) || 0) + 1
         let oldTransactionLevel = this.transactionLevel
 
-        if (transactionIdLevel === 1) {
-            setTimeout(() => {
-                let level = this.transactionIdLevels.get(transactionId)
-                if (level && level > 0) {
-                    console.error('A Govern transaction was not ended in the same tick!')
-                    debugger
-                    throw new Error('A Govern transaction was not ended in the same tick!')
-                }
-            })
+        if (__DEV__) {
+            if (transactionIdLevel === 1) {
+                setTimeout(() => {
+                    let level = this.transactionIdLevels.get(transactionId)
+                    if (level && level > 0) {
+                        throw new Error('Govern Error: a transaction did not end within the same tick. Please file an issue.')
+                    }
+                })
+            }
         }
 
         if (oldTransactionLevel === 0) {
@@ -604,15 +600,13 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             else {
                 this.transactionIdLevels.set(transactionId, 1 - transactionIdLevel)
 
-                // TODO: figure out something more useful to do than just whinging
-                // to the developer. Also, only do this in dev mode.
-                setTimeout(() => {
-                    if (this.transactionIdLevels.get(transactionId) !== undefined) {
-                        console.error('A Govern transaction did not complete successfully!')
-                        debugger
-                        throw new Error('A Govern transaction did not complete successfully!')
-                    }
-                })
+                if (__DEV__) {
+                    setTimeout(() => {
+                        if (this.transactionIdLevels.get(transactionId) !== undefined) {
+                            throw new Error('Govern Error: a transaction did not complete successfully. Please file an issue.')
+                        }
+                    })
+                }
             }
 
             this.transactionLevel -= transactionIdLevel
@@ -681,7 +675,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                     if (child.subscription) {
                         child.subscription.unsubscribe()
                     }
-                    if (child.type === 'element') {
+                    if (child.store && child.element.type !== 'subscribe') {
                         child.store!.dispose()
                     }
                 }

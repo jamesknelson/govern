@@ -4,16 +4,20 @@
   "description": "Component-based state management.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
-  "main": "./dist/commonjs/index.js",
-  "module": "./dist/es/index.js",
+  "main": "./dist/commonjs/govern.js",
+  "module": "./dist/es/govern.js",
   "types": "./src/index.ts",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/jamesknelson/govern"
+  },
   "scripts": {
     "clean": "rimraf dist",
-    "build:commonjs": "tsc --pretty --module commonjs --outDir dist/commonjs",
-    "build:es": "tsc --pretty --module es2015 --outDir dist/es",
-    "build:umd": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=development rollup -c -o dist/umd/govern.js && rimraf dist/umd-intermediate",
-    "build:umd:min": "tsc --pretty --module es2015 --outDir dist/umd-intermediate && cross-env NODE_ENV=production rollup -c -o dist/umd/govern.min.js && rimraf dist/umd-intermediate",
-    "build": "npm run build:es && npm run build:commonjs && npm run build:umd && npm run build:umd:min",
+    "build:commonjs": "tsc --pretty --module es2015 --outDir dist/raw && cross-env BUILD_ENV=cjs rollup -c -o dist/commonjs/govern.js && rimraf dist/raw",
+    "build:es": "tsc --pretty --module es2015 --outDir dist/raw && cross-env BUILD_ENV=es rollup -c -o dist/es/govern.js && rimraf dist/raw",
+    "build:umd": "tsc --pretty --module es2015 --outDir dist/raw && cross-env BUILD_ENV=umd rollup -c -o dist/umd/govern.js && rimraf dist/raw",
+    "build:umd:min": "tsc --pretty --module es2015 --outDir dist/raw && cross-env BUILD_ENV=umd-min rollup -c -o dist/umd/govern.min.js && rimraf dist/raw",
+    "build": "npm run clean && npm run build:es && npm run build:commonjs && npm run build:umd && npm run build:umd:min",
     "build:watch": "npm run clean && npm run build:es -- --watch",
     "prepublish": "npm run clean && npm run build && npm run test",
     "test": "jest",
@@ -50,6 +54,7 @@
       "json"
     ],
     "globals": {
+      "__DEV__": true,
       "ts-jest": {
         "skipBabel": true
       }

@@ -6,24 +6,21 @@
 import replace from 'rollup-plugin-replace'
 import uglify from 'rollup-plugin-uglify'
 
-const env = process.env.NODE_ENV
+const env = process.env.BUILD_ENV
+
 const config = {
-  input: 'dist/umd-intermediate/index.js',
+  input: 'dist/raw/index.js',
+  name: 'Govern',
   plugins: []
 }
 
-if (env === 'development' || env === 'production') {
+if (env === 'umd-min') {
   config.output = { format: 'umd' }
-  config.name = 'Govern'
   config.plugins.push(
     replace({
-      'process.env.NODE_ENV': JSON.stringify(env)
-    })
-  )
-}
-
-if (env === 'production') {
-  config.plugins.push(
+      '__DEV__': "false",
+      'process.env.NODE_ENV': JSON.stringify("production")
+    }),
     uglify({
       compress: {
         pure_getters: true,
@@ -33,6 +30,35 @@ if (env === 'production') {
       }
     })
   )
+}
+else if (env === 'umd') {
+  config.output = { format: 'umd' }
+  config.plugins.push(
+    replace({
+      '__DEV__': "true",
+      'process.env.NODE_ENV': JSON.stringify("development")
+    }),
+  )
+}
+else if (env === 'cjs') {
+  config.output = { format: 'cjs' }
+  config.plugins.push(
+    replace({
+      '__DEV__': 'process.env.NODE_ENV !== "production"',
+    }),
+  )
+}
+else if (env === 'es') {
+  config.output = { format: 'es' }
+  config.plugins.push(
+    replace({
+      '__DEV__': 'process.env.NODE_ENV !== "production"',
+    }),
+  )
+}
+else {
+  console.error(`Unknown BUILD_ENV "${env}".`)
+  process.exit(1)
 }
 
 export default config
