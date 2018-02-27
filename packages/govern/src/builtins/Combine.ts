@@ -2,6 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { CombineChildren, CombineProps } from '../Core'
 import { createElement } from '../Element'
 import { Instantiable } from '../Instantiable'
+import { Target } from '../Target'
 
 export class Combine<CombinedValue> implements Instantiable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
     impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
@@ -18,8 +19,8 @@ export class Combine<CombinedValue> implements Instantiable<CombineProps<Combine
         return this.impl.subs
     }
 
-    instantiate(initialTransactionId: string) {
-        this.impl.transactionStart(initialTransactionId, false)
+    instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
+        this.impl.transactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 }

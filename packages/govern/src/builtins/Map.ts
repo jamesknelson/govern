@@ -2,6 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { MapProps } from '../Core'
 import { createElement } from '../Element'
 import { Instantiable } from '../Instantiable'
+import { Target } from '../Target'
 
 export class Map<FromValue, ToValue> implements Instantiable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, FromValue> {
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue, FromValue>;
@@ -18,8 +19,8 @@ export class Map<FromValue, ToValue> implements Instantiable<MapProps<FromValue,
         return this.impl.props.to(this.impl.subs)
     }
 
-    instantiate(initialTransactionId: string) {
-        this.impl.transactionStart(initialTransactionId, false)
+    instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
+        this.impl.transactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 }

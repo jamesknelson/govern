@@ -13,7 +13,9 @@ export class StoreSubject<T> {
     protected subscriptionsToSources: Subscription[]
     protected subscribedTargets: Target<T>[]
     protected thrownError: any
+    protected transactionHasBroadcast: boolean
     protected transactionId?: string
+    protected transactionSourceTarget?: Target<any>
     protected value: T
     
     constructor(dispatch: (runner: () => void) => void) {
@@ -22,6 +24,7 @@ export class StoreSubject<T> {
         this.isStopped = false
         this.subscriptionsToSources = []
         this.subscribedTargets = []
+        this.transactionHasBroadcast = false
     }
 
     // A relay is a source, so it is possible to subscribe new targets to the
@@ -48,7 +51,7 @@ export class StoreSubject<T> {
 
         target.start(subscription)
 
-        if (this.transactionId) {
+        if (this.transactionId && this.transactionSourceTarget !== target && this.transactionHasBroadcast) {
             target.transactionStart(this.transactionId)
         }
 
@@ -72,6 +75,18 @@ export class StoreSubject<T> {
             let targets = this.subscribedTargets
             let len = targets.length
             let copy = targets.slice()
+
+            if (!this.transactionHasBroadcast && this.transactionId) {
+                this.transactionHasBroadcast = true
+
+                for (let i = 0; i < len; i++) {
+                    let target = copy[i]
+                    if (target !== this.transactionSourceTarget) {
+                        copy[i].transactionStart(this.transactionId)
+                    }
+                }
+            }
+
             for (let i = 0; i < len; i++) {
                 copy[i].next(value, this.dispatch)
             }
@@ -111,22 +126,15 @@ export class StoreSubject<T> {
         }
     }
 
-    transactionStart(transactionId: string) {
+    transactionStart(transactionId: string, sourceTarget: Target<any> | undefined) {
         if (this.transactionId) {
             this.error(new InTransactionError())
             return 
         }
 
+        this.transactionHasBroadcast = false
         this.transactionId = transactionId
-
-        if (!this.isStopped) {
-            let targets = this.subscribedTargets
-            const len = targets.length
-            const copy = targets.slice()
-            for (let i = 0; i < len; i++) {
-                copy[i].transactionStart(transactionId)
-            }
-        }
+        this.transactionSourceTarget = sourceTarget
     }
 
     transactionEnd(transactionId: string) {
@@ -135,16 +143,24 @@ export class StoreSubject<T> {
             return 
         }
 
-        delete this.transactionId
+        let sourceTarget = this.transactionSourceTarget
 
-        if (!this.isStopped) {
+        delete this.transactionId
+        delete this.transactionSourceTarget
+
+        if (!this.isStopped && this.transactionHasBroadcast) {
             let targets = this.subscribedTargets
             const len = targets.length
             const copy = targets.slice()
             for (let i = 0; i < len; i++) {
-                copy[i].transactionEnd(transactionId)
+                let target = copy[i]
+                if (target !== sourceTarget) {
+                    copy[i].transactionEnd(transactionId)
+                }
             }
         }
+
+        this.transactionHasBroadcast = false
     }
 }
 

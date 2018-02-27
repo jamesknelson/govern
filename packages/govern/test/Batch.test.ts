@@ -75,5 +75,9 @@ describe('Batching', () => {
 
     expect(harness.value).toEqual('James Nelson')
     expect(updateCount).toEqual(2)
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
   })
 })

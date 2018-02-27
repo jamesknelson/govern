@@ -6,10 +6,11 @@ import { Map } from './builtins/Map'
 import { Combine } from './builtins/Combine'
 import { CombineArray } from './builtins/CombineArray'
 import { getUniqueId } from './utils/getUniqueId'
+import { Target } from './Target'
 
 
 export interface Instantiable<Props, Value> {
-    instantiate(initialTransactionId: string): Store<Value, Props>;
+    instantiate(initialTransactionId: string, parentTarget?: Target<any>): Store<Value, Props>;
 }
 
 export interface InstantiableClass<Props, Value> {
@@ -33,7 +34,7 @@ const BuiltInComponents = {
  * an initial transaction is a superb way to waste a couple hours chasing
  * funny bugs.
  */
-export function instantiateWithManualFlush<Props, Value>(element: GovernElement<Props, Value>, initialTransactionId: string): Store<Value, Props> {
+export function instantiateWithManualFlush<Props, Value>(element: GovernElement<Props, Value>, initialTransactionId: string, parentTarget: Target<any> | undefined): Store<Value, Props> {
     let instance: Instantiable<Props, Value>
 
     // Create a component instance for the element, with the specified
@@ -69,13 +70,13 @@ export function instantiateWithManualFlush<Props, Value>(element: GovernElement<
     }
 
     // Return the component instance's governor.
-    return instance.instantiate(initialTransactionId)
+    return instance.instantiate(initialTransactionId, parentTarget)
 }
 
 
 export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Store<Value, Props> {
     let initialTransactionId = getUniqueId()
-    let store = instantiateWithManualFlush(element, initialTransactionId)
+    let store = instantiateWithManualFlush(element, initialTransactionId, undefined)
     store.transactionEnd(initialTransactionId)
     return store
 }

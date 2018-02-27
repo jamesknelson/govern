@@ -55,11 +55,11 @@ export class Store<T, Props=any> implements TransactionalObservable<T> {
         this.impl.dispose()
     }
 
-    // If a component ist starting a transaction on a connected element, it
-    // knows that the instantiated element has no other subscribers, so it
-    // doesn't need to propagate that specific transaction to subscribers.
-    transactionStart(transactionId: string, propagateToSubscribers: boolean = true) {
-        this.impl.transactionStart(transactionId, propagateToSubscribers)
+    // If `sourceTarget` exists, it indicates the Target of the subscrber that
+    // started the transaction. This allows the store to skip notifying that
+    // store of the transaction; after all, it already knows about it.
+    transactionStart(transactionId: string, sourceTarget?: Target<any>) {
+        this.impl.transactionStart(transactionId, sourceTarget)
     }
 
     transactionEnd(transactionId: string) {

@@ -3,6 +3,7 @@ import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './Element'
 import { getUniqueId } from './utils/getUniqueId'
+import { Target } from './Target'
 
 export interface ComponentClass<Props, Value=any> extends InstantiableClass<Props, Value> {
     new (props: Props): Component<Props, ComponentState, Value>;
@@ -71,8 +72,8 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         this.impl.dispatch(run)
     }
 
-    instantiate(initialTransactionId: string) {
-        this.impl.transactionStart(initialTransactionId, false)
+    instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
+        this.impl.transactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 

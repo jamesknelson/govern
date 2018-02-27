@@ -172,6 +172,10 @@ describe("Model", () => {
       email: 'james',
     })
     expect(output.error.email).toBeTruthy()
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
   })
 
   it('notifies changes', () => {
@@ -194,6 +198,10 @@ describe("Model", () => {
       name: 'James',
       email: 'james@jamesknelson.com'
     })
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
   })
 })
 
@@ -215,6 +223,10 @@ describe("FormController", () => {
     let harness = createTestHarness(store)
     expect(harness.value.data).toBe(null)
     expect(harness.value.model.error.email).toBeTruthy()
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
   })
 
   it('emits a new model when initial data is received', () => {
@@ -233,5 +245,9 @@ describe("FormController", () => {
     })
     expect(harness.value.data).toEqual(received)
     expect(harness.value.model.error).toBeFalsy()
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
   })
 })

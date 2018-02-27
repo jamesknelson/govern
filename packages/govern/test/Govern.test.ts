@@ -150,3 +150,58 @@ test("can dispose mapped items", async () => {
     setTimeout(resolve, 0)
   })
 })
+
+
+test("children can cause their own disposal", () => {
+  class Item extends Component {
+    state = {
+      value: undefined
+    }
+
+    publish() {
+      return {
+        value: this.state.value,
+        change: (value) => this.setState({ value })
+      }
+    }
+  }
+
+  let item = instantiate(createElement(Item))
+
+  class List extends Component {
+    state = {
+      items: {
+        a: item
+      }
+    }
+
+    subscribe() {
+      return combine(this.state.items)
+    }
+
+    publish() {
+      return this.subs
+    }
+
+    componentDidUpdate() {
+      if (this.subs.a && this.subs.a.value === 1) {
+        this.setState({
+          items: {}
+        })
+      }
+    }
+  }
+
+  let list = instantiate(createElement(List))
+  
+  let harness = createTestHarness(item)
+  harness.dispatch(() => {
+    harness.value.change(1)
+  })
+
+  expect(list.getValue()).toEqual({})
+
+  return new Promise(resolve => {
+    setTimeout(resolve, 0)
+  })
+})

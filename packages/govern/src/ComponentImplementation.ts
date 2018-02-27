@@ -14,18 +14,32 @@ import { TransactionalObservable, TransactionalObserver } from './TransactionalO
 // on symbols.
 const Root: string = Symbol('root') as any
 
+const noop = () => {}
+
 export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Subs=any> {
     constructor: Function & {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
     }
 
-    componentDidInstantiate?();
-    componentWillReceiveProps?(nextProps: Props);
+    componentWillEnterTransaction?(transactionId: string): void;
+    componentDidInstantiate?(): void;
+    componentWillReceiveProps?(nextProps: Props): void;
     subscribe?(): any;
-    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
+    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
     publish(): Value;
-    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs);
-    componentWillBeDisposed?();
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
+    componentWillLeaveTransaction?(transactionId: string): void;
+    componentWillBeDisposed?(): void;
+}
+
+interface Child {
+    type: 'store' | 'element' | 'constant',
+    element: GovernElement<any, any>,
+    subscription?: Subscription,
+    target?: ComponentTarget<any>,
+    store?: Store<any, any>,
+    index: string,
+    value: any
 }
 
 export class ComponentImplementation<Props, State, Value, Subs> {
@@ -59,18 +73,11 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     // Use a map so we have access to a list of keys, even if it contains
     // symbols.
-    children: Map<string, {
-        type: 'store' | 'element' | 'constant',
-        element: GovernElement<any, any>,
-        subscription?: Subscription,
-        store?: Store<any, any>,
-        index: string,
-        value: any
-    }> = new Map()
+    children: Map<string, Child> = new Map()
 
-    // A list of children that have been disposed and removed from
-    // this.children, but still haven't had the transaction ended.
-    disposedChildren: Store<any, any>[] = []
+    // A list of ex-children that we've already unsubscribed from and removed
+    // from children, but still need to have `transactionEnd` run on them,
+    storesAwaitingTransactionEnd: Store<any>[] = []
 
     // If we're running `connect`, we can defer handling of new subs values
     // to the end of the connect.
@@ -107,11 +114,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     lastUpdate: { props: Props, state: State, subs: Subs }
 
 
+    // If true, we'll need to unsubscribe from the origin child once the
+    // transaction has ended.
+    wasOriginChildRemoved: boolean = false
+
+    hasTransactionIdPropagatedToChildren?: boolean
     transactionIdLevels: Map<string, number> = new Map()
-    transactionIdPropagatedToChildren?: string
-    transactionIdPropagatedToSubscribers?: string
+    transactionId?: string
     transactionLevel: number = 0
-    nonChildTransactions: Set<string> = new Set()
+    transactionOriginChild?: Child
+    transactionSourceTarget?: Target<any>
 
     willDispose: boolean = false
 
@@ -150,20 +162,24 @@ export class ComponentImplementation<Props, State, Value, Subs> {
 
     dispatch = (runner: Function): void => {
         if (!this.store) {
-            throw new Error(`You cannot call "transaction" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "dispatch" within a component's constructor. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.disallowChangesReason[0]) {
-            throw new Error(`You cannot call "transaction" while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot call "dispatch" while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
         }
 
-        // If we're already in a transaction, re-use the id, as otherwise we
-        // won't know which transaction id to use to notify subscribers that
-        // we're done.
-        let transactionId = this.transactionIdPropagatedToChildren || getUniqueId()
+        // If we've already opened a transaction on children, we don't need
+        // to do it again.
+        let requireDispatch = !this.hasTransactionIdPropagatedToChildren
+        let transactionId = requireDispatch && (this.transactionId || getUniqueId())
 
-        this.transactionStart(transactionId)
+        if (transactionId) {
+            this.transactionStart(transactionId, undefined)
+        }
         runner()
-        this.transactionEnd(transactionId)
+        if (transactionId) {
+            this.transactionEnd(transactionId)
+        }
     }
 
     dispose = () => {
@@ -176,7 +192,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         // transaction handler and trigger disposal.
         if (!this.transactionLevel) {
             let transactionId = getUniqueId()
-            this.transactionStart(transactionId, false)
+            this.transactionStart(transactionId, undefined)
             this.transactionEnd(transactionId)
         }
     }
@@ -308,7 +324,6 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                     key,
                     nextIndexes[key],
                     nextElements[key],
-                    value => this.handleChildChange(key, value)
                 )
             }
 
@@ -316,33 +331,35 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         }
     }
 
-    addChild(key: string, index: string, element: GovernElement<any, any>, changeHandler: (value: any, dispatch: (runner: () => void) => void) => void) {
+    addChild(key: string, index: string, element: GovernElement<any, any>) {
         let store: Store<any> | undefined
+        let target: Target<any> | undefined
         let type = 'constant' as 'constant' | 'store' | 'element'
-
+        
+        // As `addChild` is only called by `connect`, which must happen inside
+        // a transaction that has been propagated to children, we must also
+        // start a transaction on subscriptions.
         if (element.type === 'subscribe') {
             type = 'store'
-
-            // If the store already exists, it must propagate
-            // any transaction starts to other subscribers, so
-            // we pass in `true`
+            target = new ComponentTarget(this, key)
             store = element.props.to
-            store!.transactionStart(this.transactionIdPropagatedToChildren!, true)
+            store!.transactionStart(this.transactionId!, target)
         }
         else if (element.type !== 'constant') {
             type = 'element'
-
-            store = instantiateWithManualFlush(element, this.transactionIdPropagatedToChildren!)
+            target = new ComponentTarget(this, key)
+            store = instantiateWithManualFlush(element, this.transactionId!, target)
         }
 
-        let child = { type, index, store, element, subscription: undefined as any, value: undefined }
+        let child = { type, index, store, element, target: undefined as any, subscription: undefined as any, value: undefined }
         this.children.set(key, child)
 
         if (store) {
             // Stores will immediately emit their current value
             // on subscription, ensuring that `subs` is updated.
             this.expectingChildChangeFor = key
-            child.subscription = store.subscribe(new ComponentTarget(this, changeHandler))
+            child.target = target
+            child.subscription = store.subscribe(target!)
             delete this.expectingChildChangeFor
         }
         else {
@@ -351,7 +368,6 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     }
 
     updateChild(key: string, index: string, nextProps: any, knownIndexes: Set<string>) {
-        // Note that stores never need updating.
         let child = this.children.get(key)!
         let oldIndex = child.index
         if (index !== oldIndex) {
@@ -362,6 +378,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
             }
         }
 
+        // Note that subscriptions never need updating.
         if (child.type === 'constant') {
             this.setKey(key, nextProps.of)
         }
@@ -375,14 +392,21 @@ export class ComponentImplementation<Props, State, Value, Subs> {
     removeChild(key, knownIndexes: Set<string>) {
         let child = this.children.get(key)!
 
-        if (child.type !== 'constant') {
-            child.subscription!.unsubscribe()
-            this.disposedChildren.push(child.store!)
-        }
-
         if (child.type === 'element') {
             // The child will be disposed when its transaction ends.
             child.store!.dispose()
+        }
+
+        if (child.type !== 'constant') {
+            if (child === this.transactionOriginChild) {
+                child.target!.markAsRemovedOrigin()
+                this.wasOriginChildRemoved = true
+            }
+            else {
+                child.subscription!.unsubscribe()
+            }
+            
+            this.storesAwaitingTransactionEnd.push(child.store!)
         }
 
         if (child.index !== Root && !knownIndexes.has(child.index)) {
@@ -490,66 +514,69 @@ export class ComponentImplementation<Props, State, Value, Subs> {
         return this.store
     }
 
-    childTransactionStart = (transactionId: string, propagateToSubscribers: boolean = true) => {
-        this.transactionStart(transactionId, propagateToSubscribers, true)
-    }
-
-    transactionStart = (transactionId: string, propagateToSubscribers: boolean = true, receivedFromChild: boolean = false) => {
+    transactionStart = (transactionId: string, sourceTarget: Target<any> | undefined, originChildKey?: string) => {
         if (!transactionId) {
             throw new Error('You must pass a transactionId to "transactionStart"')
         }
 
         let transactionIdLevel = (this.transactionIdLevels.get(transactionId) || 0) + 1
+        let oldTransactionLevel = this.transactionLevel
 
-        if (!receivedFromChild) {
-            // If we already know about the transaction and it isn't on the
-            // ignore list, it means that it originated from a child, and
-            // we don't want to add it to the ignore list.
-            if (transactionIdLevel === 1) {
-                this.nonChildTransactions.add(transactionId)
+        if (transactionIdLevel === 1) {
+            setTimeout(() => {
+                let level = this.transactionIdLevels.get(transactionId)
+                if (level && level > 0) {
+                    console.error('A Govern transaction was not ended in the same tick!')
+                    debugger
+                    throw new Error('A Govern transaction was not ended in the same tick!')
+                }
+            })
+        }
+
+        if (oldTransactionLevel === 0) {
+            this.transactionId = transactionId
+            this.transactionSourceTarget = sourceTarget
+
+            if (originChildKey) {
+                this.transactionOriginChild = this.children.get(originChildKey)!
             }
         }
-        else if (this.nonChildTransactions.has(transactionId)) {
-            // Ignore child transactions when we already know about them from
-            // somewhere else.
+        else if (originChildKey) {
+            // We're already in a transaction, so ignore this and the
+            // corresponding transactionEnd call.
+            // throw new Error("fixme: can't ignore transaction end if we've already increased level")
+            this.children.get(originChildKey)!.target!.ignoreOneTransactionEnd(transactionId)
             return
         }
 
         this.transactionLevel += 1
         this.transactionIdLevels.set(transactionId, transactionIdLevel)
 
-        if (this.transactionLevel === 1) {
-            this.transactionIdPropagatedToChildren = transactionId
+        if (!this.hasTransactionIdPropagatedToChildren && !originChildKey) {
+            this.hasTransactionIdPropagatedToChildren = true
             let children = Array.from(this.children.values())
             for (let i = 0; i < children.length; i++) {
                 let child = children[i]
                 if (child.store) {
-                    child.store.transactionStart(transactionId, child.type === "store")
+                    child.store.transactionStart(this.transactionId!, child.target)
                 }
             }
         }
 
-        if (propagateToSubscribers && !this.transactionIdPropagatedToSubscribers) {
-            this.transactionIdPropagatedToSubscribers = transactionId
+        if (oldTransactionLevel === 0) {
+            if (this.lifecycle.componentWillEnterTransaction) {
+                this.lifecycle.componentWillEnterTransaction(transactionId)
+            }
+
             this.disallowChangesReason.unshift("publishing transactionStart")
-            this.subject.transactionStart(transactionId)
+            this.subject.transactionStart(transactionId, sourceTarget)
             this.disallowChangesReason.shift()
         }
     }
 
-    childTransactionEnd = (transactionId: string) => {
-        this.transactionEnd(transactionId, true)
-    }
-
-    transactionEnd = (transactionId: string, receivedFromChild: boolean = false) => {
+    transactionEnd = (transactionId: string) => {
         let transactionIdLevel: number = this.transactionIdLevels.get(transactionId)!
 
-        if (receivedFromChild && this.nonChildTransactions.has(transactionId)) {
-            // Ignore child transactions when we already know about them from
-            // somewhere else.
-            return
-        }
-        
         // Negative transaction levels are used to denote transactions that
         // have already been ended from one subscriber or child, but still
         // need to be ended by other subscribers or children. 
@@ -581,6 +608,7 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 // to the developer. Also, only do this in dev mode.
                 setTimeout(() => {
                     if (this.transactionIdLevels.get(transactionId) !== undefined) {
+                        console.error('A Govern transaction did not complete successfully!')
                         debugger
                         throw new Error('A Govern transaction did not complete successfully!')
                     }
@@ -605,18 +633,22 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 this.hasPublishedSinceLastUpdate = false
                 if (this.lifecycle.componentDidInstantiate) {
                     this.pushFix()
-                    this.lifecycle.componentDidInstantiate()
+                    this.dispatch(() => {
+                        this.lifecycle.componentDidInstantiate!()
+                    })
                     this.popFix()
                 }
             }
             else if (this.hasPublishedSinceLastUpdate && this.lifecycle.componentDidUpdate) {
-                this.pushFix()
                 this.hasPublishedSinceLastUpdate = false
-                this.lifecycle.componentDidUpdate(
-                    this.lastUpdate.props,
-                    this.lastUpdate.state,
-                    this.lastUpdate.subs
-                )
+                this.pushFix()
+                this.dispatch(() => {
+                    this.lifecycle.componentDidUpdate!(
+                        this.lastUpdate.props,
+                        this.lastUpdate.state,
+                        this.lastUpdate.subs
+                    )
+                })
                 this.popFix()
             }
             else {
@@ -629,6 +661,16 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 subs: this.subs,
             }
 
+            if (this.wasOriginChildRemoved) {
+                this.transactionOriginChild!.subscription!.unsubscribe()
+                this.wasOriginChildRemoved = false
+                delete this.transactionOriginChild
+            }
+
+            if (this.lifecycle.componentWillLeaveTransaction) {
+                this.lifecycle.componentWillLeaveTransaction(this.transactionId!)
+            }
+
             if (this.willDispose) {
                 // The children will be disposed before the parent, so that
                 // children can always assume that they can call callbacks on
@@ -636,21 +678,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 let children = Array.from(this.children.values())
                 for (let i = 0; i < children.length; i++) {
                     let child = children[i]
+                    if (child.subscription) {
+                        child.subscription.unsubscribe()
+                    }
                     if (child.type === 'element') {
                         child.store!.dispose()
                     }
                 }
 
                 this.broadcastTransactionEndToChildren()
-
-                // Don't unsubscribe until after broadcasting the end
-                // transaction, in case it repropagates back to us.
-                for (let i = 0; i < children.length; i++) {
-                    let child = children[i]
-                    if (child.subscription) {
-                        child.subscription.unsubscribe()
-                    }
-                }
 
                 this.children.clear()
 
@@ -668,14 +704,15 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 this.broadcastTransactionEndToSubscribers()
                 this.subject.complete()
 
-                delete this.nonChildTransactions
                 delete this.state
                 delete this.subs
             }
             else {
+                let oldTransactionSourceTarget = this.transactionSourceTarget
+                let oldTransactionId = this.transactionId!
+
                 this.broadcastTransactionEndToChildren()
-                this.nonChildTransactions.delete(this.transactionIdPropagatedToChildren!)
-                delete this.transactionIdPropagatedToChildren
+                delete this.hasTransactionIdPropagatedToChildren
 
                 // Only lower transaction level after ending transaction on
                 // subscribers, in case their lifecycle methods cause updates on us.
@@ -684,8 +721,8 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 // Lower the transaction level before emitting transactionEnd,
                 // so that the transactionEnd event itself cannot have any
                 // side effects without opening a new dispatch.
-                let transactionIdPropagatedToSubscribers = this.transactionIdPropagatedToSubscribers
                 this.broadcastTransactionEndToSubscribers()
+
 
                 // Run callbacks passed into `setState`
                 while (this.callbacks.length) {
@@ -697,35 +734,40 @@ export class ComponentImplementation<Props, State, Value, Subs> {
                 // methods caused any further calls to `connect`, we may need to
                 // recursively process the queue.
                 if (this.hasPublishedSinceLastUpdate && this.transactionLevel === 0) {
-                    this.transactionStart(transactionId, !!transactionIdPropagatedToSubscribers)
-                    this.transactionEnd(transactionId)
+                    // TODO: start the secondary transaction with the same source as the original one
+                    this.transactionStart(oldTransactionId, oldTransactionSourceTarget)
+                    this.transactionEnd(oldTransactionId)
                 }
             }
         }
     }
 
     broadcastTransactionEndToChildren() {
-        let stores: Store<any, any>[] =
-            Array.from(this.children.values())
-                .filter(child => child.store)
-                .map(child => child.store!)
-                .concat(this.disposedChildren)
-        for (let i = 0; i < stores.length; i++) {
-            this.disallowChangesReason.unshift("publishing transactionEnd")
-            stores[i].transactionEnd(this.transactionIdPropagatedToChildren!)
-            this.disallowChangesReason.shift()
+        if (this.hasTransactionIdPropagatedToChildren) {
+            let stores: Store<any, any>[] =
+                Array.from(this.children.values())
+                    .filter(child => child.store)
+                    .map(child => child.store!)
+                    .concat(this.storesAwaitingTransactionEnd)
+            for (let i = 0; i < stores.length; i++) {
+                this.disallowChangesReason.unshift("publishing transactionEnd")
+                stores[i].transactionEnd(this.transactionId!)
+                this.disallowChangesReason.shift()
+            }
+
+            this.storesAwaitingTransactionEnd.length = 0
         }
-        this.disposedChildren.length = 0
     }
 
     broadcastTransactionEndToSubscribers() {
-        if (this.transactionIdPropagatedToSubscribers) {
-            let transactionId = this.transactionIdPropagatedToSubscribers
+        if (this.transactionId) {
+            let transactionId = this.transactionId
 
             // Delete before publishing transactionEnd, as otherwise any
             // subscriptions which are made in response to transactionEnd
             // will publish to old subscribers.
-            delete this.transactionIdPropagatedToSubscribers
+            delete this.transactionId
+            delete this.transactionSourceTarget
 
             this.disallowChangesReason.unshift("publishing transactionEnd")
             this.subject.transactionEnd(transactionId)
@@ -804,24 +846,66 @@ function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { 
 // stack traces, and also prevents significant unnecessary work.
 export class ComponentTarget<T> extends Target<T> {
     impl: ComponentImplementation<any, any, any, any>
+    key: string
+    ignoreTransactionId?: string
+    ignoreLevel: number = 0
 
-    constructor(impl: ComponentImplementation<any, any, any, any>, handler: (value: T, dispatch: (runner: () => void) => void) => void) {
+    constructor(impl: ComponentImplementation<any, any, any, any>, key: string) {
         super()
         
-        this.next = handler
+        this.impl = impl
+        this.key = key
         this.error = impl.handleChildError
         this.complete = impl.handleChildComplete
-        this.transactionStart = impl.childTransactionStart
-        this.transactionEnd = impl.childTransactionEnd
+        this.transactionEnd = impl.transactionEnd
     }
 
     start(subscription: Subscription): void {}
 
+    next(value: T, dispatch: (runner: () => void) => void): void {
+        this.impl.handleChildChange(this.key, value)
+    }
+
     // These will be replaced in the constructor. Unfortuantely it still needs
     // to be provided to satisfy typescript's types.
-    next(value: T, dispatch: (runner: () => void) => void): void {}
     error(err?: any): void {}
     complete(): void {}
-    transactionStart(transactionId: string): void {}
-    transactionEnd(transactionId: string): void {}
+
+    transactionStart(transactionId: string): void {
+        if (this.next === noop) {
+            // TODO: this doesn't need to be illegal; can just not forward these ids on in transactionEnd
+            throw new Error("invariant failed. cannot receive transactions from a target marked as removed origin")
+        }
+        
+        if (this.ignoreLevel) {
+            if (this.ignoreTransactionId !== transactionId) {
+                throw new Error("invariant failed. unknown transactions cannot be dispatched from child within known ones.")
+            }
+            this.ignoreLevel++
+        }
+        else {
+            this.impl.transactionStart(transactionId, undefined, this.key)
+        }
+    }
+
+    transactionEnd(transactionId: string): void {
+        if (!this.ignoreLevel) {
+            throw new Error("invariant failed. received transactionEnd for unknown transactionId")
+        }
+
+        if (--this.ignoreLevel === 0) {
+            delete this.ignoreTransactionId
+            this.transactionEnd = this.impl.transactionEnd
+        }
+    }
+
+    ignoreOneTransactionEnd(transactionId: string): void {
+        if (++this.ignoreLevel === 1) {
+            this.transactionEnd = this.constructor.prototype.transactionEnd
+        }
+    }
+
+    markAsRemovedOrigin() {
+        this.next = noop
+    }
 }
