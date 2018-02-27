@@ -1,6 +1,6 @@
 {
   "name": "govern",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Component-based state management.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -8,8 +8,8 @@
   "module": "./dist/es/govern.js",
   "types": "./src/index.ts",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/jamesknelson/govern"
+    "type": "git",
+    "url": "https://github.com/jamesknelson/govern"
   },
   "scripts": {
     "clean": "rimraf dist",

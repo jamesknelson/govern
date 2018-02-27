@@ -1,12 +1,16 @@
 {
   "name": "react-govern",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
   "main": "./dist/commonjs/index.js",
   "module": "./dist/es/index.js",
   "types": "./src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jamesknelson/govern"
+  },
   "scripts": {
     "clean": "rimraf dist",
     "build:commonjs": "tsc --pretty --module commonjs --outDir dist/commonjs",
