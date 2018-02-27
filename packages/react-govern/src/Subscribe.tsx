@@ -44,16 +44,12 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   // Keep track of whether there have been any changes since the last
   // flush, to make sure that empty transactions don't cause a re-render
   changesExist: boolean
-
-  // Increments on changes
-  sequenceNumber: number
   
   constructor(props: SubscribeProps<any>) {
     super(props)
     this.state = {} as any
     this.transactionLevel = 0
     this.changesExist = false
-    this.sequenceNumber = 1
   }
 
   componentWillMount() {
@@ -87,17 +83,21 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
 
-    let transactionId = getUniqueId()
-    this.store.transactionStart(transactionId)
-    this.store.setProps({
-      children: nextProps.to,
-    })
-    this.store.transactionEnd(transactionId)
+    // As elements are immutable, we can skip a lot of updates by
+    // checking if the `to` element/store has changed.
+    if (nextProps.to !== this.props.to) {
+      let transactionId = getUniqueId()
+      this.store.transactionStart(transactionId)
+      this.store.setProps({
+        children: nextProps.to,
+      })
+      this.store.transactionEnd(transactionId)
 
-    // Ensure that re-rendering this component causes a re-render when we're
-    // not in a transaction.
-    if (this.transactionLevel !== 0) {
-      this.changesExist = true
+      // Ensure that re-rendering this component causes a re-render when we're
+      // not in a transaction.
+      if (this.transactionLevel !== 0) {
+        this.changesExist = true
+      }
     }
   }
 
@@ -133,8 +133,6 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   handleChange = (output, dispatch) => {
-    ++this.sequenceNumber
-
     let isTransactionlessChange = this.transactionLevel === 0 && !this.isSubscribing
     if (isTransactionlessChange) {
       this.handleTransactionStart()
@@ -149,38 +147,10 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   handleTransactionStart = () => {
-    ++this.sequenceNumber
     ++this.transactionLevel
   }
 
   handleTransactionEnd = () => {
-    // React usually doesn't immediately run `setState` calls, which means
-    // that React may have queued updates that will result in the controller's
-    // props being updated.
-    //
-    // React *does* generally run `setState` calls in order, which means we
-    // can wait for all pending `setState` calls by executing an empty one
-    // here and waiting for the callback. We need to do this recursively
-    // until there are no changes, at which point we expect that there will be
-    // no further changes and we can flush our changes to the next component.
-    //
-    // Note that by the time this is called, the observers's transaction has
-    // already ended, so any further updates to observer props will trigger
-    // a new transaction, and thus a new sequence number.
-    const prevSeq = this.sequenceNumber
-    this.setState({ dummy: {} }, () => {
-      if (prevSeq !== this.sequenceNumber) {
-        this.handleTransactionEnd()
-      }
-      else {
-        this.completeTransaction()
-      }
-    })
-  }
-
-  completeTransaction() {
-    ++this.sequenceNumber
-
     if (--this.transactionLevel === 0) {
       if (this.changesExist) {
         this.changesExist = false
