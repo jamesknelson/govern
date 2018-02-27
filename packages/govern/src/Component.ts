@@ -73,7 +73,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
-        this.impl.transactionStart(initialTransactionId, parentTarget)
+        this.impl.receiveTransactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 

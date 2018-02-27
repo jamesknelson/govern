@@ -12,16 +12,19 @@ export class ComponentTarget<T> extends Target<T> {
     key: string
     ignoreTransactionId?: string
     ignoreLevel: number = 0
+    subscription: Subscription;
 
     constructor(impl: ComponentImplementation<any, any, any, any>, key: string) {
         super()
         
         this.impl = impl
         this.key = key
-        this.transactionEnd = impl.transactionEnd
+        this.transactionEnd = impl.receiveTransactionEnd
     }
 
-    start(subscription: Subscription): void {}
+    start(subscription: Subscription): void {
+        this.subscription = subscription
+    }
 
     next(value: T, dispatch: (runner: () => void) => void): void {
         this.impl.receiveChangeFromChild(this.key, value)
@@ -40,14 +43,14 @@ export class ComponentTarget<T> extends Target<T> {
             this.ignoreLevel++
         }
         else {
-            this.impl.transactionStart(transactionId, undefined, this.key)
+            this.impl.receiveTransactionStart(transactionId, undefined, this.key)
         }
     }
 
     transactionEnd(transactionId: string): void {
         if (--this.ignoreLevel === 0) {
             delete this.ignoreTransactionId
-            this.transactionEnd = this.impl.transactionEnd
+            this.transactionEnd = this.impl.receiveTransactionEnd
         }
     }
 
@@ -71,5 +74,9 @@ export class ComponentTarget<T> extends Target<T> {
      */
     preventFurtherChangeEvents() {
         this.next = noop
+    }
+
+    unsubscribe() {
+        this.subscription.unsubscribe()
     }
 }

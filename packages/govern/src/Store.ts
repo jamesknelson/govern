@@ -1,6 +1,6 @@
 import { GovernElement } from './Element'
 import { constant, flatMap, map } from './Factories'
-import { StoreSubject } from './StoreSubject'
+import { ComponentSubject } from './ComponentSubject'
 import { TransactionalObserver, TransactionalObservable } from './TransactionalObservable'
 import { ComponentImplementation } from './ComponentImplementation'
 import { Subscription } from './Subscription'
@@ -59,11 +59,11 @@ export class Store<T, Props=any> implements TransactionalObservable<T> {
     // started the transaction. This allows the store to skip notifying that
     // store of the transaction; after all, it already knows about it.
     transactionStart(transactionId: string, sourceTarget?: Target<any>) {
-        this.impl.transactionStart(transactionId, sourceTarget)
+        this.impl.receiveTransactionStart(transactionId, sourceTarget)
     }
 
     transactionEnd(transactionId: string) {
-        this.impl.transactionEnd(transactionId)
+        this.impl.receiveTransactionEnd(transactionId)
     }
 
     map<U>(transform: (value: T) => U): GovernElement<any, U> {

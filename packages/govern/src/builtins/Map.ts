@@ -20,7 +20,7 @@ export class Map<FromValue, ToValue> implements Instantiable<MapProps<FromValue,
     }
 
     instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
-        this.impl.transactionStart(initialTransactionId, parentTarget)
+        this.impl.receiveTransactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 }

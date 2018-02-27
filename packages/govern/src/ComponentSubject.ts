@@ -6,7 +6,7 @@
 import { Target, TargetClosedError } from './Target'
 import { closedSubscription, Subscription } from './Subscription'
 
-export class StoreSubject<T> {
+export class ComponentSubject<T> {
     dispatch: (runner: () => void) => void
     hasError: boolean
     isStopped: boolean;
@@ -181,10 +181,10 @@ export class StoreSubjectSubscription implements Subscription {
     // A boolean value indicating whether the subscription is closed
     closed: boolean;
 
-    protected subject: StoreSubject<any>
+    protected subject: ComponentSubject<any>
     protected target: Target<any>
 
-    constructor(subject: StoreSubject<any>, target: Target<any>) {
+    constructor(subject: ComponentSubject<any>, target: Target<any>) {
         this.closed = false
         this.subject = subject
         this.target = target

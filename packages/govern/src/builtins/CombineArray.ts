@@ -20,7 +20,7 @@ export class CombineArray<ItemValue> implements Instantiable<CombineArrayProps<I
     }
 
     instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
-        this.impl.transactionStart(initialTransactionId, parentTarget)
+        this.impl.receiveTransactionStart(initialTransactionId, parentTarget)
         return this.impl.createStore()
     }
 }

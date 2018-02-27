@@ -86,7 +86,7 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
     }
 
     instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined): Store<ToValue, FlatMapProps<FromValue, ToValue>> {
-        this.impl.transactionStart(initialTransactionId, parentTarget)
+        this.impl.receiveTransactionStart(initialTransactionId, parentTarget)
         this.receiveProps(this.impl.props)
         return this.impl.createStore()
     }
@@ -208,7 +208,7 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
             this.childTransactions.add(transactionId)
         }
 
-        this.impl.transactionStart(transactionId, undefined)
+        this.impl.receiveTransactionStart(transactionId, undefined)
     }
 }
 
@@ -228,7 +228,7 @@ export class FlatMapTarget<T> extends Target<T> {
         
         this.next = flatMap.handleFromChange
         this.transactionStart = flatMap.handleFromTransactionStart
-        this.transactionEnd = flatMap.impl.transactionEnd
+        this.transactionEnd = flatMap.impl.receiveTransactionEnd
     }
 
     start(subscription: Subscription): void {}
