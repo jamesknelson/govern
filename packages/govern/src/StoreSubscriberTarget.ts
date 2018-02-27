@@ -1,6 +1,6 @@
 import { TransactionalObserver } from './TransactionalObservable'
 import { Target, TargetClosedError } from './Target'
-import { Subscription, ClosableSubscription } from './Subscription'
+import { Subscription } from './Subscription'
 
 
 export class StoreSubscriberTarget<T> extends Target<T> {

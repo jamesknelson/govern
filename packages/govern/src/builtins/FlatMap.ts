@@ -42,8 +42,8 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
         // `to` component, even if the values are the same. It allows us to
         // respect `shouldComponentUpdate` of `to` if it exists.
         // DO NOT TRY THIS AT HOME.
-        let originalSetKey = this.impl.setKey
-        this.impl.setKey = (key: string, value) => {
+        let originalSetKey = this.impl.setSubs
+        this.impl.setSubs = (key: string, value) => {
             originalSetKey.call(this.impl, key, value)
             this.hasUnpublishedChanges = true
         }
@@ -219,23 +219,31 @@ export class FlatMap<FromValue, ToValue> implements Instantiable<FlatMapProps<Fr
 // This cleans up a number of transactionStart/transactionEnd/next calls from
 // stack traces, and also prevents significant unnecessary work.
 export class FlatMapTarget<T> extends Target<T> {
+    flatMap: FlatMap<any, any>
+
     constructor(flatMap: FlatMap<any, any>) {
         super()
+
+        this.flatMap = flatMap
         
         this.next = flatMap.handleFromChange
-        this.error = flatMap.impl.handleChildError
-        this.complete = flatMap.impl.handleChildComplete
         this.transactionStart = flatMap.handleFromTransactionStart
         this.transactionEnd = flatMap.impl.transactionEnd
     }
 
     start(subscription: Subscription): void {}
 
+    error(err?: any): void {
+        this.flatMap.impl.subject.error(err)
+    }
+
+    complete(): void {
+        /** noop */
+    }
+
     // These will be replaced in the constructor. Unfortuantely it still needs
     // to be provided to satisfy typescript's types.
     next(value: T, dispatch: (runner: () => void) => void): void {}
-    error(err?: any): void {}
-    complete(): void {}
     transactionStart(transactionId: string): void {}
     transactionEnd(transactionId: string): void {}
 }

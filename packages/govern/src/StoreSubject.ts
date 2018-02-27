@@ -4,19 +4,19 @@
  */
 
 import { Target, TargetClosedError } from './Target'
-import { closedSubscription, ClosableSubscription, Subscription } from './Subscription'
+import { closedSubscription, Subscription } from './Subscription'
 
 export class StoreSubject<T> {
-    protected dispatch: (runner: () => void) => void
-    protected hasError: boolean
-    protected isStopped: boolean;
-    protected subscriptionsToSources: Subscription[]
-    protected subscribedTargets: Target<T>[]
-    protected thrownError: any
-    protected transactionHasBroadcast: boolean
-    protected transactionId?: string
-    protected transactionSourceTarget?: Target<any>
-    protected value: T
+    dispatch: (runner: () => void) => void
+    hasError: boolean
+    isStopped: boolean;
+    subscriptionsToSources: Subscription[]
+    subscribedTargets: Target<T>[]
+    thrownError: any
+    transactionHasBroadcast: boolean
+    transactionId?: string
+    transactionSourceTarget?: Target<any>
+    value: T
     
     constructor(dispatch: (runner: () => void) => void) {
         this.dispatch = dispatch
@@ -42,12 +42,7 @@ export class StoreSubject<T> {
         
         this.subscribedTargets.push(target)
         
-        let subscription = new ClosableSubscription(() => {
-            let i = this.subscribedTargets.indexOf(target)
-            if (i !== -1) {
-                this.subscribedTargets.splice(i, 1)
-            }
-        })
+        let subscription = new StoreSubjectSubscription(this, target)
 
         target.start(subscription)
 
@@ -178,5 +173,35 @@ export class OutOfTransactionError extends Error {
         super('out of transaction');
         this.name = 'OutOfTransactionError';
         (Object as any).setPrototypeOf(this, OutOfTransactionError.prototype);
+    }
+}
+
+
+export class StoreSubjectSubscription implements Subscription {
+    // A boolean value indicating whether the subscription is closed
+    closed: boolean;
+
+    protected subject: StoreSubject<any>
+    protected target: Target<any>
+
+    constructor(subject: StoreSubject<any>, target: Target<any>) {
+        this.closed = false
+        this.subject = subject
+        this.target = target
+    }
+
+    // Cancels the subscription
+    unsubscribe(): void {
+        if (this.closed) {
+            console.warn(`"unsubscribe" was called on a "Subscription" that is already closed.`)
+            return
+        }
+
+        let i = this.subject.subscribedTargets.indexOf(this.target)
+        if (i !== -1) {
+            this.subject.subscribedTargets.splice(i, 1)
+        }
+        
+        this.closed = true
     }
 }
