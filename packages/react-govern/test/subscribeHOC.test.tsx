@@ -64,9 +64,8 @@ test('injects subsequent outputs', () => {
     <DecoratedComponent defaultValue={1} />
   )
   expect(renderer.toJSON()).toEqual("1")
-  let transactionId = Govern.getUniqueId()
-  outlet.transactionStart('1')
-  outlet.getValue().change(2)
-  outlet.transactionEnd('1')
+  outlet.governor.dispatcher.enqueueAction(() => {
+    outlet.getValue().change(2)
+  })
   expect(renderer.toJSON()).toEqual("2")
 })

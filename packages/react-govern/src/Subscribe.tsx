@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createElement, getUniqueId, instantiate, GovernElement, GovernNode, Store, Subscription } from 'govern'
+import { createElement, instantiate, GovernElement, GovernNode, Store, Subscription } from 'govern'
 
 
 export interface SubscribeProps<T> {
@@ -32,24 +32,17 @@ export function createSubscribe<T>(
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
 export class Subscribe extends React.Component<SubscribeProps<any>, { output: any, dummy: any, dispatch: any }> {
-  isSubscribing: boolean
   store: Store<any>
   subscription: Subscription
-
-  // Keep track of whteher our observable is in a transaction, and thus may
-  // have side effects that involve changes to the environment, or may emit a
-  // new value.
-  transactionLevel: number
-
-  // Keep track of whether there have been any changes since the last
-  // flush, to make sure that empty transactions don't cause a re-render
-  changesExist: boolean
+  isDispatching: boolean
+  isAwaitingRenderFromProps: boolean
+  isAwaitingRenderFromFlush: boolean
   
   constructor(props: SubscribeProps<any>) {
     super(props)
     this.state = {} as any
-    this.transactionLevel = 0
-    this.changesExist = false
+    this.isDispatching = false
+    this.isAwaitingRenderFromProps = false
   }
 
   componentWillMount() {
@@ -62,20 +55,18 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     // the controller will have some side effects on initialization.
     this.store = instantiate(createElement(Flatten, { children: this.props.to }))
     
-    // Set `isSubscribing` to true around our call to subscribe, so that the
-    // initial change handler knows it doesn't need to start a wrapper
-    // transaction
-    this.isSubscribing = true
-
     this.subscription = this.store.subscribe({
       next: this.handleChange,
       error: this.receiveError,
       complete: undefined,
-      transactionStart: this.handleTransactionStart,
-      transactionEnd: this.handleTransactionEnd
+      startDispatch: this.handleStartDispatch,
+      endDispatch: this.handleEndDispatch
     })
 
-    this.isSubscribing = false
+    this.handleChange(
+      this.store.getValue(),
+      this.store.governor.dispatcher.enqueueAction
+    )
   }
 
   componentWillReceiveProps(nextProps: SubscribeProps<any>) {
@@ -83,21 +74,18 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
 
+    // If no flush is received during dispatch, we'll want to re-render
+    // manually when it completes.
+    if (this.isDispatching) {
+      this.isAwaitingRenderFromProps = true
+    }
+
     // As elements are immutable, we can skip a lot of updates by
     // checking if the `to` element/store has changed.
     if (nextProps.to !== this.props.to) {
-      let transactionId = getUniqueId()
-      this.store.transactionStart(transactionId)
       this.store.setProps({
         children: nextProps.to,
       })
-      this.store.transactionEnd(transactionId)
-
-      // Ensure that re-rendering this component causes a re-render when we're
-      // not in a transaction.
-      if (this.transactionLevel !== 0) {
-        this.changesExist = true
-      }
     }
   }
 
@@ -125,40 +113,32 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   shouldComponentUpdate() {
-    return this.transactionLevel === 0
+    return !this.isDispatching || this.isAwaitingRenderFromFlush
   }
 
   render() {
+    this.isAwaitingRenderFromFlush = false
+    this.isAwaitingRenderFromProps = false
     return this.props.children(this.state.output, this.state.dispatch)
   }
 
   handleChange = (output, dispatch) => {
-    let isTransactionlessChange = this.transactionLevel === 0 && !this.isSubscribing
-    if (isTransactionlessChange) {
-      this.handleTransactionStart()
-    }
-
-    this.changesExist = true
+    this.isAwaitingRenderFromFlush = true
+    this.isAwaitingRenderFromProps = false
     this.setState({ output, dispatch })
-
-    if (isTransactionlessChange) {
-      this.handleTransactionEnd()
-    }
   }
 
-  handleTransactionStart = () => {
-    ++this.transactionLevel
+  handleStartDispatch = () => {
+    this.isDispatching = true
   }
 
-  handleTransactionEnd = () => {
-    if (--this.transactionLevel === 0) {
-      if (this.changesExist) {
-        this.changesExist = false
+  handleEndDispatch = () => {
+    this.isDispatching = false
 
-        // Now that transactionLevel is 0, `shouldComponentUpdate` will return
-        // true, so we can flush through our changes by setting a dummy object.
-        this.setState({ dummy: {} })
-      }
+    if (this.isAwaitingRenderFromProps) {
+      // Now that `isDispatching` is false, `shouldComponentUpdate` will return
+      // true, so we can flush through our changes by setting a dummy object.
+      this.setState({ dummy: {} })
     }
   }
 }
