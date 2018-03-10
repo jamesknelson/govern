@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { InstantiableClass } from './Instantiable'
+import { GovernableClass } from './StoreGovernor'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps } from './Core'
 import { Store, isValidStore } from './Store'
 import { isPlainObject } from './utils/isPlainObject'
@@ -69,7 +69,7 @@ export function isValidElement(obj): obj is GovernElement<any, any> {
 
 
 export interface GovernElement<Props, Value> {
-    type: string | InstantiableClass<Props, Value> | SFC<Props, Value>;
+    type: string | GovernableClass<Props, Value> | SFC<Props, Value>;
     props: Props;
     key: Key | null;
 
@@ -82,7 +82,7 @@ export interface SFCElement<Props, Value> extends GovernElement<Props, Value> {
     type: SFC<Props, Value>;
 }
 export interface ComponentElement<Props, Value> extends GovernElement<Props, Value> {
-    type: InstantiableClass<Props, Value>;
+    type: GovernableClass<Props, Value>;
 }
 
 export function createElement<FromValue, ToValue>(

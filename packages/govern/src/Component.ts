@@ -1,11 +1,11 @@
-import { Instantiable, InstantiableClass } from './Instantiable'
+import { Governable, GovernableClass } from './StoreGovernor'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './Element'
-import { getUniqueId } from './utils/getUniqueId'
 import { Target } from './Target'
+import { Dispatcher } from './Dispatcher';
 
-export interface ComponentClass<Props, Value=any> extends InstantiableClass<Props, Value> {
+export interface ComponentClass<Props, Value=any> extends GovernableClass<Props, Value> {
     new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
@@ -20,7 +20,7 @@ export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> ext
 
 export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
 
-export abstract class Component<Props, State={}, Value=any, Subs=any> implements Instantiable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
+export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
     protected impl: ComponentImplementation<Props, State, Value, Subs>;
 
     constructor(props: Props) {
@@ -43,7 +43,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     set state(state: State) {
-        if (this.impl.store) {
+        if (this.impl.emitter) {
             throw new Error(`You cannot set a component's state directly outside of the constructor. See component "${getDisplayName(this.constructor)}".`)
         }
 
@@ -54,7 +54,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         state: ((prevState: Readonly<State>, props: Props) => (Pick<State, K> | State)) | (Pick<State, K> | State),
         callback?: () => void
     ): void {
-        if (!this.impl.store) {
+        if (!this.impl.emitter) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
         if (this.impl.disallowChangesReason[0]) {
@@ -68,13 +68,12 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         this.impl.setState(updater, callback)
     }
 
-    dispatch(run: Function): void {
-        this.impl.dispatch(run)
+    dispatch(action: () => {}): void {
+        this.impl.dispatcher.enqueueAction(action)
     }
 
-    instantiate(initialTransactionId: string, parentTarget: Target<any> | undefined) {
-        this.impl.receiveTransactionStart(initialTransactionId, parentTarget)
-        return this.impl.createStore()
+    createStoreGovernor(dispatcher: Dispatcher) {
+        return this.impl.createStoreGovernor(dispatcher)
     }
 
     abstract publish(): Value;
@@ -87,7 +86,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     getTypedValue<Value>(component: { publish: () => Value }): Value {
-        return this.impl.subject.getValue() as any
+        return this.impl.emitter.getValue() as any
     }
 }
 

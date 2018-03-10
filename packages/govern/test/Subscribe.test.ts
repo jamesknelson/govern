@@ -24,7 +24,7 @@ describe("Subscribing to governors", () => {
         expect(harness.value.count).toEqual(1)
     })
 
-    it("can change governor", () => {
+    it("can change store", () => {
         let Component1 = () => constant('blue')
         let store1 = instantiate(createElement(Component1))
 

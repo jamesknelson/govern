@@ -1,10 +1,9 @@
-import { TransactionalObservable } from './TransactionalObservable'
 import { GovernElement } from './Element'
-import { InstantiableClass } from './Instantiable'
+import { GovernableClass } from './StoreGovernor'
 import { Store } from './Store'
 
 export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'flatMap' | 'map' | 'subscribe'
-export type ComponentType<Props, Value> = InstantiableClass<Props, Value> | StatelessComponent<Props, Value>;
+export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
 export type GovernType<Props = any, Value = any> = BuiltInType | ComponentType<Props, Value>;
 
 export type Key = string | number;
@@ -45,7 +44,7 @@ export type ConstantProps<Value> = {
 }
 
 export type SubscribeProps<Value> = {
-    to: TransactionalObservable<Value>,
+    to: Store<Value>,
 }
 
 export type GovernNode<Props = any, Value = any> =

@@ -1,9 +1,11 @@
-import { TransactionalObserver } from './TransactionalObservable'
-import { Target, TargetClosedError } from './Target'
+import { DispatchedObserver } from './DispatchedObserver'
+import { FlushTarget, TargetClosedError } from './Target'
 import { Subscription } from './Subscription'
 
 
-export class StoreSubscriberTarget<T> extends Target<T> {
+export class StoreSubscriberTarget<T> implements FlushTarget<T> {
+    priority: string;
+
     /**
      * If an error or complete event has occured, we'll stop propagating
      * further events. This is slightly different to `subscription.closed`,
@@ -17,25 +19,19 @@ export class StoreSubscriberTarget<T> extends Target<T> {
      */
     protected latestDispatch: any;
     protected latestValue: any;
-    protected hasChangedSinceTransactionStart: boolean = false;
 
-    /**
-     * Store the transactionLevel, so we can always push out events that
-     * are published outside of actions (like initial events).
-     */
-    protected transactionLevel: number = 0;
-
-    protected observer: TransactionalObserver<T>;
+    protected observer: DispatchedObserver<T>;
     protected subscription?: Subscription;
 
     constructor(
-        nextOrObserver: TransactionalObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
+        priority: string,
+        nextOrObserver: DispatchedObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
         error?: (error: any) => void,
         complete?: () => void,
-        transactionStart?: (transactionId: string) => void,
-        transactionEnd?: (transactionId: string) => void
+        startDispatch?: () => void,
+        endDispatch?: () => void
     ) {
-        super()
+        this.priority = priority
 
         if (typeof nextOrObserver !== 'function') {
             this.observer = nextOrObserver
@@ -45,8 +41,8 @@ export class StoreSubscriberTarget<T> extends Target<T> {
                 next: nextOrObserver,
                 error,
                 complete,
-                transactionStart,
-                transactionEnd,
+                startDispatch,
+                endDispatch,
             }
         }
     }
@@ -78,8 +74,7 @@ export class StoreSubscriberTarget<T> extends Target<T> {
 
         this.latestDispatch = dispatch
         this.latestValue = value
-        this.hasChangedSinceTransactionStart = true
-        if (!this.isStopped && this.observer.next && (this.observer.transactionEnd || this.transactionLevel === 0)) {
+        if (!this.isStopped && this.observer.next) {
             this.observer.next(value, dispatch)
         }
     }
@@ -111,35 +106,24 @@ export class StoreSubscriberTarget<T> extends Target<T> {
         }
     }
 
-    transactionStart(transactionId: string): void {
+    startDispatch(): void {
         if (this.closed) {
             throw new TargetClosedError()
         }
 
-        if (this.transactionLevel === 0) {
-            this.hasChangedSinceTransactionStart = false
-        }
-
-        this.transactionLevel++
-
-        if (!this.isStopped && this.observer.transactionStart) {
-            this.observer.transactionStart(transactionId)
+        if (!this.isStopped && this.observer.startDispatch) {
+            this.observer.startDispatch()
         }
     }
 
-    transactionEnd(transactionId: string): void {
+    endDispatch(): void {
         if (this.closed) {
             throw new TargetClosedError()
         }
 
-        this.transactionLevel--
-
         if (!this.isStopped) {
-            if (this.observer.transactionEnd) {
-                this.observer.transactionEnd(transactionId)
-            }
-            else if (this.transactionLevel === 0 && this.hasChangedSinceTransactionStart) {
-                this.observer.next(this.latestValue, this.latestDispatch)
+            if (this.observer.endDispatch) {
+                this.observer.endDispatch()
             }
         }
     }

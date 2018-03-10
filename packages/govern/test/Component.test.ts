@@ -193,9 +193,9 @@ describe('Component', () => {
     })
   })
 
-  it("shouldComponentPublish can prevent updates", () => {
+  it("shouldComponentUpdate can prevent updates", () => {
     class TestComponent extends Component<{ updated }> {
-      shouldComponentPublish() {
+      shouldComponentUpdate() {
         return false
       }
       
@@ -209,16 +209,16 @@ describe('Component', () => {
     let harness = createTestHarness(store, () => {
       updateCount++
     })
-    expect(updateCount).toBe(1)
+    expect(updateCount).toBe(0)
     harness.setProps({ updated: true })
-    expect(updateCount).toBe(1)
+    expect(updateCount).toBe(0)
 
     return new Promise(resolve => {
       setTimeout(resolve, 0)
     })
   })
 
-  it("shouldComponentPublish receives old state and props", () => {
+  it("shouldComponentUpdate receives new state and props", () => {
     let state, props
     let nextState, nextProps
 
@@ -231,11 +231,11 @@ describe('Component', () => {
         })
       }
 
-      shouldComponentPublish(prevProps, prevState) {
-        state = prevState
-        props = prevProps
-        nextState = this.state
-        nextProps = this.props
+      shouldComponentUpdate(_nextProps, _nextState) {
+        state = this.state
+        props = this.props
+        nextState = _nextState
+        nextProps = _nextProps
         return false
       }
       
@@ -257,9 +257,9 @@ describe('Component', () => {
     })
   })
 
-  it("child components with shouldComponentPublish: false still appear in the parent after setting parent props", () => {
+  it("child components with shouldComponentUpdate: false still appear in the parent after setting parent props", () => {
     class TestChildComponent extends Component {
-      shouldComponentPublish(prevProps, prevState) {
+      shouldComponentUpdate(prevProps, prevState) {
         return false
       }
       
@@ -391,9 +391,9 @@ describe('Component', () => {
     })
   })
 
-  it("shouldComponentPublish receives old subs", () => {
+  it("shouldComponentUpdate receives old subs", () => {
     let counterStore = createCounter()
-    let shouldComponentPublishValue
+    let shouldComponentUpdateValue
 
     class TestComponent extends Component<{ updated }> {
       subscribe() {
@@ -402,8 +402,8 @@ describe('Component', () => {
         })
       }
 
-      shouldComponentPublish(prevProps, prevState, prevSubs) {
-        shouldComponentPublishValue = prevSubs.inner !== this.subs.inner
+      shouldComponentUpdate(prevProps, prevState, prevSubs) {
+        shouldComponentUpdateValue = prevSubs.inner !== this.subs.inner
       }
 
       publish() {
@@ -416,7 +416,7 @@ describe('Component', () => {
     harness.dispatch(() => {
       harness.value.inner.increase()
     })
-    expect(shouldComponentPublishValue).toEqual(true)
+    expect(shouldComponentUpdateValue).toEqual(true)
 
     return new Promise(resolve => {
       setTimeout(resolve, 0)

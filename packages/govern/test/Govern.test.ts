@@ -42,27 +42,27 @@ describe('instantiate', () => {
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
 
-  it("can be called during the end of a previous transaction", () => {
-    function TestComponent(props) {
-      return {
-        a: props.a,
-      }
-    }
+  // it("can be called during a flush", () => {
+  //   function TestComponent(props) {
+  //     return {
+  //       a: props.a,
+  //     }
+  //   }
 
-    let element = createElement(TestComponent, { a: 1 })
-    let store = instantiate(element)
-    let mapStore
+  //   let element = createElement(TestComponent, { a: 1 })
+  //   let store = instantiate(element)
+  //   let mapStore
     
-    store.subscribe((state, dispatch) => {
-      mapStore = instantiate(store.map(x => x.a))
-    })
+  //   store.subscribe((state, dispatch) => {
+  //     mapStore = instantiate(store.map(x => x.a))
+  //   })
 
-    store.transactionStart('1')
-    store.setProps({ a: 2 })
-    store.transactionEnd('1')
+  //   store.transactionStart('1')
+  //   store.setProps({ a: 2 })
+  //   store.transactionEnd('1')
 
-    expect(mapStore.getValue()).toBe(2)
-  })
+  //   expect(mapStore.getValue()).toBe(2)
+  // })
 })
 
 test("can call `dispatch` from a subscribed component, within a `dispatch` of a subscription", async () => {

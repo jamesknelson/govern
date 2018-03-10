@@ -1,27 +1,72 @@
 import { Subscription } from './Subscription'
-import { ComponentImplementation } from './ComponentImplementation';
+import { EmitterStoreSubscription } from './DispatcherEmitter'
 
-/**
- * Target objects represent a single location where observable events can be
- * pushed to.
- * 
- * Targets can be closed by their creator, using the `subscription` object
- * is passed to `start`. Once closed, the target holder should clean up any
- * resources used to push to the target.
- */
-export abstract class Target<T> {
+
+export interface Target<T> {
     // Receives the subscription object when `subscribe` is called
-    abstract start(subscription: Subscription): void
-
-    abstract next(value: T, dispatch: (runner: () => void) => void): void
-    abstract error(err?: any): void
-    abstract complete(): void
-    abstract transactionStart(transactionId: string): void
-    abstract transactionEnd(transactionId: string): void
+    start?(subscription: Subscription): void
+    next(value: T, dispatch: (action: () => void) => void): void
+    error?(err?: any): void
 }
 
-export function isValidTarget(target: any): target is Target<any> {
-    return target instanceof Target
+/**
+ * Each external subscriber (including React's <Subscribe> component) is
+ * represented by an ObservableTarget object.
+ */
+export interface FlushTarget<T> extends Target<T> {
+    /**
+     * When two targets have differing priority, the lower priority target will
+     * be notified first, and the store will be given a chance to execute any
+     * resulting actions before continuing notifying the higher priority
+     * target.
+     */
+    priority: string,
+
+    /**
+     * Receives the subscription object when `subscribe` is called
+     */
+    start?(subscription: Subscription): void
+
+    next(value: T, dispatch: (action: () => void) => void): void
+
+    error?(err?: any): void
+
+    /**
+     * Notify the target that no further values will be published.
+     */
+    complete?(): void
+
+    /**
+     * Notify the target that new values may be published.
+     */
+    startDispatch?(): void
+
+    /**
+     * Notify the target that no new values will be published until
+     * `startDispatching` is called again.
+     */
+    endDispatch?(): void
+}
+
+export interface PublishTarget<T> extends Target<T> {
+    isPublishTarget: true
+
+    // Receives the subscription object when `subscribe` is called
+    start(subscription: EmitterStoreSubscription): void
+
+    /**
+     * Notify the target of a new value.
+     * 
+     * Calling this can cause other stores to publish, but it cannot
+     * cause subscriptions or stores to be created / disposed.
+     */
+    next(value: T): void
+
+    error(err?: any): void
+}
+
+export function isValidPublishTarget(x): x is PublishTarget<any> {
+    return x && x['isPublishTarget'] === true
 }
 
 export class TargetClosedError extends Error {

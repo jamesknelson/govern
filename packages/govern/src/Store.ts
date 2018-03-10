@@ -1,11 +1,21 @@
+import { Dispatcher } from './Dispatcher'
 import { GovernElement } from './Element'
 import { constant, flatMap, map } from './Factories'
-import { ComponentSubject } from './ComponentSubject'
-import { TransactionalObserver, TransactionalObservable } from './TransactionalObservable'
+import { Component, getDisplayName } from './Component'
+import { DispatchedObservable } from './DispatchedObservable'
+import { DispatchedObserver } from './DispatchedObserver'
 import { ComponentImplementation } from './ComponentImplementation'
 import { Subscription } from './Subscription'
-import { isValidTarget, Target } from './Target'
+import { Target, PublishTarget, isValidPublishTarget } from './Target'
+import { createStoreGovernor, StoreGovernor } from './StoreGovernor'
 import { StoreSubscriberTarget } from './StoreSubscriberTarget'
+import globalDispatcher from './globalDispatcher';
+
+
+interface Subscribable<T> {
+    governor: StoreGovernor<T>;
+}
+
 
 /**
  * A Store is a type of Observable, and also has a current value that
@@ -19,60 +29,54 @@ import { StoreSubscriberTarget } from './StoreSubscriberTarget'
  * facilitating composition of multiple observables that are computed from
  * a single observable.
  */
-export class Store<T, Props=any> implements TransactionalObservable<T> {
-    // The internal interface for publishing events is hidden within the
-    // `subject` instance.
-    private impl: ComponentImplementation<Props, any, T, any>
+export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservable<T> {
+    governor: StoreGovernor<T, Props>
 
-    constructor(impl: ComponentImplementation<Props, any, T, any>) {
-        this.impl = impl
+    constructor(governor: StoreGovernor<T, Props>) {
+        this.governor = governor
     }
-    
+
     subscribe(
-        targetOrNextOrObserver: TransactionalObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
+        nextOrObserver: DispatchedObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
         error?: (error: any) => void,
         complete?: () => void,
-        transactionStart?: (transactionId: string) => void,
-        transactionEnd?: (transactionId: string) => void
+        startDispatch?: () => void,
+        endDispatch?: () => void,
+        priority = "0",
     ): Subscription {
-        let target = 
-            isValidTarget(targetOrNextOrObserver)
-                ? targetOrNextOrObserver
-                : new StoreSubscriberTarget(targetOrNextOrObserver, error, complete, transactionStart, transactionEnd)
-        
-        return this.impl.subject.subscribe(target)
+        let target = new StoreSubscriberTarget(priority, nextOrObserver, error, complete, startDispatch, endDispatch)
+        return this.governor.emitter.subscribeFlushTarget(target)
     }
 
     getValue(): T {
-        return this.impl.subject.getValue()
+        return this.governor.emitter.getValue()
     }
 
     setProps(props: Props): void {
-        this.impl.setProps(props)
+        this.governor.dispatcher.enqueueAction(() => {
+            this.governor.setProps(props)
+        })
     }
-
-    dispose() {
-        this.impl.dispose()
-    }
-
-    // If `sourceTarget` exists, it indicates the Target of the subscrber that
-    // started the transaction. This allows the store to skip notifying that
-    // store of the transaction; after all, it already knows about it.
-    transactionStart(transactionId: string, sourceTarget?: Target<any>) {
-        this.impl.receiveTransactionStart(transactionId, sourceTarget)
-    }
-
-    transactionEnd(transactionId: string) {
-        this.impl.receiveTransactionEnd(transactionId)
+    dispose(): void {
+        this.governor.dispatcher.enqueueAction(this.governor.dispose)
     }
 
     map<U>(transform: (value: T) => U): GovernElement<any, U> {
         return map(this, transform)
     }
-
-    flatMap<U>(transform: (value: T) => Store<U> | GovernElement<any, U>): GovernElement<any, U> {
+    flatMap<U>(transform: (value: T) => Store<U, Props> | GovernElement<any, U>): GovernElement<any, U> {
         return flatMap(this, transform)
     }
+}
+
+export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Store<Value, Props> {
+    // TODO: create a dispatcher.
+    let storeGovernor
+    globalDispatcher.enqueueAction(() => {
+        storeGovernor = createStoreGovernor(element, globalDispatcher)
+    })
+    globalDispatcher.dispatch()
+    return new Store(storeGovernor)
 }
 
 export function isValidStore(x): x is Store<any, any> {

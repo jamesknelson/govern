@@ -66,7 +66,7 @@ describe('Batching', () => {
       updateCount++
     })
 
-    expect(updateCount).toEqual(1)
+    expect(updateCount).toEqual(0)
     expect(harness.value).toEqual(' ')
 
     harness.dispatch(() => {
@@ -74,7 +74,7 @@ describe('Batching', () => {
     })
 
     expect(harness.value).toEqual('James Nelson')
-    expect(updateCount).toEqual(2)
+    expect(updateCount).toEqual(1)
 
     return new Promise(resolve => {
       setTimeout(resolve, 0)

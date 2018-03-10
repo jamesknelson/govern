@@ -1,8 +1,7 @@
 import { Store } from './Store'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
-import { InstantiableClass } from './Instantiable'
-import { TransactionalObservable } from './TransactionalObservable'
+import { GovernableClass } from './StoreGovernor'
 
 type Factory<Props, Value> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Props, Value>;
 
@@ -12,8 +11,8 @@ type ComponentFactory<Props, Value> = (props?: Attributes & Props, ...children: 
 
 // Custom components
 function createFactory<Props, Value>(type: SFC<Props, Value>): SFCFactory<Props, Value>;
-function createFactory<Props, Value>(type: InstantiableClass<Props, Value>): Factory<Props, Value>
-function createFactory<Props, Value>(type: InstantiableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
+function createFactory<Props, Value>(type: GovernableClass<Props, Value>): Factory<Props, Value>
+function createFactory<Props, Value>(type: GovernableClass<Props, Value> | SFC<Props, Value>): Factory<Props, Value> {
     return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
 }
 
