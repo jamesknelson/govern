@@ -1,4 +1,5 @@
 import * as React from 'react'
+import * as PropTypes from 'prop-types'
 import { createElement, instantiate, GovernElement, GovernNode, Store, Subscription } from 'govern'
 
 
@@ -32,17 +33,39 @@ export function createSubscribe<T>(
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
 export class Subscribe extends React.Component<SubscribeProps<any>, { output: any, dummy: any, dispatch: any }> {
+  priority: number
   store: Store<any>
   subscription: Subscription
   isDispatching: boolean
   isAwaitingRenderFromProps: boolean
   isAwaitingRenderFromFlush: boolean
+
+  static contextTypes = {
+    govern_priority: PropTypes.number,
+  }
+
+  static childContextTypes = {
+    govern_priority: PropTypes.number,
+  }
   
-  constructor(props: SubscribeProps<any>) {
-    super(props)
+  constructor(props: SubscribeProps<any>, context) {
+    super(props, context)
     this.state = {} as any
     this.isDispatching = false
     this.isAwaitingRenderFromProps = false
+
+    if (context.govern_priority) {
+      this.priority = context.govern_priority
+    }
+    else {
+      this.priority = 1
+    }
+  }
+
+  getChildContext() {
+    return {
+      govern_priority: this.priority + 1
+    }
   }
 
   componentWillMount() {
@@ -55,17 +78,18 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     // the controller will have some side effects on initialization.
     this.store = instantiate(createElement(Flatten, { children: this.props.to }))
     
-    this.subscription = this.store.subscribe({
-      next: this.handleChange,
-      error: this.receiveError,
-      complete: undefined,
-      startDispatch: this.handleStartDispatch,
-      endDispatch: this.handleEndDispatch
-    })
+    this.subscription = this.store.subscribe(
+      this.handleChange,
+      this.receiveError,
+      undefined,
+      this.handleStartDispatch,
+      this.handleEndDispatch,
+      String(this.priority)
+    )
 
     this.handleChange(
       this.store.getValue(),
-      this.store.governor.dispatcher.enqueueAction
+      this.store.UNSAFE_dispatch
     )
   }
 

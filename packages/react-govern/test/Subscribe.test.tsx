@@ -1,4 +1,3 @@
-
 import * as React from 'react'
 import * as Govern from 'govern'
 import * as ReactTestRenderer from 'react-test-renderer'
@@ -27,9 +26,7 @@ function createTester<T>(initialValue: T) {
     next: (value) => {
       store.getValue().change(value)
     },
-    dispatch: (fn) => {
-      store.governor.dispatcher.enqueueAction(fn)
-    }
+    dispatch: store.UNSAFE_dispatch,
   }
 }
 

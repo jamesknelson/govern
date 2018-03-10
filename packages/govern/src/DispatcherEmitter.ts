@@ -5,7 +5,11 @@ import { StoreGovernor } from './StoreGovernor';
 
 
 export class DispatcherEmitter<T=any> {
+    // This will be mutated by the dispactcher if it is ever merged into
+    // another dispatcher, such that it will always refer to the correct
+    // dispatcher.
     dispatcher: Dispatcher
+
     governor: StoreGovernor<T>
     hasError: boolean
     isStopped: boolean;
@@ -14,26 +18,28 @@ export class DispatcherEmitter<T=any> {
     thrownError: any
     value: T
     
-    constructor(dispatcher: Dispatcher, governor: StoreGovernor<T>, initialValue: T) {
-        this.dispatcher = dispatcher
+    constructor(dispatcher: Dispatcher, governor: StoreGovernor<T>) {
         this.governor = governor
+        this.dispatcher = dispatcher
         this.hasError = false
         this.isStopped = false
-        this.value = initialValue
 
         this.flushTargets = []
         this.publishTargets = []
     }
 
-    // todo:
-    // - add 'dispatcher' as second param
-    // - if dispatcher differs, then this dispatcher must be flushing, and a
-    //   different dispatcher has found this one in the process. So merge in
-    //   the argument dispatcher to this one, consuming its queue in the process.
     subscribePublishTarget(publishTarget: PublishTarget<T>): Subscription {
         if (this.hasError) {
             publishTarget.error(this.thrownError)
             return closedSubscription
+        }
+
+        // If dispatcher differs, then this dispatcher must be flushing, and a
+        // different dispatcher has found this one in the process. So merge in
+        // the argument dispatcher to this one, consuming its queue in the
+        // process.
+        if (publishTarget.emitter.dispatcher !== this.dispatcher) {
+            this.dispatcher.mergeChild(publishTarget.emitter.dispatcher)
         }
         
         this.publishTargets.push(publishTarget)
@@ -95,19 +101,23 @@ export class DispatcherEmitter<T=any> {
             for (let i = 0; i < len; i++) {
                 let target = targets[i]
                 if (target.priority === priority) {
-                    copy[i].next(this.value, this.dispatcher.enqueueAction)
+                    copy[i].next(this.value, this.enqueueAction)
                 }
             }
         }
     }
 
+    enqueueAction = (fn: () => void) => {
+        this.dispatcher.enqueueAction(fn)
+    }
+
     publish(value: T) {
         if (!this.isStopped) {
-            this.value = value
-            this.dispatcher.registerPublish(this)
             let targets = this.publishTargets
             let len = targets.length
             let copy = targets.slice()
+            this.value = value
+            this.dispatcher.registerPublish(this, len === 0)
             for (let i = 0; i < len; i++) {
                 copy[i].next(value)
             }
@@ -154,10 +164,11 @@ export class DispatcherEmitter<T=any> {
             this.flushTargets.length = 0
             this.publishTargets.length = 0
             this.dispatcher.disposeEmitter(this)
+            delete this.dispatcher
         }
     }
 
-    transactionStart() {
+    startDispatch() {
         if (!this.isStopped) {
             let targets = this.flushTargets
             let len = targets.length
@@ -172,7 +183,7 @@ export class DispatcherEmitter<T=any> {
         }
     }
 
-    transactionEnd() {
+    endDispatch() {
         if (!this.isStopped) {
             let targets = this.flushTargets
             let len = targets.length

@@ -55,17 +55,17 @@ test('allows for components as first argument', () => {
 })
 
 test('injects subsequent outputs', () => {
-  let outlet = Govern.instantiate(
+  let store = Govern.instantiate(
     Govern.createElement(TestController, { defaultValue: 1 }),
   )
-  let decorator = subscribe(props => outlet)
+  let decorator = subscribe(props => store)
   let DecoratedComponent = decorator(TestComponent)
   let renderer = ReactTestRenderer.create(
     <DecoratedComponent defaultValue={1} />
   )
   expect(renderer.toJSON()).toEqual("1")
-  outlet.governor.dispatcher.enqueueAction(() => {
-    outlet.getValue().change(2)
+  store.UNSAFE_dispatch(() => {
+    store.getValue().change(2)
   })
   expect(renderer.toJSON()).toEqual("2")
 })

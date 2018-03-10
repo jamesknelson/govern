@@ -13,13 +13,6 @@ export class StoreSubscriberTarget<T> implements FlushTarget<T> {
      */
     protected isStopped: boolean = false;
 
-    /**
-     * Store the latest value, so we can send it before transactionEnd if
-     * the user doesn't provide a transactionEnd handler.
-     */
-    protected latestDispatch: any;
-    protected latestValue: any;
-
     protected observer: DispatchedObserver<T>;
     protected subscription?: Subscription;
 
@@ -72,8 +65,6 @@ export class StoreSubscriberTarget<T> implements FlushTarget<T> {
             throw new TargetClosedError()
         }
 
-        this.latestDispatch = dispatch
-        this.latestValue = value
         if (!this.isStopped && this.observer.next) {
             this.observer.next(value, dispatch)
         }

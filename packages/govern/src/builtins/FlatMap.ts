@@ -6,6 +6,7 @@ import { Store } from '../Store'
 import { GovernElement, createElement, convertToElement, doElementsReconcile } from '../Element'
 import { Subscription } from '../Subscription'
 import { PublishTarget } from '../Target'
+import { DispatcherEmitter } from '../DispatcherEmitter';
 
 interface Child<FromValue> {
     element: GovernElement<any, FromValue>,
@@ -18,6 +19,7 @@ interface Child<FromValue> {
 const noop = () => {}
 
 export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
+    initialDispatcher: Dispatcher
     from: Child<FromValue>
     hasUnpublishedChanges: boolean = true
     impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue>;
@@ -66,13 +68,18 @@ export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<From
         return this.impl.subs
     }
 
-    createStoreGovernor(dispatcher: Dispatcher) {
-        // Need to set this ahead of time, as receiveProps may use it.
-        this.impl.dispatcher = dispatcher
+    // Reimplement impl's `createStoreGovernor`, so that we can get a value
+    // from our `from` store/element before running the initial `connect` and
+    // `publish`.
+    createStoreGovernor(initialDispatcher: Dispatcher) {
+        this.impl.emitter = initialDispatcher.createEmitter(this.impl)
 
         this.receiveProps(this.impl.props)
+        
+        this.impl.connect()
+        this.impl.publish()
 
-        return this.impl.createStoreGovernor(dispatcher)
+        return this.impl
     }
 
     receiveProps(props: FlatMapProps<FromValue, ToValue>) {
@@ -99,7 +106,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<From
             }
             else if (fromElement.type !== 'constant') {
                 target = new FlatMapTarget(this)
-                governor = createStoreGovernor(fromElement, this.impl.dispatcher)
+                governor = createStoreGovernor(fromElement, this.impl.emitter.dispatcher)
             }
 
             if (governor) {
@@ -134,25 +141,21 @@ export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<From
     handleFromChange = (fromValue: FromValue) => {
         this.from.value = fromValue
 
-        if (this.impl.emitter && !this.impl.isReceivingProps) {
+        if (this.impl.previousPublish && !this.impl.isReceivingProps) {
             this.impl.connect()
             this.impl.publish()
         }
     }
 }
 
-
-
-
-// Use a custom Target class for parent components without the sanity checks.
-// This cleans up a number of transactionStart/transactionEnd/next calls from
-// stack traces, and also prevents significant unnecessary work.
 export class FlatMapTarget<T> implements PublishTarget<T> {
+    emitter: DispatcherEmitter<T>
     flatMap: FlatMap<any, any>
 
     isPublishTarget = true as true
 
     constructor(flatMap: FlatMap<any, any>) {
+        this.emitter = flatMap.impl.emitter
         this.flatMap = flatMap
         this.next = flatMap.handleFromChange
     }

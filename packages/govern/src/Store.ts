@@ -9,7 +9,6 @@ import { Subscription } from './Subscription'
 import { Target, PublishTarget, isValidPublishTarget } from './Target'
 import { createStoreGovernor, StoreGovernor } from './StoreGovernor'
 import { StoreSubscriberTarget } from './StoreSubscriberTarget'
-import globalDispatcher from './globalDispatcher';
 
 
 interface Subscribable<T> {
@@ -53,12 +52,26 @@ export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservabl
     }
 
     setProps(props: Props): void {
-        this.governor.dispatcher.enqueueAction(() => {
+        this.governor.emitter.enqueueAction(() => {
             this.governor.setProps(props)
         })
     }
     dispose(): void {
-        this.governor.dispatcher.enqueueAction(this.governor.dispose)
+        this.governor.emitter.enqueueAction(this.governor.dispose)
+    }
+
+    /**
+     * Dispatch an action on the store.
+     * 
+     * If this method is called from within another store, it may cause
+     * multiple flushes, which can make side effects harder to reason about.
+     * 
+     * As such, this method is not safe to use within Govern components.
+     * However, it is made available as it necessary (and safe) for calling
+     * from within React components.
+     */
+    UNSAFE_dispatch = (fn: () => void) => {
+        this.governor.emitter.enqueueAction(fn)
     }
 
     map<U>(transform: (value: T) => U): GovernElement<any, U> {
@@ -70,12 +83,11 @@ export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservabl
 }
 
 export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Store<Value, Props> {
-    // TODO: create a dispatcher.
     let storeGovernor
-    globalDispatcher.enqueueAction(() => {
-        storeGovernor = createStoreGovernor(element, globalDispatcher)
+    let dispatcher = new Dispatcher()
+    dispatcher.enqueueAction(() => {
+        storeGovernor = createStoreGovernor(element, dispatcher)
     })
-    globalDispatcher.dispatch()
     return new Store(storeGovernor)
 }
 

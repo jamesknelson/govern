@@ -34,7 +34,6 @@ export interface GovernableClass<Props, Value> {
 // The publicly consumable parts of this are exposed to the outside world
 // through the `Store` class.
 export interface StoreGovernor<T, Props=any> {
-    dispatcher: Dispatcher;
     emitter: DispatcherEmitter<T>;
     
     setProps(props: Props): void;

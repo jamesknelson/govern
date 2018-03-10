@@ -57,9 +57,6 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (!this.impl.emitter) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
-        if (this.impl.disallowChangesReason[0]) {
-            throw new Error(`You cannot call "setState" while ${this.impl.disallowChangesReason[0]}. See component "${getDisplayName(this.constructor)}".`)
-        }
 
         let updater = state as ((prevState: Readonly<State>, props: Props) => any)
         if (typeof state !== 'function') {
@@ -68,8 +65,8 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         this.impl.setState(updater, callback)
     }
 
-    dispatch(action: () => {}): void {
-        this.impl.dispatcher.enqueueAction(action)
+    dispatch(action: () => void): void {
+        this.impl.emitter.dispatcher.enqueueAction(action)
     }
 
     createStoreGovernor(dispatcher: Dispatcher) {

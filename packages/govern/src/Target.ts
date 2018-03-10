@@ -1,5 +1,6 @@
+import { Dispatcher } from './Dispatcher'
+import { EmitterStoreSubscription, DispatcherEmitter } from './DispatcherEmitter'
 import { Subscription } from './Subscription'
-import { EmitterStoreSubscription } from './DispatcherEmitter'
 
 
 export interface Target<T> {
@@ -50,6 +51,10 @@ export interface FlushTarget<T> extends Target<T> {
 
 export interface PublishTarget<T> extends Target<T> {
     isPublishTarget: true
+
+    // Store the emitter of the target, so we can merge the target's
+    // dispatcher into the source dispatcher if they don't match.
+    emitter: DispatcherEmitter<T>;
 
     // Receives the subscription object when `subscribe` is called
     start(subscription: EmitterStoreSubscription): void

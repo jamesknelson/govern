@@ -56,12 +56,6 @@ export interface ChildSubscription {
 }
 
 export class ComponentImplementation<Props, State, Value, Subs> implements StoreGovernor<Value, Props> {
-    // Keep track of whether side effects are allowed to help keep
-    // components responsible.
-    disallowChangesReason: (string | null)[] = []
-
-    dispatcher: Dispatcher
-
     props: Props;
     state: State;
     subs: Subs;
@@ -112,10 +106,6 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
-
-        // This will be shifted off the stack during `createStoreGovernor`, which
-        // is guaranteed to run directly after the subclass constructor.
-        this.disallowChangesReason.unshift('in constructor')
     }
 
     /**
@@ -170,10 +160,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     setProps = (props: Props): void => {
-        if (this.disallowChangesReason[0]) {
-            throw new Error(`You cannot update governor's props while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-        }
-        if (!this.dispatcher.isDispatching) {
+        if (!this.emitter.dispatcher.isDispatching) {
             throw new Error(`setProps cannot be called outside of a dispatch.`)
         }
 
@@ -188,9 +175,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         this.props = props
 
         if (this.lifecycle.constructor.getDerivedStateFromProps) {
-            this.disallowChangesReason.unshift("running `getDerivedStateFromProps`")
             this.state = Object.assign({}, this.state, this.lifecycle.constructor.getDerivedStateFromProps(props, this.state))
-            this.disallowChangesReason.shift()
         }
         
         this.connect()
@@ -198,10 +183,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
-        if (this.disallowChangesReason[0]) {
-            throw new Error(`A Govern component cannot call "setState" outside while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-        }
-        if (!this.dispatcher.isDispatching) {
+        if (!this.emitter.dispatcher.isDispatching) {
             throw new Error(`"setState" cannot be called outside of a dispatch.`)
         }
 
@@ -209,10 +191,8 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.callbacks.push(callback)
         }
 
-        this.disallowChangesReason.unshift("running a setState updater")
         this.state = Object.assign({}, this.state, updater(this.state, this.props))
-        this.disallowChangesReason.shift()
-
+        
         // If `setState` is called within `componentWillReceiveProps`, then
         // a `connect` and `publish` is already scheduled immediately
         // afterward, so we don't need to run them.
@@ -224,8 +204,6 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
 
     connect() {
         if (this.lifecycle.subscribe) {
-            this.disallowChangesReason.unshift("running subscribe")
-
             this.pushFix()
             this.isRunningSubscribe = true
             let result = this.lifecycle.subscribe()
@@ -298,8 +276,6 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
                     nextElements[key],
                 )
             }
-
-            this.disallowChangesReason.shift()
         }
     }
 
@@ -320,7 +296,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             let governor: StoreGovernor<any, any> =
                 element.type == 'subscribe'
                     ? element.props.to.governor
-                    : createStoreGovernor(element, this.dispatcher)
+                    : createStoreGovernor(element, this.emitter.dispatcher)
 
             child.subscription = { governor, target }
             governor.emitter.subscribePublishTarget(target)
@@ -389,10 +365,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         let isExpectingChange = this.expectingChildChangeFor === key
 
         if (!isExpectingChange) {
-            if (this.disallowChangesReason[0]) {
-                throw new Error(`A Govern component cannot receive new values from children while ${this.disallowChangesReason[0]}. See component "${getDisplayName(this.lifecycle.constructor)}".`)
-            }
-            if (!this.dispatcher.isDispatching) {
+            if (!this.emitter.dispatcher.isDispatching) {
                 throw new Error(`A Govern component cannot receive new values from children outside of a dispatch.`)
             }
  
@@ -420,82 +393,41 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     publish() {
-        this.pushFix()
-
         let shouldComponentPublish = true
         let shouldForcePublish =
-            !this.emitter ||
             !this.previousPublish ||
             !this.lifecycle.shouldComponentUpdate
         if (!shouldForcePublish) {
-            this.disallowChangesReason.unshift("running shouldComponentPublish")
             this.pushFix(this.previousPublish)
             shouldComponentPublish = this.lifecycle.shouldComponentUpdate!(this.props, this.state, this.subs)
             this.popFix()
-            this.disallowChangesReason.shift()
         }
         
         // Publish a new value based on the current props, state and subs.
         if (shouldComponentPublish) {
-            this.disallowChangesReason.unshift("publishing a value")
+            this.pushFix()
             this.emitter.publish(this.lifecycle.publish())
-            this.disallowChangesReason.shift()
-            this.previousPublish = {
-                props: this.props,
-                state: this.state,
-                subs: Object.assign({}, this.subs),
-            }
+            this.popFix()
         }
 
-        this.popFix()
-    }
-
-    createStoreGovernor(_dispatcher: Dispatcher): this {
-        // Side effects were disallowed during the subclass' constructor.
-        this.disallowChangesReason.shift()
-        this.dispatcher = _dispatcher
-
-        // Props and any state were set in the constructor, so we can jump
-        // directly to `connect`.
-        this.connect()
-        this.pushFix()
-        this.disallowChangesReason.unshift("publishing a value")
-        let initialValue = this.lifecycle.publish()
-        this.disallowChangesReason.shift()
-        this.popFix()
         this.previousPublish = {
             props: this.props,
             state: this.state,
             subs: Object.assign({}, this.subs),
         }
-
-        // Make sure to use `this.dispatcher` instead of the `_dispatcher`
-        // argument, in case a new dispatcher was assigned during `connect`.
-        this.emitter = this.dispatcher.createEmitter(this, initialValue)
-
-        // We need to enqueue this lifecycle method instead of running it
-        // immediately, as otherwise it may be able to call actions on
-        // stores that we connected to during their flush phase.
-        this.dispatcher.enqueueAction(this.performComponentDidInstantiate)
-
-        return this
     }
 
-    performComponentDidInstantiate = () => {
-        if (!this.hasCalledComponentDidInstantiate) {
-            this.hasCalledComponentDidInstantiate = true
-            if (this.lifecycle.componentDidInstantiate) {
-                this.pushFix()
-                this.lifecycle.componentDidInstantiate()
-                this.popFix()
-            }
-        }
+    createStoreGovernor(initialDispatcher: Dispatcher): this {
+        // Make sure to use `this.emitter.dispatcher` instead of the `_dispatcher`
+        // argument, in case a new dispatcher was assigned during `connect`.
+        this.emitter = initialDispatcher.createEmitter(this)
 
-        this.lastUpdate = {
-            props: this.props,
-            state: this.state,
-            subs: this.subs,
-        }
+        // Props and any state were set in the constructor, so we can jump
+        // directly to `connect`.
+        this.connect()
+        this.publish()
+
+        return this
     }
 
     performReaction(): boolean {
@@ -503,14 +435,19 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         for (let i = 0; i < children.length; i++) {
             let child = children[i]
             if (child.subscription) {
-                if (this.dispatcher.moveReactionToFront(child.subscription.target.subscription.emitter)) {
+                if (this.emitter.dispatcher.moveReactionToFront(child.subscription.target.subscription.emitter)) {
                     return false
                 }
             }
         }
 
         if (!this.hasCalledComponentDidInstantiate) {
-            this.performComponentDidInstantiate()
+            this.hasCalledComponentDidInstantiate = true
+            if (this.lifecycle.componentDidInstantiate) {
+                this.pushFix()
+                this.lifecycle.componentDidInstantiate()
+                this.popFix()
+            }
         }
         else if (this.lifecycle.componentDidUpdate) {
             this.pushFix()
@@ -536,7 +473,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         for (let i = 0; i < children.length; i++) {
             let child = children[i]
             if (child.subscription) {
-                if (this.dispatcher.movePostToFront(child.subscription.target.subscription.emitter)) {
+                if (this.emitter.dispatcher.movePostToFront(child.subscription.target.subscription.emitter)) {
                     return false
                 }
             }
