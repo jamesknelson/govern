@@ -73,11 +73,17 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
 
-    // Create controllers within `componentWillMount` instead of in
-    // `constructor`, as we can't rule out the possibility that
-    // the controller will have some side effects on initialization.
     this.store = instantiate(createElement(Flatten, { children: this.props.to }))
     
+    this.handleChange(
+      this.store.getValue(),
+      this.store.UNSAFE_dispatch
+    )
+
+    // Create subsription within `componentWillMount` instead of in
+    // `constructor`, as it is possible for components to have side effects
+    // on initial subscription (as the first `componentDidFlush` is held
+    // until then, and it can cause `setState`.
     this.subscription = this.store.subscribe(
       this.handleChange,
       this.receiveError,
@@ -85,11 +91,6 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
       this.handleStartDispatch,
       this.handleEndDispatch,
       String(this.priority)
-    )
-
-    this.handleChange(
-      this.store.getValue(),
-      this.store.UNSAFE_dispatch
     )
   }
 
