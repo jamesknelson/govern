@@ -145,11 +145,6 @@ export class DispatcherEmitter<T=any> {
     }
 
     complete() {
-        if (this.dispatcher.isDispatching) {
-            this.error(new InTransactionError())
-            return 
-        }
-
         if (!this.isStopped) {
             this.isStopped = true
             let targets = this.flushTargets.concat(this.publishTargets as any[])
@@ -157,6 +152,10 @@ export class DispatcherEmitter<T=any> {
             let copy = targets.slice()
             for (let i = 0; i < len; i++) {
                 let target = copy[i]
+                // `complete` must be called within a dispatch. 
+                if (target.endDispatch) {
+                    target.endDispatch()
+                }
                 if (target.complete) {
                     target.complete()
                 }
@@ -195,14 +194,6 @@ export class DispatcherEmitter<T=any> {
                 }
             }
         }
-    }
-}
-
-export class InTransactionError extends Error {
-    constructor() {
-        super('in transaction');
-        this.name = 'InTransactionError';
-        (Object as any).setPrototypeOf(this, InTransactionError.prototype);
     }
 }
 
