@@ -183,8 +183,12 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
+        // If we're not already dispatching, start a dispatch.
         if (!this.emitter.dispatcher.isDispatching) {
-            throw new Error(`"setState" cannot be called outside of a dispatch.`)
+            this.emitter.dispatcher.enqueueAction(() => {
+                this.setState(updater, callback)
+            })
+            return
         }
 
         if (callback) {

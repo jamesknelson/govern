@@ -3,24 +3,7 @@ import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Component', () => {
-  it("actions with setState throw an error when not in a transaction", () => {
-    class TestComponent extends Component<{}> {
-      publish() {
-        return {
-          action: () => {
-            this.setState({})
-          }
-        }
-      }
-    }
-
-    let store = instantiate(createElement(TestComponent))
-    expect(() => {
-      store.getValue().action()
-    }).toThrow()
-  })
-
-	it("calls only componentDidInstantiate on instantiation", () => {
+  it("calls only componentDidInstantiate on instantiation", () => {
     let calledDidInstantiateWith = undefined as any
     let didCallDidUpdate = false
 
