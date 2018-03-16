@@ -1,5 +1,5 @@
 import { Store } from './Store'
-import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, DistinctProps } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
 import { GovernableClass } from './StoreGovernor'
 
@@ -51,4 +51,11 @@ export function constant<Value>(
     key?: Key
 ): GovernElement<ConstantProps<Value>, Value> {
     return createElement('constant', { of, key })
+}
+
+export function distinct<Value>(
+    children: Store<Value> | GovernElement<any, Value> | Value,
+    by?: (x: Value, y: Value) => boolean
+): GovernElement<DistinctProps<Value>, Value> {
+    return createElement('distinct', { children, by })
 }

@@ -2,7 +2,7 @@ import { GovernElement } from './Element'
 import { GovernableClass } from './StoreGovernor'
 import { Store } from './Store'
 
-export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'flatMap' | 'map' | 'subscribe'
+export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'distinct' | 'flatMap' | 'map' | 'subscribe'
 export type ComponentType<Props, Value> = GovernableClass<Props, Value> | StatelessComponent<Props, Value>;
 export type GovernType<Props = any, Value = any> = BuiltInType | ComponentType<Props, Value>;
 
@@ -41,6 +41,13 @@ export type CombineArrayProps<ItemValue> = {
 
 export type ConstantProps<Value> = {
     of: Value,
+}
+
+export type DistinctProps<Value> = {
+    // Defaults to reference equality
+    by?: (x: Value, y: Value) => boolean,
+
+    children: Store<Value, any> | GovernElement<any, Value> | Value
 }
 
 export type SubscribeProps<Value> = {

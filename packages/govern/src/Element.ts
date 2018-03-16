@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './StoreGovernor'
-import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps } from './Core'
+import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, DistinctProps } from './Core'
 import { Store, isValidStore } from './Store'
 import { isPlainObject } from './utils/isPlainObject'
 
@@ -43,6 +43,7 @@ const BUILT_IN_TYPES = [
     'combine',
     'combineArray',
     'constant',
+    'distinct',
     'flatMap',
     'map'
 ]
@@ -111,6 +112,12 @@ export function createElement<Value>(
     type: 'constant',
     props?: Attributes & ConstantProps<Value> | null,
 ): GovernElement<ConstantProps<Value>, Value>
+
+export function createElement<Value>(
+    type: 'distinct',
+    props?: Attributes & DistinctProps<Value> | null,
+): GovernElement<DistinctProps<Value>, Value>
+
 
 
 // Custom components

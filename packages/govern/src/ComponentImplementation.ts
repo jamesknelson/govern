@@ -413,7 +413,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         this.previousPublish = {
             props: this.props,
             state: this.state,
-            subs: Object.assign({}, this.subs),
+            subs: (this.subs !== undefined && typeof this.subs === 'object') ? Object.assign({}, this.subs) : this.subs,
         }
     }
 
