@@ -1,10 +1,10 @@
 import * as React from 'react'
 import * as PropTypes from 'prop-types'
-import { createElement, instantiate, GovernElement, GovernNode, Store, Subscription } from 'govern'
+import { createElement, instantiate, Subscribable, GovernNode, Store, Subscription } from 'govern'
 
 
 export interface SubscribeProps<T> {
-  to: GovernElement<any, T> | Store<T>,
+  to: Subscribable<T>,
   children: (value: T, dispatch: Function) => React.ReactNode,
 }
 
@@ -15,7 +15,7 @@ export interface SubscribeProps<T> {
  * @param children A function to render each of the store's values.
  */
 export function createSubscribe<T>(
-  store: GovernElement<any, T> | Store<T>,
+  store: Subscribable<T>,
   children: (value: T, dispatch: Function) => React.ReactNode
 ): React.ReactElement<SubscribeProps<T>> {
   return React.createElement(Subscribe, { to: store, children })

@@ -5,7 +5,7 @@ import { GovernElement } from './Element'
 import { Target } from './Target'
 import { Dispatcher } from './Dispatcher';
 
-export interface ComponentClass<Props, Value=any> extends GovernableClass<Props, Value> {
+export interface ComponentClass<Props, Value=any> extends GovernableClass<Value, Props> {
     new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
@@ -15,12 +15,14 @@ export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> ext
     // While `ComponentImplementation` allows us to "subscribe" to any value,
     // it only makes sense for components to subscribe to elements (as other
     // values are treated as constants.)
-    subscribe?(): GovernElement<any, Subs> | null;
+    subscribe?(): GovernElement<Subs, any> | null;
 }
 
 export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
 
-export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Props, Value>, ComponentLifecycle<Props, State, Value, Subs> {
+type SubscribeType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
+
+export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Value, Props>, ComponentLifecycle<Props, State, Value, Subs> {
     protected impl: ComponentImplementation<Props, State, Value, Subs>;
 
     constructor(props: Props) {
@@ -31,11 +33,11 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         return (this.impl.getFix().props || {}) as Props
     }
 
-    get subs() {
+    get subs(): SubscribeType<this["subscribe"]> {
         if (this.impl.isRunningSubscribe) {
             throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.getTypedSubs(this as this)
+        return this.impl.getFix().subs as any
     }
 
     get state() {
@@ -74,13 +76,6 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     abstract publish(): Value;
-
-    // TypeScript isn't able to infer the output of the subclass's
-    // `subscribe` function by just accessing `this`, so we need to pass
-    // in the subclass if we want access to a correctly typed output :-(
-    getTypedSubs<Subs>(component: { subscribe?: () => GovernElement<any, Subs> | null }): Subs {
-        return this.impl.getFix().subs as any
-    }
 
     getTypedValue<Value>(component: { publish: () => Value }): Value {
         return this.impl.emitter.getValue() as any

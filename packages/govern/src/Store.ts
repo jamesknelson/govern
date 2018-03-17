@@ -1,3 +1,4 @@
+import { Subscribable } from './Core'
 import { Dispatcher } from './Dispatcher'
 import { GovernElement } from './Element'
 import { constant, flatMap, map } from './Factories'
@@ -9,11 +10,6 @@ import { Subscription } from './Subscription'
 import { Target, PublishTarget, isValidPublishTarget } from './Target'
 import { createStoreGovernor, StoreGovernor } from './StoreGovernor'
 import { StoreSubscriberTarget } from './StoreSubscriberTarget'
-
-
-interface Subscribable<T> {
-    governor: StoreGovernor<T>;
-}
 
 
 /**
@@ -28,15 +24,15 @@ interface Subscribable<T> {
  * facilitating composition of multiple observables that are computed from
  * a single observable.
  */
-export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservable<T> {
-    governor: StoreGovernor<T, Props>
+export class Store<Value, Props=any> implements DispatchedObservable<Value> {
+    governor: StoreGovernor<Value, Props>
 
-    constructor(governor: StoreGovernor<T, Props>) {
+    constructor(governor: StoreGovernor<Value, Props>) {
         this.governor = governor
     }
 
     subscribe(
-        nextOrObserver: DispatchedObserver<T> | ((value: T, dispatch?: (runner: () => void) => void) => void),
+        nextOrObserver: DispatchedObserver<Value> | ((value: Value, dispatch?: (runner: () => void) => void) => void),
         error?: (error: any) => void,
         complete?: () => void,
         startDispatch?: () => void,
@@ -47,7 +43,7 @@ export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservabl
         return this.governor.emitter.subscribeFlushTarget(target)
     }
 
-    getValue(): T {
+    getValue(): Value {
         return this.governor.emitter.getValue()
     }
 
@@ -74,15 +70,15 @@ export class Store<T, Props=any> implements Subscribable<T>, DispatchedObservabl
         this.governor.emitter.enqueueAction(fn)
     }
 
-    map<U>(transform: (value: T) => U): GovernElement<any, U> {
+    map<U>(transform: (value: Value) => U): GovernElement<U> {
         return map(this, transform)
     }
-    flatMap<U>(transform: (value: T) => Store<U, Props> | GovernElement<any, U>): GovernElement<any, U> {
+    flatMap<U>(transform: (value: Value) => Subscribable<U>): GovernElement<U> {
         return flatMap(this, transform)
     }
 }
 
-export function instantiate<Props, Value>(element: GovernElement<Props, Value>): Store<Value, Props> {
+export function instantiate<Value, Props>(element: GovernElement<Value, Props>): Store<Value, Props> {
     let storeGovernor
     let dispatcher = new Dispatcher()
     dispatcher.enqueueAction(() => {

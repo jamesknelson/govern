@@ -108,10 +108,6 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      get subs() {
-        return this.getTypedSubs(this)
-      }
-
       subscribe() {
 			  return combine({
           a: counter,
@@ -385,8 +381,9 @@ describe('Component', () => {
         })
       }
 
-      shouldComponentUpdate(prevProps, prevState, prevSubs) {
-        shouldComponentUpdateValue = prevSubs.inner !== this.subs.inner
+      shouldComponentUpdate(nextProps, nextState, nextSubs) {
+        shouldComponentUpdateValue = nextSubs.inner !== this.subs.inner
+        return true
       }
 
       publish() {

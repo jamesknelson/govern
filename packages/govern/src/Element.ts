@@ -69,8 +69,8 @@ export function isValidElement(obj): obj is GovernElement<any, any> {
 }
 
 
-export interface GovernElement<Props, Value> {
-    type: string | GovernableClass<Props, Value> | SFC<Props, Value>;
+export interface GovernElement<Value, Props=any> {
+    type: string | GovernableClass<Value, Props> | SFC<Value, Props>;
     props: Props;
     key: Key | null;
 
@@ -79,65 +79,65 @@ export interface GovernElement<Props, Value> {
     // element's output in TypeScript types.
     value: Value;
 }
-export interface SFCElement<Props, Value> extends GovernElement<Props, Value> {
-    type: SFC<Props, Value>;
+export interface SFCElement<Value, Props> extends GovernElement<Value, Props> {
+    type: SFC<Value, Props>;
 }
-export interface ComponentElement<Props, Value> extends GovernElement<Props, Value> {
-    type: GovernableClass<Props, Value>;
+export interface ComponentElement<Value, Props> extends GovernElement<Value, Props> {
+    type: GovernableClass<Value, Props>;
 }
 
 export function createElement<FromValue, ToValue>(
     type: 'flatMap',
     props?: Attributes & FlatMapProps<FromValue, ToValue>
-): GovernElement<FlatMapProps<FromValue, ToValue>, ToValue>
+): GovernElement<ToValue, FlatMapProps<FromValue, ToValue>>
 
 export function createElement<FromValue, ToValue>(
     type: 'map',
     props?: Attributes & MapProps<FromValue, ToValue>
-): GovernElement<MapProps<FromValue, ToValue>, ToValue>
+): GovernElement<ToValue, MapProps<FromValue, ToValue>>
 
 export function createElement<CombinedValue>(
     type: 'combine',
     props?: Attributes & CombineProps<CombinedValue> | null,
     children?: CombineChildren<keyof CombinedValue, CombinedValue>
-): GovernElement<CombineProps<CombinedValue>, CombinedValue>
+): GovernElement<CombinedValue, CombineProps<CombinedValue>>
 
 export function createElement<ItemValue>(
     type: 'combineArray',
     props?: Attributes & CombineArrayProps<ItemValue> | null,
     children?: CombineArrayChildren<ItemValue>
-): GovernElement<CombineArrayProps<ItemValue>, ItemValue[]>
+): GovernElement<ItemValue[], CombineArrayProps<ItemValue>>
 
 export function createElement<Value>(
     type: 'constant',
     props?: Attributes & ConstantProps<Value> | null,
-): GovernElement<ConstantProps<Value>, Value>
+): GovernElement<Value, ConstantProps<Value>>
 
 export function createElement<Value>(
     type: 'distinct',
     props?: Attributes & DistinctProps<Value> | null,
-): GovernElement<DistinctProps<Value>, Value>
+): GovernElement<Value, DistinctProps<Value>>
 
 
 
 // Custom components
-export function createElement<Props, Value>(
-    type: SFC<Props, Value>,
+export function createElement<Value, Props>(
+    type: SFC<Value, Props>,
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): SFCElement<Props, Value>;
-export function createElement<Props, Value>(
+    ...children: GovernNode[]): SFCElement<Value, Props>;
+export function createElement<Value, Props>(
     type:
         (new (props: Props) => { props: Props }) &
         (new (props: Props) => {
             publish(): Value;
         }),
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): ComponentElement<Props, Value>;
-export function createElement<Props, Value>(
+    ...children: GovernNode[]): ComponentElement<Value, Props>;
+export function createElement<Value, Props>(
     type: any,
     config?: Attributes & Props | null,
     ...children: GovernNode[]
-): GovernElement<Props, Value> {
+): GovernElement<Value, Props> {
     let propName
     
     // Reserved names are extracted

@@ -1,6 +1,8 @@
-import { map, combine, createElement, instantiate, Store, Component, SFC } from '../src'
+import { map, combine, createElement, GovernElement, instantiate, Store, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
+
+type ReturnType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
 
 describe('Batching', () => {
   function FirstName(props: { userStore: Store<{ firstName: string, lastName: string }> }) {
@@ -24,9 +26,6 @@ describe('Batching', () => {
         firstName: firstName,
         lastName: lastName,
       })
-    }
-    get subs() {
-      return this.getTypedSubs(this)
     }
     publish() {
       let { firstName, lastName } = this.subs

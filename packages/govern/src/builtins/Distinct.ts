@@ -5,7 +5,7 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, StoreGovernor } from '../StoreGovernor'
 import { Target } from '../Target'
 
-export class Distinct<Value> implements Governable<DistinctProps<Value>, Value>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value, Value> {
+export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value, Value> {
     impl: ComponentImplementation<DistinctProps<Value>, {}, Value, Value>;
     
     constructor(props: DistinctProps<Value>) {

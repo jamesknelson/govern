@@ -5,7 +5,7 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, StoreGovernor } from '../StoreGovernor'
 import { Target } from '../Target'
 
-export class CombineArray<ItemValue> implements Governable<CombineArrayProps<ItemValue>, ItemValue[]>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
+export class CombineArray<ItemValue> implements Governable<ItemValue[], CombineArrayProps<ItemValue>>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
     impl: ComponentImplementation<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]>;
     
     constructor(props: CombineArrayProps<ItemValue>) {

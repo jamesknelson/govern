@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createElement, isValidElement, isValidStore, Component, ComponentClass, GovernElement, Store } from 'govern'
+import { createElement, isValidElement, isValidStore, Component, ComponentClass, Subscribable } from 'govern'
 import { createSubscribe } from './Subscribe'
 
 
@@ -11,14 +11,14 @@ import { createSubscribe } from './Subscribe'
 // )
 
 export function subscribe<T, WrapperProps=any, WrappedProps=any>(
-  mapOwnPropsToElement: (props: any) => (GovernElement<any, T> | Store<T>),
+  mapOwnPropsToElement: (props: any) => (Subscribable<T>),
   mapValueToProps?: (value: T, dispatch?: Function, ownProps?: WrapperProps) => any,
   mapDispatchToProps?: (dispatch: Function, initialValue?: T) => any,
   merge?: (valueProps?: any, dispatchProps?: any, ownProps?: WrapperProps) => WrappedProps
 ): (component: React.ComponentType<WrappedProps>) => React.ComponentClass<WrapperProps>;
 
 export function subscribe<T, WrapperProps=any, WrappedProps=any>(
-  element: GovernElement<any, T> | Store<T>,
+  element: Subscribable<T>,
   mapValueToProps?: (value: T, dispatch?: Function, ownProps?: WrapperProps) => any,
   mapDispatchToProps?: (dispatch: Function, initialValue?: T) => any,
   merge?: (valueProps?: any, dispatchProps?: any, ownProps?: WrapperProps) => WrappedProps
@@ -36,15 +36,14 @@ export function subscribe<T, WrapperProps=any, WrappedProps=any>(
  */
 export function subscribe(
   mapOwnPropsToElement:
-    ((props) => Store<any> | GovernElement<any, any>) |
-    GovernElement<any, any> |
-    Store<any> |
+    ((props) => Subscribable<any>) |
+    Subscribable<any> |
     ComponentClass<any, any>,
   mapValueToProps = (value, dispatch?, ownProps?) => value,
   mapDispatchToProps = (dispatch, initialValue?) => ({ dispatch }),
   merge = (valueProps?, dispatchProps?, ownProps?) => Object.assign({}, valueProps, dispatchProps, ownProps),
 ): (component: React.ComponentType<any>) => React.ComponentClass<any> {
-  let mapFn = mapOwnPropsToElement as (props) => (GovernElement<any, any> | Store<any>)
+  let mapFn = mapOwnPropsToElement as (props) => (Subscribable<any>)
   
   if (isValidElement(mapOwnPropsToElement) || isValidStore(mapOwnPropsToElement)) {
     mapFn = (() => mapOwnPropsToElement) as any

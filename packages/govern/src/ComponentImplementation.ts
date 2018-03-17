@@ -1,9 +1,5 @@
-import { isPlainObject } from './utils/isPlainObject'
 import { Component, getDisplayName } from './Component'
-import { createElement, convertToElement, doElementsReconcile, isValidElement, GovernElement } from './Element'
-import { isValidStore, Store } from './Store'
-import { Subscription } from './Subscription'
-import { Target, PublishTarget, FlushTarget } from './Target'
+import { convertToElement, doElementsReconcile, isValidElement, GovernElement } from './Element'
 import { ComponentTarget } from './ComponentTarget'
 import { DispatcherEmitter } from './DispatcherEmitter'
 import { Dispatcher } from './Dispatcher';

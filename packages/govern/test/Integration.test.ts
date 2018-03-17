@@ -32,10 +32,6 @@ function createModelClass() {
       defaultValue: {},
     }
 
-    get subs() {
-      return this.getTypedSubs(this)
-    }
-
     subscribe() {
       return combine({
         name: createElement(ModelPrimitive, {
@@ -92,10 +88,6 @@ function createDataSourceClass() {
       this.state = { store: null }
     }
 
-    get subs() {
-      return this.getTypedSubs(this)
-    }
-
     receive = (store) => {
       this.setState({ store })
     }
@@ -121,10 +113,6 @@ function createFormControllerClass() {
 
   return class FormController extends Component<{ data }> {
     awaitingData: boolean = true
-
-    get subs() {
-      return this.getTypedSubs(this)
-    }
 
     subscribe() {
       return combine({

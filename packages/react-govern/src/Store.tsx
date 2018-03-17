@@ -4,7 +4,7 @@ import { createElement, instantiate, GovernElement, GovernNode, Store as GovernS
 
 
 export interface StoreProps<T> {
-  element: GovernElement<any, T>,
+  element: GovernElement<T>,
   children: (store: GovernStore<T>) => React.ReactNode,
 }
 
@@ -15,10 +15,10 @@ export interface StoreProps<T> {
  * @param children A function to render each of the store's values.
  */
 export function createStore<T>(
-  store: GovernElement<any, T>,
+  element: GovernElement<T>,
   children: (store: GovernStore<T>) => React.ReactNode
 ): React.ReactElement<StoreProps<T>> {
-  return React.createElement(Store, { element: store, children })
+  return React.createElement(Store, { element, children })
 }
 
 

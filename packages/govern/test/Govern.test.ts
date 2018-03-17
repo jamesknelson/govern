@@ -3,7 +3,7 @@ import { createTestHarness } from './utils/createTestHarness'
 
 describe('instantiate', () => {
   it("creates stateless functional components", () => {
-    const TestComponent: SFC<any, { a: number, b: number, c: number }> = ({ a, c }) => {
+    const TestComponent: SFC<{ a: number, b: number, c: number }, any> = ({ a, c }) => {
       return combine({
         a,
         b: 2,

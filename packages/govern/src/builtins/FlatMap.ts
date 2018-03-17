@@ -9,7 +9,7 @@ import { PublishTarget } from '../Target'
 import { DispatcherEmitter } from '../DispatcherEmitter';
 
 interface Child<FromValue> {
-    element: GovernElement<any, FromValue>,
+    element: GovernElement<FromValue>,
     governor?: StoreGovernor<FromValue>,
     subscription?: Subscription,
     target?: PublishTarget<any>,
@@ -18,7 +18,7 @@ interface Child<FromValue> {
 
 const noop = () => {}
 
-export class FlatMap<FromValue, ToValue> implements Governable<FlatMapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
+export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     initialDispatcher: Dispatcher
     from: Child<FromValue>
     hasUnpublishedChanges: boolean = true

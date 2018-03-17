@@ -22,12 +22,12 @@ const BuiltInComponents = {
 }
 
 
-export interface Governable<Props, Value> {
+export interface Governable<Value, Props> {
     createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<Value, Props>;
 }
 
-export interface GovernableClass<Props, Value> {
-    new (props: Props): Governable<Props, Value>;
+export interface GovernableClass<Value, Props> {
+    new (props: Props): Governable<Value, Props>;
     defaultProps?: Partial<Props>;
     displayName?: string;
 }
@@ -35,8 +35,8 @@ export interface GovernableClass<Props, Value> {
 // An interface used iternally within Govern to control a store instance.
 // The publicly consumable parts of this are exposed to the outside world
 // through the `Store` class.
-export interface StoreGovernor<T, Props=any> {
-    emitter: DispatcherEmitter<T>;
+export interface StoreGovernor<Value, Props=any> {
+    emitter: DispatcherEmitter<Value>;
     
     setProps(props: Props): void;
     dispose(): void;
@@ -52,8 +52,8 @@ export interface StoreGovernor<T, Props=any> {
     performPost(): boolean;
 }
 
-export function createStoreGovernor<Props, Value>(element: GovernElement<Props, Value>, dispatcher: Dispatcher): StoreGovernor<Value, Props> {
-    let instance: Governable<Props, Value>
+export function createStoreGovernor<Value, Props>(element: GovernElement<Value, Props>, dispatcher: Dispatcher): StoreGovernor<Value, Props> {
+    let instance: Governable<Value, Props>
 
     // Create a component instance for the element, with the specified
     // initial props.

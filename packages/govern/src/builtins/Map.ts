@@ -5,7 +5,7 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, StoreGovernor } from '../StoreGovernor'
 import { Target } from '../Target'
 
-export class Map<FromValue, ToValue> implements Governable<MapProps<FromValue, ToValue>, ToValue>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, FromValue> {
+export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, FromValue> {
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue, FromValue>;
     
     constructor(props: MapProps<FromValue, ToValue>) {

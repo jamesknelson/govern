@@ -5,7 +5,7 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, StoreGovernor } from '../StoreGovernor'
 import { Target } from '../Target'
 
-export class Combine<CombinedValue> implements Governable<CombineProps<CombinedValue>, CombinedValue>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
+export class Combine<CombinedValue> implements Governable<CombinedValue, CombineProps<CombinedValue>>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
     impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
     
     constructor(props: CombineProps<CombinedValue>) {
