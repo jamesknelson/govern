@@ -1,6 +1,6 @@
 {
   "name": "react-govern",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
@@ -46,7 +46,7 @@
     "rollup-plugin-commonjs": "^8.2.6",
     "rollup-plugin-node-resolve": "^3.0.0",
     "ts-jest": "^22.0.1",
-    "typescript": "^2.6.2"
+    "typescript": "^2.8.0-rc"
   },
   "jest": {
     "transform": {
