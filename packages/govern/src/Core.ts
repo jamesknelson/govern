@@ -10,10 +10,24 @@ export type Subscribable<Value> = GovernElement<Value> | Store<Value>
 type ReturnOf<T> = T extends (...args: any[]) => infer R ? R : never;
 export type StoreValue<S extends Store<any>> = ReturnOf<S["getValue"]>
 export type ElementValue<E extends GovernElement<any>> = E["value"]
+
 export type Value<X extends Subscribable<any>> =
     X extends Store<infer T> ? T :
     X extends GovernElement<infer T> ? T :
     never
+
+type ComponentClass<Value> =
+    (new (props: any) => {
+        publish(): Value;
+    })
+
+export type StoreOf<X extends ComponentClass<any> | StatelessComponent<any, any> | GovernElement<any, any>> =
+    Store<
+        X extends ComponentClass<infer T> ? T :
+        X extends StatelessComponent<infer T, any> ? T :
+        X extends GovernElement<infer T, any> ? T :
+        never
+    >
 
 export type Key = string | number;
 

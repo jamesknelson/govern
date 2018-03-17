@@ -5,7 +5,7 @@ import { GovernElement } from './Element'
 import { Target } from './Target'
 import { Dispatcher } from './Dispatcher';
 
-export interface ComponentClass<Props, Value=any> extends GovernableClass<Value, Props> {
+export interface ComponentClass<Value, Props> extends GovernableClass<Value, Props> {
     new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
@@ -76,10 +76,6 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     abstract publish(): Value;
-
-    getTypedValue<Value>(component: { publish: () => Value }): Value {
-        return this.impl.emitter.getValue() as any
-    }
 }
 
 export function getDisplayName(componentClass) {

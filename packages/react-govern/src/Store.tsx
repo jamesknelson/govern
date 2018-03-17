@@ -4,7 +4,7 @@ import { createElement, instantiate, GovernElement, GovernNode, Store as GovernS
 
 
 export interface StoreProps<T> {
-  element: GovernElement<T>,
+  of: GovernElement<T>,
   children: (store: GovernStore<T>) => React.ReactNode,
 }
 
@@ -15,10 +15,10 @@ export interface StoreProps<T> {
  * @param children A function to render each of the store's values.
  */
 export function createStore<T>(
-  element: GovernElement<T>,
+  of: GovernElement<T>,
   children: (store: GovernStore<T>) => React.ReactNode
 ): React.ReactElement<StoreProps<T>> {
-  return React.createElement(Store, { element, children })
+  return React.createElement(Store, { of, children })
 }
 
 
@@ -40,25 +40,25 @@ export class Store extends React.Component<StoreProps<any>, { output: any, dummy
     super(props)
     this.state = {} as any
     this.isDispatching = false
-    this.store = instantiate(createElement(Flatten, { children: this.props.element }))
+    this.store = instantiate(createElement(Flatten, { children: this.props.of }))
   }
 
   componentWillMount() {
-    if (!this.props.element) {
-      console.warn(`An "element" prop must be provided to <Store> but "${this.props.element}" was received.`)
+    if (!this.props.of) {
+      console.warn(`An "element" prop must be provided to <Store> but "${this.props.of}" was received.`)
     }
   }
 
   componentWillReceiveProps(nextProps: StoreProps<any>) {
-    if (!nextProps.element) {
-      console.warn(`A "element" prop must be provided to <StoreProps> but "${this.props.element}" was received.`)
+    if (!nextProps.of) {
+      console.warn(`A "element" prop must be provided to <StoreProps> but "${this.props.of}" was received.`)
     }
 
     // As elements are immutable, we can skip a lot of updates by
     // checking if the `to` element/store has changed.
-    if (nextProps.element !== this.props.element) {
+    if (nextProps.of !== this.props.of) {
       this.store.setProps({
-        children: nextProps.element,
+        children: nextProps.of,
       })
     }
   }
