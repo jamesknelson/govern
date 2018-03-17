@@ -1,6 +1,6 @@
 {
   "name": "govern",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Component-based state management.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
