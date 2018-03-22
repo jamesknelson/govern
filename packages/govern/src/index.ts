@@ -2,6 +2,7 @@
 
 export * from './Component'
 export * from './Core'
+export { Dispatcher } from './Dispatcher'
 export * from './Element'
 export * from './Factories'
 export * from './Store'

@@ -78,9 +78,9 @@ export class Store<Value, Props=any> implements DispatchedObservable<Value> {
     }
 }
 
-export function instantiate<Value, Props>(element: GovernElement<Value, Props>): Store<Value, Props> {
+export function instantiate<Value, Props>(element: GovernElement<Value, Props>, _dispatcher?: Dispatcher): Store<Value, Props> {
     let storeGovernor
-    let dispatcher = new Dispatcher()
+    let dispatcher = _dispatcher || new Dispatcher()
     dispatcher.enqueueAction(() => {
         storeGovernor = createStoreGovernor(element, dispatcher)
     })
