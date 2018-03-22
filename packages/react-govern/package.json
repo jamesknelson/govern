@@ -1,6 +1,6 @@
 {
   "name": "react-govern",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Separate state from Components.",
   "author": "James K Nelson <james@jamesknelson.com>",
   "license": "MIT",
