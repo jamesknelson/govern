@@ -15,7 +15,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
         getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
     }
 
-    componentWillReceiveProps?(nextProps: Props): void;
+    UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
     subscribe?(): any;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State, nextSubs?: Subs): boolean;
@@ -160,10 +160,10 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             throw new Error(`setProps cannot be called outside of a dispatch.`)
         }
 
-        if (this.lifecycle.componentWillReceiveProps) {
+        if (this.lifecycle.UNSAFE_componentWillReceiveProps) {
             this.pushFix()
             this.isReceivingProps = true
-            this.lifecycle.componentWillReceiveProps(props)
+            this.lifecycle.UNSAFE_componentWillReceiveProps(props)
             this.isReceivingProps = false
             this.popFix()
         }

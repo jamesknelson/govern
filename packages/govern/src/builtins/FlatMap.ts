@@ -38,7 +38,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         }
     }
 
-    componentWillReceiveProps(nextProps: FlatMapProps<FromValue, ToValue>) {
+    UNSAFE_componentWillReceiveProps(nextProps: FlatMapProps<FromValue, ToValue>) {
         this.receiveProps(nextProps)
     }
 

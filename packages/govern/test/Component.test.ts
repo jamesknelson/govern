@@ -140,11 +140,11 @@ describe('Component', () => {
     })
   })
 
-  it("setState within componentWillReceiveProps is reflected within the output", () => {
+  it("setState within UNSAFE_componentWillReceiveProps is reflected within the output", () => {
     class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			componentWillReceiveProps(nextProps) {
+			UNSAFE_componentWillReceiveProps(nextProps) {
         this.setState({ a: 2 })
 			}
 
@@ -204,7 +204,7 @@ describe('Component', () => {
     class TestComponent extends Component<{ updated }> {
       state = { x: 1 }
 
-      componentWillReceiveProps(nextProps) {
+      UNSAFE_componentWillReceiveProps(nextProps) {
         this.setState({
           x: 2
         })
@@ -340,11 +340,11 @@ describe('Component', () => {
     })
   })
 
-  it("events can be received from combined <subscribe /> elements when emitted during `componentWillReceiveProps` ", () => {
+  it("events can be received from combined <subscribe /> elements when emitted during `UNSAFE_componentWillReceiveProps` ", () => {
     let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }> {
-      componentWillReceiveProps() {
+      UNSAFE_componentWillReceiveProps() {
         this.subs.inner.increase()
       }
 
