@@ -33,31 +33,15 @@ export function createStore<T>(
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
 export class Store extends React.Component<StoreProps<any>, { output: any, dummy: any, dispatch: any }> {
-  static contextTypes = {
-    govern_dispatcher: PropTypes.object,
-  }
-
-  static childContextTypes = {
-    govern_dispatcher: PropTypes.object,
-  }
-
-  dispatcher: Dispatcher
   store: GovernStore<any>
   isDispatching: boolean
   
   constructor(props: StoreProps<any>, context: any) {
     super(props, context)
 
-    this.dispatcher = context.govern_dispatcher || new Dispatcher()
     this.state = {} as any
     this.isDispatching = false
-    this.store = instantiate(createElement(Flatten, { children: this.props.of }), this.dispatcher)
-  }
-
-  getChildContext() {
-    return {
-      govern_dispatcher: this.dispatcher,
-    }
+    this.store = instantiate(createElement(Flatten, { children: this.props.of }))
   }
 
   componentWillMount() {

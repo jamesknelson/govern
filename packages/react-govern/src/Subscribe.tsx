@@ -33,7 +33,6 @@ export function createSubscribe<T>(
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
 export class Subscribe extends React.Component<SubscribeProps<any>, { output: any, dummy: any, dispatch: any }> {
-  dispatcher: Dispatcher
   priority: number
   store: Store<any>
   subscription: Subscription
@@ -42,18 +41,15 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   isAwaitingRenderFromFlush: boolean
 
   static contextTypes = {
-    govern_dispatcher: PropTypes.object,
     govern_priority: PropTypes.number,
   }
 
   static childContextTypes = {
-    govern_dispatcher: PropTypes.object,
     govern_priority: PropTypes.number,
   }
   
   constructor(props: SubscribeProps<any>, context: any) {
     super(props, context)
-    this.dispatcher = context.govern_dispatcher || new Dispatcher()
     this.state = {} as any
     this.isDispatching = false
     this.isAwaitingRenderFromProps = false
@@ -68,7 +64,6 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
 
   getChildContext() {
     return {
-      govern_dispatcher: this.dispatcher,
       govern_priority: this.priority + 1,
     }
   }
@@ -78,7 +73,7 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
 
-    this.store = instantiate(createElement(Flatten, { children: this.props.to }), this.dispatcher)
+    this.store = instantiate(createElement(Flatten, { children: this.props.to }))
     
     this.handleChange(
       this.store.getValue(),
