@@ -480,33 +480,6 @@ React application state can be split into roughly three categories:
 API Documentation
 -----------------
 
-### Component Classes
-
-Components are defined as JavaScript classes that extend from `Govern.Component`.
-
-#### `this.props`
-
-#### `this.state`
-
-#### `this.subs`
-
-A property that contains the last output of the component connected via `subscribe`.
-
-This is similar in purpose to React's `refs` property. You can use it to interact with child components when required, but it is generally cleaner to avoid this if possible.
-
-#### `this.setState(changes)`
-
-Usage is identical to React's `setState`.
-
-#### `this.dispatch(Function)`
-
-If you need to make calls to `setState` outside of lifecycle methods or
-React components, you'll need to wrap these calls in a `dispatch` call.
-
-For example, you'll need to use this when handling the response of a HTTP
-Request.
-
-
 ### Govern.Component
 
 Govern components are JavaScript classes that extend `Govern.Component`, and contain a `publish()` method.
