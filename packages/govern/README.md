@@ -1,154 +1,37 @@
 Govern
 ======
 
-Component-based state management.
+A state management library for people who enjoy React.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
 ---
 
-Use govern to create data stores from re-usable components.
+Managing state in React apps can be daunting. Govern makes it staightforward. It lets you get more done with the APIs you already know, and untangles your business logic in the same way that React untangled your view.
 
-If you've used React, you already know the API. Just replace `render` with `subscribe` and `publish`!
+With Govern, you manage your state with *store components*. These are a lot like React components - they can receive props, call `setState`, and define lifecycle methods. They can be defined as ES6 classes, or as stateless functions. 
 
-Create components for your forms, data store, authentication, etc, and then combine them with govern's built-in components.
+Store components can handle state, actions, side effects, and selectors. This means that Govern can replace redux (or MobX), redux-thunk, redux-saga, reselect, and even recompose. But you can still use these tools when it makes sense - Govern is flexible, just like React.
 
-See a [live demo](https://codesandbox.io/s/w6j1xk8nvw) at Code Sandbox.
-
-
-Example with React
-------------------
+And if you know React, then you already know most of Govern's API, so you'll be productive in no time.
 
 
-```jsx
-import * as Govern from "govern";
-import * as React from "react";
-import * as ReactDOM from "react-dom";
-import { Subscribe } from "react-govern";
+Simple, Sensible Forms: a short guide.
+--------------------------------------
 
-// Create components to hold state and actions.
-class Model extends Govern.Component {
-  static defaultProps = {
-    defaultValue: ""
-  };
-
-  constructor(props) {
-    super(props);
-    this.state = {
-      value: props.defaultValue
-    };
-  }
-
-  publish() {
-    return {
-      value: this.state.value,
-      error: this.props.validate && this.props.validate(this.state.value),
-      onChange: this.onChange
-    };
-  }
-
-  onChange = value => {
-    this.setState({ value });
-  };
-}
-
-// Govern supports Stateless Functional Components too
-const SignUpFormModel = () => ({
-  name: <Model validate={value => !value && "who are you?"} />,
-  email: (
-    <Model validate={value => value.indexOf("@") === -1 && "not an email"} />
-  )
-});
-
-// Create stores by instantiating them.
-let store = Govern.instantiate(<SignUpFormModel />);
-
-// Use `store.map` to create elements that select parts of the store's state.
-const SignUpForm = ({ store }) => (
-  <div>
-    <h2>Hello, Store Components!</h2>
-    <Field
-      label="Name"
-      store={store.map(state => state.name)}
-    />
-    <Field label="E-mail" store={store.map(state => state.email)} />
-  </div>
-);
-
-// Use `<Subscribe>` to access state within a React component
-const Field = props => (
-  <div>
-    <label>
-      <span>{props.label}</span>
-      <Subscribe to={props.store}>
-        {(model, dispatch) => (
-          <React.Fragment>
-            <input
-              value={model.value}
-              onChange={e =>
-                // Use `dispatch` to indicate that the store may change
-                dispatch(() => model.onChange(e.target.value))
-              }
-            />
-            {model.error && <span style={{ color: "red" }}>{model.error}</span>}
-          </React.Fragment>
-        )}
-      </Subscribe>
-    </label>
-  </div>
-);
-
-ReactDOM.render(<SignUpForm store={store} />, document.getElementById("root"));
-```
+Creating forms with React is usually a little awkward. Govern makes it easy and fun. It lets you break your state into small components, and then reuse them -- as God and [Douglas McIlroy](https://en.wikiquote.org/wiki/Doug_McIlroy) intended.
 
 
-Another state management tool?
-------------------------------
+### Defining store components
 
-The React ecosystem already has Redux and `setState`. So why do we need Govern too?
+Govern components are just JavaScript classes that extend `Govern.Component`. Like React components, they have props, state, and lifecycle methods.
 
-**Govern doesn't replace Redux or `setState`, but embraces and complements them.**
-
-Where Redux is great at managing *global* state like fetched data, Govern is great at managing [*control* state](http://jamesknelson.com/5-types-react-application-state/) -- for example, selected items, pagination, or search queries.
-
-And where React's `setState` method is great for simple cases like animations, it still ties state to the DOM. With Govern's observable components, you can use the same `setState` API to store state wherever you'd like.
-
-#### When should I use Govern?
-
-- Storing form state without losing it between route changes
-- Re-usable components that don't render anything
-- Business logic that doesn't belong in a global store
-
-#### When should I use Redux?
-
-- Storing data received from the server
-- Business logic that is completely independent of the DOM tree
-- When time-travelling is a requirement
-
-#### When should I use React component state?
-
-- Animated components
-- Managing interactions with the DOM
-- Pop-out menus, tooltips, etc.
-
-
-A simple Govern component
--------------------------
-
-If you've used React, Govern's renderless components will feel familiar. They have lifecycle methods, a constructor that receives `props`, and can call `this.setState()`.
-
-Govern components have two main differences from React components:
-
-- They don't output React elements. Instead of an `render()` method, they have a `publish()` method that returns a plain JavaScript object.
-- Handler methods with side effects should be wrapped with `this.transaction(() => { ... })`.
-
-For example, here is a Govern component that could be used to manage a single input's state:
+For example, here's how you'd create a `Model` component that handles state and validation for individual form fields:
 
 ```js
-import Govern from 'govern'
+import * as Govern from 'govern'
 
 class Model extends Govern.Component {
-  // Govern compoents can have default props, just like React components.
   static defaultProps = {
     defaultValue: ''
   }
@@ -156,9 +39,19 @@ class Model extends Govern.Component {
   constructor(props) {
     super(props)
 
-    // Set the initial value of the form field
     this.state = {
       value: props.defaultValue,
+    }
+  }
+
+  publish() {
+    let value = this.state.value
+    let error = this.props.validate ? this.props.validate(value) : null
+
+    return {
+      value: this.state.value,
+      error: error,
+      change: this.change,
     }
   }
 
@@ -167,201 +60,459 @@ class Model extends Govern.Component {
       value: newValue,
     })
   }
+}
+```
 
-  publish() {
-    // Govern components output plain old JavaScript objects and arrays.
-    return {
-      change: this.change,
-      value: this.state.value,
-      error: !this.props.validate || this.props.validate(this.state.value)
+Govern components have one major difference from React components: instead of `render`, they take a `publish` method. This is where you specify the component's output, which will be computed each time the component's props or state change.
+
+
+### Subscribing to stores
+
+Now that you have a Model component, the next step is to subscribe to its published values from inside of your React app.
+
+Govern exports a `<Subscribe to>` React component to handle this for you. This component takes a Govern element for its `to` prop, and a render function for its `children` prop. It calls the render function with each new published value -- just like React's context API.
+
+Here's a barebones example that connects a `<Model>` to an input field, using `<Subscribe>`. [See it live at CodeSandbox](https://codesandbox.io/s/0y10o4977l).
+
+```js
+import * as React from 'react'
+import * as ReactDOM from 'react-dom'
+import { Subscribe } from 'react-govern'
+
+ReactDOM.render(
+  <Subscribe to={<Model validate={validateEmail} />}>
+    {emailModel =>
+      <label>
+        Email: 
+        <input
+          value={emailModel.value}
+          onChange={e => emailModel.change(e.target.value)}
+        />
+        {
+          emailModel.error &&
+          <p style={{color: 'red'}}>{emailModel.error}</p>
+        }
+      </label>
     }
+  </Subscribe>,
+  document.getElementById('root')
+)
+
+function validateEmail(value) {
+  if (value.indexOf('@') === -1) {
+    return "pleae enter a valid e-mail"
   }
 }
 ```
 
-Govern also supports stateless function components. For example, this component builds on the above Model component to add e-mail specific validation:
+Congratulations -- you've just learned a new way to manage state! And all you need to remember is that:
+
+- Store components extend from `Govern.Component` in place of `React.Component`.
+- Store components use a `publish` method in place of `render`.
+- You can subscribe to store components with `<Subscribe to>`.
+
+These three things will get you a long way. But there's one more tool that will make your life even easier:
+
+
+### Combining stores
+
+Govern components have one special method that doesn't exist on React components -- `subscribe`.
+
+When a component's `subscribe` method returns an object of Govern elements, the component will subscribe to those element, and place the latest values on `this.subs`. You can then use the value of `this.subs` within the `publish` method, allowing you to *combine* store components.
+
+For example, you could combine two `<Model>` elements to create a `<RegistrationFormModel>` component:
 
 ```js
-const EmailModel = (props) =>
-  <Model
-    defaultValue={props.defaultValue}
-    validate={(value) =>
-      (!value || value.indexOf('@') === -1)
-        ? ['Please enter an e-mail address']
-        : (props.validate && props.validate())
-    }
-  />
-```
-
-
-
-A simple store component
--------------------------
-
-If you've used React, Govern's renderless components will feel familiar. They have lifecycle methods, a constructor that receives `props`, and can call `this.setState()`.
-
-store components have two main differences from React components:
-
-- They don't output React elements. Instead of an `render()` method, they have a `publish()` method that returns a plain JavaScript object.
-- Handler methods with side effects should be wrapped with `this.transaction(() => { ... })`.
-
-For example, here is a store component that could be used to manage a single input's state:
-
-```js
-import Govern from 'govern'
-
-class Model extends Govern.Component {
-  // Govern compoents can have default props, just like React components.
+class RegistrationFormModel extends Govern.Component {
   static defaultProps = {
-    defaultValue: ''
+    defaultValue: { name: '', email: '' }
   }
 
-  constructor(props) {
-    super(props)
+  subscribe() {
+    let defaultValue = this.props.defaultValue
 
-    // Set the initial value of the form field
-    this.state = {
-      value: props.defaultValue,
+    return {
+      name: <Model defaultValue={defaultValue.name} validate={validateNotEmpty} />,
+      email: <Model defaultValue={defaultValue.email} validate={validateEmail} />,
     }
-  }
-
-  change = (newValue) => {
-    this.setState({
-      value: newValue,
-    })
   }
 
   publish() {
-    // store components output plain old JavaScript objects and arrays.
-    return {
-      change: this.change,
-      value: this.state.value,
-      error: !this.props.validate || this.props.validate(this.state.value)
-    }
+    return this.subs
+  }
+}
+
+function validateNotEmpty(value) {
+  if (!value) {
+    return "please enter your name"
   }
 }
 ```
 
-Govern also supports stateless function components. For example, this component builds on the above Model component to add e-mail specific validation:
+You can then subscribe to the form model with `<Subscribe to>`, just as before.
+
+One of the benefits of using the same `<Model>` component for every field is that it makes creating reusable form controls simpler. For example, you could create a `<Field>` React component to render your field models. [See it live at CodeSandbox](https://codesandbox.io/s/vv09or2853).
 
 ```js
-const EmailModel = (props) =>
-  Govern.createElement(Model, {
-    defaultValue: props.defaultValue,
-    validate: (value) =>
-      (!value || value.indexOf('@') === -1)
-        ? ['Please enter an e-mail address']
-        : (props.validate && props.validate())
-  })
-```
+class Field extends React.Component {
+  render() {
+    return (
+      <label style={{display: 'block'}}>
+        <span>{this.props.label}</span>
+        <input
+          value={this.props.model.value}
+          onChange={this.handleChange}
+        />
+        {
+          this.props.model.error &&
+          <p style={{color: 'red'}}>{this.props.model.error}</p>
+        }
+      </label>
+    )
+  }
 
+  handleChange = (e) => {
+    this.props.model.change(e.target.value)
+  }
+}
 
-Using store components
------------------------
-
-### subscribe(mapOwnPropsToGovernElement, mapOutputToProps)
-
-Once you have a store component, you can instantiate it and attach its output to a React component with the `subscribe` decorator function. Or, you can manually instantiate elements:
-
-### `instantiate(element: GovernElement): Store`
-
-This function instantiates the argument element, and returns a `Store` object, which allows you to subscribe to the output, or make changes to the props.
-
-The equivalent in the React world is `ReactDOM.render`; the main difference being that in the React world, the component output is written directly to the DOM, while with Govern, you'll need to consume the output yourself.
-
-```
-instantiate: (element: GovernElement) => Store
-```
-
-For example, if you wanted to create an instance of the above EmailModel component, you would do the following:
-
-```js
-import { createElement, instantiate } from 'govern'
-
-let emailModel = instantiate(
-  createElement(EmailModel, { defaultValue: 'test@example.com' })
+ReactDOM.render(
+  <Subscribe to={<RegistrationFormModel />}>
+    {model =>
+      <div>
+        <Field label='Name' model={model.name} />
+        <Field label='E-mail' model={model.email} />
+      </div>
+    }
+  </Subscribe>,
+  document.getElementById('root')
 )
 ```
 
-You can an observable's latest published value by calling `getValue()`:
+
+### Stateless functional components
+
+You'll sometimes find yourself creating components that just `subscribe` to a few elements, and then re-publish the outputs without any changes. Govern provides a shortcut for defining this type of component: just return the elements you want to subscribe to from a plain function -- like React's stateless functional components.
+
+For example, you could convert the above `<RegistrationFormModel>` component to a stateless functional component. [See it live at CodeSandbox](https://codesandbox.io/s/pyr7y18xq).
 
 ```js
-emailModel.getValue() // test@example.com
+const RegistrationFormModel = ({ defaultValue }) => ({
+  name: <Model defaultValue={defaultValue.name} validate={validateNotEmpty} />,
+  email: <Model defaultValue={defaultValue.email} validate={validateEmail} />
+});
+
+RegistrationFormModel.defaultProps = {
+  defaultValue: { name: '', email: '' } 
+}
 ```
 
-The returned Store objects also follow the proposed [ESNext Observables](https://github.com/tc39/proposal-observable) format, so subscribing to them is simple:
+
+### Submitting forms
+
+Once you have some data in your form, submitting it is easy -- you just publish a `submit` handler along with the form data. Everything you know about handling HTTP requests in React components transfers over to Govern components.
+
+But Govern gives you an advantage over plain old React -- your requests can be components too!
+
+For example, this component takes the request body as props, makes a request in the `componentDidInstantiate` lifecyle method, and emits the request status via the `publish` method.
 
 ```js
-// Note that store components receive a `dispatch` function in addition to
-// the standard `value` object. Use `dispatch` when you want to make changes
-// to the store's state.
-emailModel.subscribe((value, dispatch) => {
-  console.log('component published:', value)
-})
+import * as axios from "axios";
+
+class PostRegistrationRequest extends Govern.Component {
+  state = {
+    status: 'fetching',
+  }
+
+  publish() {
+    return this.state
+  }
+
+  componentDidInstantiate() {
+    axios.post('/user', this.props.data)
+      .then(response => {
+        if (!this.isDisposed) {
+          this.setState({
+            status: 'success',
+            result: response.data,
+          })
+        }
+      })
+      .catch((error = {}) => {
+        if (!this.isDisposed) {
+          this.setState({
+            status: 'error',
+            message: error.message || "Unknown Error",
+          })
+        }
+      });
+  }
+
+  componentWillBeDisposed() {
+    this.isDisposed = true
+  }
+}
 ```
 
-### `<Subscribe to={store} children={(value, dispatch) => ReactNode} />`
+You can then make a request by subscribing to a new `<PostRegistrationRequest>` element. [See it live at CodeSandbox](https://codesandbox.io/s/8zxv9kq9vl).
 
-Once you have a Store object, you can use the `<Subscribe>` component to access its output in a React component. Internally, this uses the store's `subscribe` method to request notification of any changes to its output. It then feeds each new output to the render function passed via the `children` prop.
+```js
+class RegistrationFormController extends Govern.Component {
+  state = {
+    request: null
+  };
 
+  subscribe() {
+    return {
+      model: <RegistrationFormModel />,
+      request: this.state.request
+    };
+  }
 
-Composing components
---------------------
+  publish() {
+    return {
+      ...this.subs,
+      canSubmit: this.canSubmit(),
+      submit: this.submit
+    };
+  }
 
-The best part about having state in components, is that you can *compose* those components to make bigger components.
+  canSubmit() {
+    return (
+      !this.subs.model.email.error &&
+      !this.subs.model.name.error &&
+      (!this.subs.request || this.subs.request.status === "error")
+    );
+  }
 
+  submit = e => {
+    e.preventDefault();
 
-### Objects
+    if (this.canSubmit()) {
+      let data = {
+        email: this.subs.model.email.value,
+        name: this.subs.model.name.value
+      };
 
-When you have multiple independent components that share the same inputs, you can use an object to indicate that you'd like a new component that nests the output of each child component.
-
-For example, you could create a LoginFormModel component that contains the state for an entire login form.
-
-```jsx
-const LoginFormModel = ({ defaultValue }) =>
-  ({
-    email:
-      <EmailModel defaultValue={props.defaultValue.email} />,
-    password:
-      <Model
-        defaultValue=''
-        validate={(value) => !value && ["Please enter your password"]}
-      />,
-  })
-
-LoginFormModel.defaultProps = {
-  defaultValue: {},
+      this.setState({
+        request: (
+          <PostRegistrationRequest data={data} key={new Date().getTime()} />
+        )
+      });
+    }
+  };
 }
 
-let store = instantiate(createElement(LoginFormModel))
+ReactDOM.render(
+  <Subscribe to={<RegistrationFormController />}>
+    {({ canSubmit, model, request, submit }) => (
+      <form onSubmit={submit}>
+        {request &&
+          request.status === "error" && (
+            <p style={{ color: "red" }}>{request.message}</p>
+          )}
+        <Field label="Name" model={model.name} />
+        <Field label="E-mail" model={model.email} />
+        <button type="submit" disabled={!canSubmit}>
+          Register
+        </button>
+      </form>
+    )}
+  </Subscribe>,
+  document.getElementById("root")
+);
 ```
 
+Note how the `key` prop is used in the above example; just like React, changing `key` will result in a new component instance being created, and thus a new request being made each time the user clicks "save".
 
-### <map from={GovernElement | Store} to={mapOutputToValue} />
+While request components can take a little getting used to, they have the benefit of being able to publish multiple statuses over time -- where promises can only publish one. For example, you could publish *disconnected* or *unauthenticated* states, along with a `retry` action that attempts to fix them.
 
-The built-in `map` element allows you to extract values from within an element.
+Request components also make it easy to share communication logic within and between applications. For an example, see [this gist](https://gist.github.com/jamesknelson/ab93890eb26f2841a2f8846d4013b151) of an axios-based `<Request>` component.
 
-For example, you can use this to select part of the output:
+
+### Performance note: selecting data
+
+Govern's `<Subscribe>` component needs to call its render prop each time that *any* part of its output changse. This is great for small components, but as the output gets larger and more complicated, the number of re-renders will also grow -- and a perceivable delay can creep into user interactions.
+
+Where possible, you should stick to `<Subscribe>`. But in the rare case that there is noticeable lag, you can use Govern's `<Store of>` component to instantiate a *Store* object, which allows you to manually manage subscriptions.
+
+Once you have a store object, there are two ways you can use it:
+
+- You can access the latest output with its `getValue()` method.
+- You can return the store from a component's `subscribe` method, and then republish the individual parts that you want.
+
+For example, here's how the above example would look with a `<Store of>` component. Note that this adds a fair amount of complexity -- try to stick to `<Subscribe to>` unless performance becomes an issue. [See it live at CodeSandbox](https://codesandbox.io/s/616xxyppyz).
 
 ```js
-createElement('map', {
-  from: createElement(Model, { defaultValue: 1 }),
-  to: (output) => output.value
-})
+class MapDistinct extends Govern.Component {
+  subscribe() {
+    return this.props.from
+  }
+  shouldComponentUpdate(nextProps, nextState, nextSubs) {
+    return nextProps.to(nextSubs) !== this.props.to(this.subs)
+  }
+  publish() {
+    return this.props.to(this.subs)
+  }
+}
+
+const Field = ({ model, label }) => (
+  <Subscribe to={model}>
+    {model => (
+      <label style={{ display: "block" }}>
+        <span>{label}</span>
+        <input
+          value={model.value}
+          onChange={e => model.change(e.target.value)}
+        />
+        {model.error && <p style={{ color: "red" }}>{model.error}</p>}
+      </label>
+    )}
+  </Subscribe>
+);
+
+ReactDOM.render(
+  <Store of={<RegistrationFormController />}>
+    {store => (
+      <form onSubmit={store.getValue().submit}>
+        <Subscribe
+          to={<MapDistinct from={store} to={output => output.request} />}
+        >
+          {request =>
+            request && request.status === "error" ? (
+              <p style={{ color: "red" }}>{request.message}</p>
+            ) : null
+          }
+        </Subscribe>
+        <Field
+          label="Name"
+          model={<MapDistinct from={store} to={output => output.model.name} />}
+        />
+        <Field
+          label="E-mail"
+          model={<MapDistinct from={store} to={output => output.model.email} />}
+        />
+        <Subscribe
+          to={<MapDistinct from={store} to={output => output.canSubmit} />}
+        >
+          {canSubmit => (
+            <button type="submit" disabled={!canSubmit}>
+              Register
+            </button>
+          )}
+        </Subscribe>
+      </form>
+    )}
+  </Store>,
+  document.getElementById("root")
+);
+```
+
+Note how the above example only uses `getValue()` to access the `submit` action. This is ok, because we know that `submit` won't change, and thus we don't need to subscribe to future values.
+
+Also note how the selector component defines a `shouldComponentUpdate` method. If this *wasn't* defined, then each update to the `from` store would cause a new publish -- even if the published value didn't change! Defining `shouldComponentUpdate` gives you control over exactly which changes cause a publish.
+
+
+### Built-in components
+
+Govern has a number of built-in elements to help you reduce boilerplate and accomplish common tasks. These are particularly useful for creating selector components.
+
+The three built-ins that you'll use most often are:
+
+1. `<map from={Store | Element} to={output => mappedOutput} />`
+
+Maps the output of `from`, using the function passed to `to`. Each publish on the `from` store will result in a new publish.
+
+2. `<flatMap from={Store | Element} to={output => mappedElement} />`
+
+Maps the output of `from`, using the output of whatever element is returned by `to`. Each published of the *mapped* element results in a new publish.
+
+3. `<distinct by?={(x, y) => boolean} children>`
+
+Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using reference equality, but you can supply a custom comparison function via the `by` prop.
+
+---
+
+For example, you could use the `<flatMap>` and `<distinct>` built-ins to rewrite the `<MapDistinct>` component from the previous example as a stateless functional component. [See it live at CodeSandbox](https://codesandbox.io/s/0ozlm2lxjl).
+
+```js
+const MapDistinct = props => (
+  <distinct>
+    <map from={props.from} to={props.to} />
+  </distinct>
+);
 ```
 
 
-### <flatMap from={GovernElement | Store} to={mapOutputToElement} />
+Two out of Three types of state
+-------------------------------
 
-The built-in `flatMap` element allows you to use the output of one component to compute the props of another element.
+React application state can be split into roughly three categories:
+
+-   Environment state
+
+    State that is global to your entire application. For example:
+
+    * Navigation state
+    * Communication state
+    * Authentication state
+    * Cached data
+
+    *Govern is great at handling environment state -- just create a store at the root of your application, and pass it to your screen controllers via React props.*
+
+-   Control state
+
+    State that represents that current view, and any actions that have been initialized from it. For example:
+
+    * Form state
+    * Errors form requests
+    * Selected list items
+
+    *Govern is great at handling control state. Just follow the guide above.*
+
+-   View state
+
+    State that represents the view, but does not affect the environment or control state. For example, animations and transitions.
+
+    *Govern is **not** meant to handle view state. Instead use React component state.*
 
 
-Component Lifecycle
--------------------
+API Documentation
+-----------------
+
+### Component Classes
+
+
+- not sure what example to use
+- note that any changes caused by componentDidUpdate will be executed *before*
+  changes are flushed to react, ensuring that you don't get multiple renders.
+  (don't mention componentDidFlush... it can stay in the API docs, and will
+  confuse people otherwise.)
+
+#### `this.subs`
+
+A property that contains the last output of the component connected via `subscribe`.
+
+This is similar in purpose to React's `refs` property. You can use it to interact with child components when required, but it is generally cleaner to avoid this if possible.
+
+#### `this.setState(changes)`
+
+Usage is identical to React's `setState`.
+
+#### `this.dispatch(Function)`
+
+If you need to make calls to `setState` outside of lifecycle methods or
+React components, you'll need to wrap these calls in a `dispatch` call.
+
+For example, you'll need to use this when handling the response of a HTTP
+Request.
+
+
+### Component Lifecycle
 
 As store components are not mounted/unmounted from the DOM, their lifecycle is a little different from the React component lifecycle.
 
-### `constructor(props)`
+#### `constructor(props)`
 
 The constructor is called when a Controller isntance is instantiated.
 
@@ -372,40 +523,55 @@ Perform any initialization here, including:
 
 *Note that store components do **not** receive `context`, so you'll need to pass any required data in via props.*
 
-### `componentWasInstantiated()`
+#### `componentDidInstantiate()`
 
 Similar to `componentDidMount`, this component will be called once the initial output is available.
 
-### `componentWillReceiveProps(nextProps)`
+#### `UNSAFE_componentWillReceiveProps(nextProps)`
 
 This is identical to the React lifecycle method.
 
-### `componentDidUpdate(nextProps, nextState, nextChild)`
+#### `componentDidUpdate(nextProps, nextState, nextChild)`
 
 Similar to React's `componentDidUpdate`.
 
-### `componentWillBeDisposed()`
+#### `componentWillBeDisposed()`
 
 Called when a component will be be destroyed. Use this in the same way that you'd use React's `componentWillUnmount()` lifecycle method.
 
 
-Component Instance API
-----------------------
+### Stateless function components
 
-### `this.subs`
+- a little different to React, as they need to handle publish *and* subscribe instead of just render
+- the function is treated as a `subscribe` function, and all suscriptions are published.
 
-A property that contains the last output of the component connected via `subscribe`.
 
-This is similar in purpose to React's `refs` property. You can use it to interact with child components when required, but it is generally cleaner to avoid this if possible.
+### Built-in Govern components
 
-### `this.setState(changes)`
+#### <map from={Store | Element} to={output => mappedOutput} />
 
-Usage is identical to React's `setState`.
+Maps the output of `from`, using the function passed to `to`. Each publish on the `from` store will result in a new publish.
 
-### `this.dispatch(Function)`
+#### <flatMap from={Store | Element} to={output => mappedElement} />
 
-If you need to make calls to `setState` outside of lifecycle methods or
-React components, you'll need to wrap these calls in a `dispatch` call.
+Maps the output of `from`, using the output of whatever element is returned by `to`. Each published of the *mapped* element results in a new publish.
 
-For example, you'll need to use this when handling the response of a HTTP
-Request.
+#### <distinct by?={(x, y) => boolean} children>
+
+Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using reference equality, but you can supply a custom comparison function via the `by` prop.
+
+
+### React components
+
+#### <Store of={GovernElement} children={store => ReactElement}>
+
+Instantiates 
+
+#### <Subscribe to={GovernElement | Store} children={output => ReactElement}>
+
+
+### `Store` objects
+
+#### `getValue()`
+
+#### `subscribe()`
