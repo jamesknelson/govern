@@ -118,7 +118,7 @@ These three things will get you a long way. But there's one more tool that will 
 
 Govern components have one special method that doesn't exist on React components -- `subscribe`.
 
-When a component's `subscribe` method returns an object of Govern elements, the component will subscribe to those element, and place the latest values on `this.subs`. You can then use the value of `this.subs` within the `publish` method, allowing you to *combine* store components.
+When a component's `subscribe` method returns some Govern elements, the component will subscribe to those elements, placing their latest published values on `this.subs`. You can then use the value of `this.subs` within the component's `publish` method, allowing you to *combine* store components.
 
 For example, you could combine two `<Model>` elements to create a `<RegistrationFormModel>` component:
 
