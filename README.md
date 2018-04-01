@@ -458,7 +458,7 @@ React application state can be split into roughly three categories:
     * Authentication state
     * Cached data
 
-    *Govern is great at handling environment state -- just create a store at the root of your application, and pass it to your screen controllers via React props.*
+    *Govern is great at handling environment state -- but it can also integrate with your existing Redux or MobX-based store.*
 
 -   Control state
 
@@ -474,7 +474,7 @@ React application state can be split into roughly three categories:
 
     State that represents the view, but does not affect the environment or control state. For example, animations and transitions.
 
-    *Govern is **not** meant to handle view state. Instead use React component state.*
+    *Govern is **not** meant to handle view state. Use React component state instead.*
 
 
 API Documentation
@@ -482,12 +482,11 @@ API Documentation
 
 ### Component Classes
 
+Components are defined as JavaScript classes that extend from `Govern.Component`.
 
-- not sure what example to use
-- note that any changes caused by componentDidUpdate will be executed *before*
-  changes are flushed to react, ensuring that you don't get multiple renders.
-  (don't mention componentDidFlush... it can stay in the API docs, and will
-  confuse people otherwise.)
+#### `this.props`
+
+#### `this.state`
 
 #### `this.subs`
 
@@ -508,70 +507,256 @@ For example, you'll need to use this when handling the response of a HTTP
 Request.
 
 
-### Component Lifecycle
+### Govern.Component
 
-As store components are not mounted/unmounted from the DOM, their lifecycle is a little different from the React component lifecycle.
+Govern components are JavaScript classes that extend `Govern.Component`, and contain a `publish()` method.
 
-#### `constructor(props)`
+If you've used React, the component API will be familiar. However, there are a couple differences:
 
-The constructor is called when a Controller isntance is instantiated.
+- Govern components output plain JavaScript objects instead of DOM elements
+- Govern components can declare subscriptions to other elements and stores
 
-Perform any initialization here, including:
+As a component author, the most obvious difference is that you'll define a `publish()` method in place of `render()`.
 
-- setting an initial value of `this.state`
-- addings event handlers to stores, etc.
+Govern also gives you the `subscribe()` method, and `subs` instance property, which combine to allow you to declare subscriptions to elements and stores.
 
-*Note that store components do **not** receive `context`, so you'll need to pass any required data in via props.*
+##### Publishing and subscribing
 
-#### `componentDidInstantiate()`
+- `publish()`
+- `subscribe()`
+- `subs`
 
-Similar to `componentDidMount`, this component will be called once the initial output is available.
+##### Shared methods
 
-#### `UNSAFE_componentWillReceiveProps(nextProps)`
+- `constructor()`
+- `static getDerivedStateFromProps()`
+- `UNSAFE_componentWillReceiveProps()`
+- `componentDidInstantiate()` (see React's `componentDidMount()`)
+- `componentDidUpdate()`
+- `componentWillBeDisposed()` (see React's `componentWillUnmount()`)
+- `setState()`
 
-This is identical to the React lifecycle method.
+##### Miscelaneous methods
 
-#### `componentDidUpdate(nextProps, nextState, nextChild)`
+- `dispatch()`
 
-Similar to React's `componentDidUpdate`.
+##### Shared instance properties
 
-#### `componentWillBeDisposed()`
+- `props`
+- `state`
 
-Called when a component will be be destroyed. Use this in the same way that you'd use React's `componentWillUnmount()` lifecycle method.
+##### Shared class properties
+
+- `defaultProps`
+
+---
+
+#### Component Lifecycle
+
+##### `constructor()`
+
+```js
+constructor(props)
+```
+
+Identical to React's component [constructor](https://reactjs.org/docs/react-component.html#constructor), a Govern component's constructor can be used to bind event handlers, set initial state, etc.
+
+##### `static getDerivedStateFromProps()`
+
+```js
+static getDerivedStateFromProps(nextProps, prevState)
+```
+
+Identical to React's [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops), this can be used to compute state from props.
+
+##### `componentDidInstantiate()`
+
+```js
+componentDidInstantiate()
+```
+
+Similar to React's [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount), this component will be called once the initial output is available.
+
+Note that this will be called *before* the initial value of the component is flushed to any listening `<Subscribe>` components.
+
+Any Govern state changes caused by this method will be executed before changes are flushed to React.
+
+##### `UNSAFE_componentWillReceiveProps()`
+
+```js
+UNSAFE_componentWillReceiveProps(nextProps)
+```
+
+Identical to React's [UNSAFE_componentWillReceiveProps](https://reactjs.org/docs/react-component.html#unsafe_componentwillreceiveprops).
+
+Where possible, avoid this in favor of `static getDerivedStateFromProps`.
+
+##### `shouldComponentUpdate()`
+
+```js
+shouldComponentUpdate(nextProps, nextState, nextSubs)
+```
+
+Similar to React's [shouldComponentUpdate](https://reactjs.org/docs/react-component.html#shouldcomponentupdate), but receives a third argument with the latest values of the component's subscriptions.
+
+When defined, returning a falsy value will prevent `publish` from being called, and prevent any changes from being published to subscribers.
+
+##### `componentDidUpdate()`
+
+```js
+componentDidUpdate(prevProps, prevState, prevSubs)
+```
+
+Similar to React's [componentDidUpdate](https://reactjs.org/docs/react-component.html#componentdidupdate), but receives a third argument with the previous values of the component's subscriptions.
+
+Any Govern state changes caused by this method will be executed before changes are flushed to React.
+
+##### `componentWillBeDisposed()`
+
+```js
+componentWillBeDisposed()
+```
+
+Similar to React's [componentWillUnmount](https://reactjs.org/docs/react-component.html#componentwillunmount) lifecycle method, this component will be called before a component is scheduled to be disposed.
+
+##### `setState()`
+
+```js
+setState(updater[, callback])
+```
+
+Identical to React's [setState](https://reactjs.org/docs/react-component.html#setstate).
+
+##### `dispatch()`
+
+```js
+dispatch(actionFunction)
+```
+
+The dispatch method allows you to ensure that a group of changes only result in a single flush to your React app via `<Subscribe>` components.
+
+This method is never required, but can be used to improve performance when making multiple changes in response to a single event.
 
 
-### Stateless function components
+#### Instance properties
 
-- a little different to React, as they need to handle publish *and* subscribe instead of just render
-- the function is treated as a `subscribe` function, and all suscriptions are published.
+##### `props`
+
+Identical to React's [`props`](https://reactjs.org/docs/react-component.html#props).
+
+##### `state`
+
+Identical to React's [`state`](https://reactjs.org/docs/react-component.html#state).
+
+##### `subs`
+
+This property holds the latest output of any elements or stores that have been returned from your `subscribe()` method.
+
+
+#### Class properties
+
+##### `defaultProps`
+
+Identical to React's [`defaultProps`](https://reactjs.org/docs/react-component.html#defaultprops).
+
+
+### Stateless functional components
+
+Govern's stateless functional components are a little different to React's. While React can treat function components as `render()` methods, a Govern stateless Govern component with just a `publish()` wouldn't be very useful at all.
+
+As such, Govern treats function components as the `subscribe()` method of a class component, and publishes `this.subs` as its output.
+
+For example, if you have a stateless functional component `sfc(props)`, then it will map to the following class component:
+
+```js
+class SFC extends Govern.Component {
+  subscribe() {
+    return sfc(this.props)
+  }
+
+  publish() {
+    return this.subs
+  }
+}
+```
 
 
 ### Built-in Govern components
 
-#### <map from={Store | Element} to={output => mappedOutput} />
+Govern provides a number of useful primitives as built-in elements. Just like React, these can be created by passing a string as the first argument to `createElement()`.
+
+
+#### `<map>`
+
+```js
+<map from={Store | Element} to={output => mappedOutput} />
+```
 
 Maps the output of `from`, using the function passed to `to`. Each publish on the `from` store will result in a new publish.
 
-#### <flatMap from={Store | Element} to={output => mappedElement} />
+#### `<flatMap>`
+
+```js
+<flatMap from={Store | Element} to={output => mappedElement} />
+```
 
 Maps the output of `from`, using the output of whatever element is returned by `to`. Each published of the *mapped* element results in a new publish.
 
-#### <distinct by?={(x, y) => boolean} children>
+#### `<distinct>`
+
+```js
+<distinct by?={(x, y) => boolean} children={GovernElement | Store}>
+```
 
 Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using reference equality, but you can supply a custom comparison function via the `by` prop.
 
 
 ### React components
 
-#### <Store of={GovernElement} children={store => ReactElement}>
+The *react-govern* package exports two components for creating and subscribing to Govern stores/elements within React applications.
 
-Instantiates 
+#### `<Store>`
 
-#### <Subscribe to={GovernElement | Store} children={output => ReactElement}>
+```js
+<Store of={GovernElement} children={store => ReactElement} />
+```
+
+Instantiates the given Govern element as a `Store` object, and passes this object to the render function specified on `children`.
+
+When the element passed to `of` changes, Govern will compare it against the previous element. If the element type and `key` prop match, Govern will update the props on the existing component instance. Otherwise, it will dispose the existing component instance and create a new one.
+
+Unlike `<Subscribe>`, the render function will not be called when the store publishes new values. It will only be called when a new store is created, or when the `<Subscribe>` component itself is re-rendered.
+
+
+#### `<Subscribe>`
+
+```js
+<Subscribe to={GovernElement | Store} children={output => ReactElement} />
+```
+
+Instantiates a store for the given Govern Element (if necessary), and subscribes to it -- passing each value to the `children` render function.
+
+Uses the same strategy as `<Store>` for reconciling the element passed to `to`.
 
 
 ### `Store` objects
 
 #### `getValue()`
 
+```
+getValue()
+```
+
+Return the store's current output.
+
 #### `subscribe()`
+
+```
+subscribe(onNext, onError, onComplete, onStartDispatch, onEndDispatch, priority)
+```
+
+Creates a new subscription to the store.
+
+This method is compatible with the [ESNext Observable proposal](https://github.com/tc39/proposal-observable), and thus can be used with RxJS, etc.
+
+In general, you should avoid manually creating subscriptions in favor of using the `<Subscribe to>` component from the *react-govern* package.
