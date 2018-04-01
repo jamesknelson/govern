@@ -19,7 +19,7 @@ And if you know React, then you already know most of Govern's API, so you'll be 
 Simple, Sensible Forms: a short guide.
 --------------------------------------
 
-Creating forms with React is usually a little awkward. Govern makes it easy and fun. It lets you break your state into small components, and then reuse them -- as God and [Douglas McIlroy](https://en.wikiquote.org/wiki/Doug_McIlroy) intended.
+Creating forms with React is usually a little awkward. Govern makes it easy and fun. It lets you break your state into small components, and then reuse them -- as God and Douglas McIlroy intended.
 
 
 ### Defining store components
