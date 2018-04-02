@@ -5,9 +5,9 @@ A component-based state management library for React.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
-1. [Read the introduction &raquo;]()
+1. [Read the introduction &raquo;](http://jamesknelson.com/component-based-state-management-react/)
 
-2. [Follow the guide &raquo;]()
+2. [Follow the guide &raquo;](http://jamesknelson.com/sensible-react-forms-with-govern/)
 
 3. [Try it at CodeSandbox &raquo;](https://codesandbox.io/s/0ozlm2lxjl)
 
