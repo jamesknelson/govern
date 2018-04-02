@@ -5,6 +5,8 @@ A state management library for people who enjoy React.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
+[Try it at CodeSandbox &raquo;](https://codesandbox.io/s/0ozlm2lxjl)
+
 ---
 
 Managing state in React apps can be daunting. Govern makes it staightforward. It lets you get more done with the APIs you already know, and untangles your business logic in the same way that React untangled your view.
@@ -15,6 +17,13 @@ Store components can handle state, actions, side effects, and selectors. This me
 
 And if you know React, then you already know most of Govern's API, so you'll be productive in no time.
 
+```bash
+# Install with NPM
+npm install --save govern react-govern
+
+# Install with Yarn
+yarn add govern react-govern
+```
 
 Simple, Sensible Forms: a short guide.
 --------------------------------------
@@ -499,7 +508,7 @@ Govern also gives you the `subscribe()` method, and `subs` instance property, wh
 - `subscribe()`
 - `subs`
 
-##### Shared methods
+##### Methods shared with React
 
 - `constructor()`
 - `static getDerivedStateFromProps()`
@@ -513,12 +522,12 @@ Govern also gives you the `subscribe()` method, and `subs` instance property, wh
 
 - `dispatch()`
 
-##### Shared instance properties
+##### Instance properties shared with React
 
 - `props`
 - `state`
 
-##### Shared class properties
+##### Class properties shared with React
 
 - `defaultProps`
 
