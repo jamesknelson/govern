@@ -1,11 +1,15 @@
 Govern
 ======
 
-A state management library for people who enjoy React.
+A component-based state management library for React.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
-[Try it at CodeSandbox &raquo;](https://codesandbox.io/s/8zxv9kq9vl)
+1. [Read the introduction &raquo;]()
+
+2. [Follow the guide &raquo;]()
+
+3. [Try it at CodeSandbox &raquo;](https://codesandbox.io/s/0ozlm2lxjl)
 
 ---
 
