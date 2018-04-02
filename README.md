@@ -5,7 +5,7 @@ A state management library for people who enjoy React.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
-[Try it at CodeSandbox &raquo;](https://codesandbox.io/s/0ozlm2lxjl)
+[Try it at CodeSandbox &raquo;](https://codesandbox.io/s/8zxv9kq9vl)
 
 ---
 
