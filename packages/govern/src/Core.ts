@@ -16,6 +16,10 @@ export type Value<X extends Subscribable<any>> =
     X extends GovernElement<infer T> ? T :
     never
 
+export type ValueOf<X extends ComponentType<any, any>> =
+    X extends ComponentType<infer T, any> ? T : never
+
+
 type ComponentClass<Value> =
     (new (props: any) => {
         publish(): Value;

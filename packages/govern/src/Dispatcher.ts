@@ -223,51 +223,53 @@ export class Dispatcher {
             emitters[i].startDispatch()
         }
 
-        this.processActionQueue()
-        
-        let priority: string
-        this.priorityQueue = Object.keys(this.priorityCounts).sort()
-        let allowableFlushLoops = this.flushQueue.size + 10
-        while (this.flushQueue.size > 0) {
-            if (--allowableFlushLoops < 0) {
-                debugger
+        while (this.actionQueue.length) {
+            this.processActionQueue()
+            
+            let priority: string
+            this.priorityQueue = Object.keys(this.priorityCounts).sort()
+            let allowableFlushLoops = this.flushQueue.size + 10
+            while (this.flushQueue.size > 0) {
+                if (--allowableFlushLoops < 0) {
+                    debugger
 
-                if (allowableFlushLoops < -5) {
-                    throw new Error('Too many flush loops')
-                }
-            }
-
-            let allowablePriorityLoops = this.priorityQueue.length + 10
-            while (priority = this.priorityQueue.shift()!) {
-                if (--allowablePriorityLoops < 0) {
-                    throw new Error('Too many priority loops')
-                }
-
-                // Create a list of flushes ahead of time, in case any of the
-                // flushes results in this dispatcher being merged into a
-                // parent.
-                let emitters = Array.from(this.priorityCounts[priority].keys())
-                let emittersToFlush = [] as DispatcherEmitter[]
-                for (let i = 0; i < emitters.length; i++) {
-                    let emitter = emitters[i]
-                    if (this.flushQueue.delete(emitter)) {
-                        emittersToFlush.push(emitter)
+                    if (allowableFlushLoops < -5) {
+                        throw new Error('Too many flush loops')
                     }
                 }
 
-                // Flush all targets with this priority.
-                this.isFlushing = true
-                for (let i = 0; i < emittersToFlush.length; i++) {
-                    emittersToFlush[i].flush(priority)
+                let allowablePriorityLoops = this.priorityQueue.length + 10
+                while (priority = this.priorityQueue.shift()!) {
+                    if (--allowablePriorityLoops < 0) {
+                        throw new Error('Too many priority loops')
+                    }
+
+                    // Create a list of flushes ahead of time, in case any of the
+                    // flushes results in this dispatcher being merged into a
+                    // parent.
+                    let emitters = Array.from(this.priorityCounts[priority].keys())
+                    let emittersToFlush = [] as DispatcherEmitter[]
+                    for (let i = 0; i < emitters.length; i++) {
+                        let emitter = emitters[i]
+                        if (this.flushQueue.delete(emitter)) {
+                            emittersToFlush.push(emitter)
+                        }
+                    }
+
+                    // Flush all targets with this priority.
+                    this.isFlushing = true
+                    for (let i = 0; i < emittersToFlush.length; i++) {
+                        emittersToFlush[i].flush(priority)
+                    }
+                    this.isFlushing = false
+
+                    // If the flush has caused any actions to be queued, process them
+                    // before continuing to the next flush priority.
+                    this.processActionQueue()
                 }
-                this.isFlushing = false
 
-                // If the flush has caused any actions to be queued, process them
-                // before continuing to the next flush priority.
-                this.processActionQueue()
+                this.processPostQueue()
             }
-
-            this.processPostQueue()
         }
 
         // If this dispatcher has been merged into a parent, then the parent

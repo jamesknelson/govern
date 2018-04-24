@@ -108,11 +108,6 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
      * Create a fixed set of props/state/subs that can be used
      * within one method of a component instance.
      */
-    fix(wrappedFn: Function) {
-        this.pushFix()
-        wrappedFn()
-        this.popFix()
-    }
     getFix() {
         return this.fixed[0] || { props: this.props, state: this.state, subs: this.subs }
     }

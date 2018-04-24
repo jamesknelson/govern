@@ -3,3 +3,4 @@ node_modules
 site/build
 *.log
 NOTES.md
+notes
