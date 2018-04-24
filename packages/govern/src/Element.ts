@@ -207,10 +207,14 @@ export function convertToElement(value): GovernElement<any, any> {
         }
     }
     else if (Array.isArray(value)) {
-        return createElement('combineArray', { children: value })
+        // Create a clone, in case the array is mutatively modified,
+        // as adding children by mutation will break things.
+        return createElement('combineArray', { children: value.slice(0) })
     }
     else if (isPlainObject(value)) {
-        return createElement('combine', { children: value })
+        // Create a clone, in case the object is mutatively modified,
+        // as adding children by mutation will break things.
+        return createElement('combine', { children: { ...value } })
     }
     else {
         return createElement('constant', { of: value })
