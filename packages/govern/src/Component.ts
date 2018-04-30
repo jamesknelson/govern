@@ -59,6 +59,10 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         if (!this.impl.emitter) {
             throw new Error(`You cannot call "setState" within a component's constructor. Instead, set the "state" property directly. See component "${getDisplayName(this.constructor)}".`)
         }
+        if (this.impl.isDisposed) {
+            console.error(`You cannot call "setState" on a component that has already been disposed. Treating as a noop.`)
+            return
+        }
 
         let updater = state as ((prevState: Readonly<State>, props: Props) => any)
         if (typeof state !== 'function') {

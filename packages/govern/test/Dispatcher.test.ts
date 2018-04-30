@@ -31,7 +31,7 @@ describe('Dipatcher', () => {
       }
 
 			subscribe() {
-			  return this.state.child
+			  return this.state.child || null
       }
 
       publish() {

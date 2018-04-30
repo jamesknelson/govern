@@ -74,6 +74,8 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     // next flush.
     hasCalledComponentDidInstantiate: boolean = false
 
+    isDisposed: boolean = false
+
     // Keep track of whether we're in a componentWillReceiveProps lifecycle
     // method, so that we don't double connect/double publish.
     isReceivingProps: boolean = false
@@ -142,11 +144,12 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.lifecycle.componentWillBeDisposed()
             this.popFix()
         }
+        
 
         this.children.clear()
         delete this.state
         delete this.subs
-
+        this.isDisposed = true
         this.emitter.complete()
     }
 
