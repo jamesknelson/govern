@@ -436,7 +436,29 @@ describe('Component', () => {
     })
   })
 
-  it("supports getDerivedStateFromProps", () => {
+  it("calls getDerivedStateFromProps on instantiation", () => {
+    class TestComponent extends Component<{ hello }, any> {
+      state = {} as any
+
+      static getDerivedStateFromProps(props: { hello }, prevState) {
+        return props.hello ? { hello: 'world' } : {}
+      }
+
+      publish() {
+        return this.state.hello
+      }
+    }
+
+    let store = instantiate(createElement(TestComponent, { hello: 'derive' }))
+    let harness = createTestHarness(store)
+    expect(harness.value).toBe('world')
+
+    return new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+
+  it("calls getDerivedStateFromProps on update", () => {
     class TestComponent extends Component<{ updated }, any> {
       state = {} as any
 

@@ -420,6 +420,10 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         // argument, in case a new dispatcher was assigned during `connect`.
         this.emitter = initialDispatcher.createEmitter(this)
 
+        if (this.lifecycle.constructor.getDerivedStateFromProps) {
+            this.state = Object.assign({}, this.state, this.lifecycle.constructor.getDerivedStateFromProps(this.props, this.state))
+        }
+
         // Props and any state were set in the constructor, so we can jump
         // directly to `connect`.
         this.connect()
