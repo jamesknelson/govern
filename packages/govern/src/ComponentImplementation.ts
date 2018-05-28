@@ -75,6 +75,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     hasCalledComponentDidInstantiate: boolean = false
 
     isDisposed: boolean = false
+    isDisposing: boolean = false
 
     // Keep track of whether we're in a componentWillReceiveProps lifecycle
     // method, so that we don't double connect/double publish.
@@ -125,6 +126,8 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     dispose = () => {
+        this.isDisposing = true
+
         // The children will be disposed before the parent, so that
         // children can always assume that they can call callbacks on
         // the parent during disposal.
@@ -139,21 +142,31 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             }
         }
 
+        // Set this before `componentWillBeDisposed` to ensure `setState`
+        // can't be called within `componentWillBeDisposed`.
+        this.isDisposed = true
+
         if (this.lifecycle.componentWillBeDisposed) {
             this.pushFix()
             this.lifecycle.componentWillBeDisposed()
             this.popFix()
         }
         
-
         this.children.clear()
         delete this.state
         delete this.subs
-        this.isDisposed = true
         this.emitter.complete()
     }
 
     setProps = (props: Props): void => {
+        if (this.isDisposing) {
+            throw new Error(`setProps cannot be called on a component that has already been disposed.`)
+        }
+
+        if (!this.emitter.dispatcher) {
+            debugger
+        }
+
         if (!this.emitter.dispatcher.isDispatching) {
             throw new Error(`setProps cannot be called outside of a dispatch.`)
         }
@@ -194,7 +207,12 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         // If `setState` is called within `componentWillReceiveProps`, then
         // a `connect` and `publish` is already scheduled immediately
         // afterward, so we don't need to run them.
-        if (!this.isReceivingProps) {
+        //
+        // It's also possible for `setState` to be called while disposing
+        // children, but before our own `componentWillBeDisposed` has been
+        // called. In this case, we don't want to connect/publish, as some
+        // children may have already been removed.
+        if (!this.isReceivingProps && !this.isDisposing) {
             this.connect()
             this.publish()
         }
@@ -385,7 +403,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         this.setSubs(key, value)
 
         // We don't need to `publish` if there is already one scheduled.
-        if (!isExpectingChange && !this.isReceivingProps) {
+        if (!isExpectingChange && !this.isReceivingProps && !this.isDisposing) {
             this.publish()
         }
     }

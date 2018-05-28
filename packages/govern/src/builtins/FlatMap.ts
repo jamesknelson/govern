@@ -141,7 +141,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
     handleFromChange = (fromValue: FromValue) => {
         this.from.value = fromValue
 
-        if (this.impl.previousPublish && !this.impl.isReceivingProps) {
+        if (this.impl.previousPublish && !this.impl.isReceivingProps && !this.impl.isDisposing) {
             this.impl.connect()
             this.impl.publish()
         }

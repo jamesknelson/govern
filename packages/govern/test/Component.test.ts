@@ -30,10 +30,6 @@ describe('Component', () => {
     let store = instantiate(createElement(TestComponent, null))
     expect(didCallDidUpdate).toBe(false)
     expect(calledDidInstantiateWith).toEqual({ a: 1 })
-    
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("componentDidUpdate is called once after an update with no side effects", () => {
@@ -62,10 +58,6 @@ describe('Component', () => {
     harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(1)
     expect(harness.value).toEqual({ a: 1 })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
   
   it("setState within componentDidUpdate causes another componentDidUpdate", () => {
@@ -97,10 +89,6 @@ describe('Component', () => {
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({ a: 2 })
     expect(didUpdateCallCount).toBe(2)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("children emitting values within componentDidUpdate causes another componentDidUpdate", () => {
@@ -134,10 +122,6 @@ describe('Component', () => {
     harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(2)
     expect(harness.value).toEqual({ a: 1 })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("setState within UNSAFE_componentWillReceiveProps is reflected within the output", () => {
@@ -166,10 +150,6 @@ describe('Component', () => {
     })
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({ a: 2 })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("shouldComponentUpdate can prevent updates", () => {
@@ -191,10 +171,6 @@ describe('Component', () => {
     expect(updateCount).toBe(0)
     harness.setProps({ updated: true })
     expect(updateCount).toBe(0)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("shouldComponentUpdate receives new state and props", () => {
@@ -230,10 +206,6 @@ describe('Component', () => {
     expect(props).toEqual({ updated: false })
     expect(nextState).toEqual({ x: 2 })
     expect(nextProps).toEqual({ updated: true })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("child components with shouldComponentUpdate: false still appear in the parent after setting parent props", () => {
@@ -271,10 +243,6 @@ describe('Component', () => {
         test: "hello"
       },
     })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it(`removing a property of a <combine /> connected child removes its value from subs`, () => {
@@ -300,10 +268,6 @@ describe('Component', () => {
     expect(harness.value).toEqual({ a: 'a', b: 'a' })
     harness.setProps({ updated: true })
     expect(harness.value).toEqual({ a: 'a' })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("changing a child from an object with numeric keys to an array recreates the children", () => {
@@ -334,10 +298,6 @@ describe('Component', () => {
     expect(childConstructorCount).toEqual(1)
     harness.setProps({ updated: true })
     expect(childConstructorCount).toEqual(2)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("events can be received from combined <subscribe /> elements when emitted during `UNSAFE_componentWillReceiveProps` ", () => {
@@ -364,10 +324,6 @@ describe('Component', () => {
     expect(harness.value).toEqual(0)
     harness.setProps({ updated: true })
     expect(harness.value).toEqual(1)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("shouldComponentUpdate receives old subs", () => {
@@ -397,10 +353,6 @@ describe('Component', () => {
       harness.value.inner.increase()
     })
     expect(shouldComponentUpdateValue).toEqual(true)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("events can be received from combined stores in the same transaction as a setState", () => {
@@ -430,10 +382,6 @@ describe('Component', () => {
       harness.value.update()
     })
     expect(harness.value.child).toEqual(1)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("calls getDerivedStateFromProps on instantiation", () => {
@@ -452,10 +400,6 @@ describe('Component', () => {
     let store = instantiate(createElement(TestComponent, { hello: 'derive' }))
     let harness = createTestHarness(store)
     expect(harness.value).toBe('world')
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("calls getDerivedStateFromProps on update", () => {
@@ -476,10 +420,6 @@ describe('Component', () => {
     expect(harness.value).toBe(undefined)
     harness.setProps({ updated: true })
     expect(harness.value).toBe('world')
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("can subscribe to nested stores", () => {
@@ -508,10 +448,6 @@ describe('Component', () => {
       harness.value.increase()
     })
     expect(harness.value.count).toBe(1)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("can subscribe to arrays of stores", () => {
@@ -541,9 +477,9 @@ describe('Component', () => {
     })
     expect(harness.value[0].count).toBe(1)
     expect(harness.value[1].count).toBe(0)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
+
+  // it("can call actions on parents during disposal", () => {
+
+  // })
 })
