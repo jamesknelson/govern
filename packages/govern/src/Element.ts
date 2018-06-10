@@ -133,6 +133,18 @@ export function createElement<Value, Props>(
         }),
     props?: Attributes & Props | null,
     ...children: GovernNode[]): ComponentElement<Value, Props>;
+
+// When using generics, TypeScript can fail because no props match Attributes.
+// This overload helps avoid this.
+export function createElement<Value, Props>(
+    type:
+        (new (props: Props) => { props: Props }) &
+        (new (props: Props) => {
+            publish(): Value;
+        }),
+    props?: Props | null,
+    ...children: GovernNode[]): ComponentElement<Value, Props>;
+
 export function createElement<Value, Props>(
     type: any,
     config?: Attributes & Props | null,
