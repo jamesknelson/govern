@@ -12,7 +12,7 @@ const Root: string = Symbol('root') as any
 
 export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Subs=any> {
     constructor: Function & {
-        getDerivedStateFromProps?(nextProps: Props, prevState: State): Partial<State>;
+        getDerivedStateFromProps?(nextProps: Props, prevState: State): (State extends object ? (Partial<State> | null) : any;
     }
 
     UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
