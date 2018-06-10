@@ -5,6 +5,11 @@ import { GovernElement } from './Element'
 import { Target } from './Target'
 import { Dispatcher } from './Dispatcher';
 
+export type ElementType<T extends Component<any, any, any>> = {
+    new (props: T['props']): T
+    defaultProps?: Partial<T['props']>;
+}
+
 export interface ComponentClass<Value, Props> extends GovernableClass<Value, Props> {
     new (props: Props): Component<Props, ComponentState, Value>;
     defaultProps?: Partial<Props>;
