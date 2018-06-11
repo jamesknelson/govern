@@ -59,7 +59,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         return this.impl.props.to(this.from.value)
     }
 
-    shouldComponentUpdate() {
+    shouldComponentPublish() {
         return this.hasUnpublishedChanges
     }
 

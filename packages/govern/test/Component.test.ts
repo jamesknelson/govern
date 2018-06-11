@@ -326,35 +326,6 @@ describe('Component', () => {
     expect(harness.value).toEqual(1)
   })
 
-  it("shouldComponentUpdate receives old subs", () => {
-    let counterStore = createCounter()
-    let shouldComponentUpdateValue
-
-    class TestComponent extends Component<{ updated }> {
-      subscribe() {
-        return combine({
-          inner: counterStore
-        })
-      }
-
-      shouldComponentUpdate(nextProps, nextState, nextSubs) {
-        shouldComponentUpdateValue = nextSubs.inner !== this.subs.inner
-        return true
-      }
-
-      publish() {
-        return this.subs
-      }
-    }
-
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
-    harness.dispatch(() => {
-      harness.value.inner.increase()
-    })
-    expect(shouldComponentUpdateValue).toEqual(true)
-  })
-
   it("events can be received from combined stores in the same transaction as a setState", () => {
     let counterStore = createCounter()
 

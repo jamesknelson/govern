@@ -1,4 +1,4 @@
-import { flatMap, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, map, combine, constant, createElement, instantiate, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 import { createCounter, createCounterClass } from './utils/createCounter';
@@ -210,69 +210,38 @@ describe('FlatMap', () => {
   it("doesn't emit a new value when the `to` element doesn't, even if `from` changes", () => {
     let Counter = createCounterClass()
 
-    class CounterWithSelector extends Component {
-      subscribe() {
-        return createElement(Counter)
+    class OddSelector extends Component<{ count: any, increase: Function }> {
+      shouldComponentUpdate(nextProps) {
+        return !(nextProps.count % 2)
       }
 
       publish() {
         return {
-          count: this.subs.count + 100,
-          increase: this.subs.increase,
-          selectOdd: this.selectOdd,
+          count: this.props.count,
+          increase: this.props.increase,
         }
       }
-
-      selectOdd = () =>
-        createElement(OddSelector, { value: this.subs.count + 100 })
     }
 
-    class OddSelector extends Component<{ value: any }> {
-      shouldComponentUpdate(nextProps) {
-        return !(nextProps.value % 2)
-      }
+    let oddStore = instantiate(flatMap(createElement(Counter), value => createElement(OddSelector, { count: value.count, increase: value.increase })))
 
-      publish() {
-        return this.props.value
-      }
-    }
+    let oddUpdates = 0
+    let oddHarness = createTestHarness(oddStore, () => { oddUpdates++ })
+    
+    expect(oddHarness.value.count).toEqual(0)
 
-    let counterStore = instantiate(createElement(CounterWithSelector))
-    let selectorStore = instantiate(flatMap(counterStore, value => value.selectOdd()))
-
-    let counterUpdates = 0
-    let counterHarness = createTestHarness(counterStore, () => { counterUpdates++ })
-
-    let selectorUpdates = 0
-    let selectorHarness = createTestHarness(selectorStore, () => { selectorUpdates++ })
-
-    expect(selectorHarness.value).toEqual(100)
-
-    counterHarness.dispatch(() => {
-      counterHarness.value.increase()
+    oddHarness.dispatch(() => {
+      oddHarness.value.increase()
+    })
+    
+    expect(oddHarness.value.count).toEqual(0)
+    expect(oddUpdates).toEqual(0)
+    
+    oddHarness.dispatch(() => {
+      oddHarness.value.increase()
     })
 
-    expect(counterHarness.value.count).toEqual(101)
-    expect(selectorHarness.value).toEqual(100)
-    expect(selectorUpdates).toEqual(0)
-
-    counterHarness.setProps({ updated: true })
-
-    expect(counterHarness.value.count).toEqual(101)
-    expect(selectorHarness.value).toEqual(100)
-    expect(selectorUpdates).toEqual(0)
-
-    counterHarness.dispatch(() => {
-      counterHarness.value.increase()
-    })
-
-    expect(counterHarness.value.count).toEqual(102)
-    expect(selectorHarness.value).toEqual(102)
-    expect(counterUpdates).toEqual(3)
-    expect(selectorUpdates).toEqual(1)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
+    expect(oddHarness.value.count).toEqual(2)
+    expect(oddUpdates).toEqual(1)
   })
 })

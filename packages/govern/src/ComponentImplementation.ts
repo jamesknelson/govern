@@ -18,7 +18,8 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
     subscribe?(): any;
 
-    shouldComponentUpdate?(nextProps?: Props, nextState?: State, nextSubs?: Subs): boolean;
+    shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
+    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
 
     publish(): Value
 
@@ -94,6 +95,9 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
 
     lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
 
+    // Holds any state that has been "set", but not yet set on this.state
+    nextState: State
+
     // Keep the previously published values around for shouldComponentPublish
     previousPublish: { props: Props, state: State, subs: Subs };
 
@@ -153,6 +157,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         }
         
         this.children.clear()
+        delete this.nextState
         delete this.state
         delete this.subs
         this.emitter.complete()
@@ -161,10 +166,6 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     setProps = (props: Props): void => {
         if (this.isDisposing) {
             throw new Error(`setProps cannot be called on a component that has already been disposed.`)
-        }
-
-        if (!this.emitter.dispatcher) {
-            debugger
         }
 
         if (!this.emitter.dispatcher.isDispatching) {
@@ -179,14 +180,28 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.popFix()
         }
 
+        if (this.lifecycle.constructor.getDerivedStateFromProps) {
+            this.nextState = Object.assign({}, this.nextState || this.state, this.lifecycle.constructor.getDerivedStateFromProps(props, this.nextState || this.state))
+        }
+
+        let shouldComponentUpdate = true
+        let shouldForceUpdate = !this.lifecycle.shouldComponentUpdate
+        if (!shouldForceUpdate) {
+            this.pushFix()
+            shouldComponentUpdate = this.lifecycle.shouldComponentUpdate!(props, this.nextState || this.state)
+            this.popFix()
+        }
+
+        if (this.nextState) {
+            this.state = this.nextState
+            delete this.nextState
+        }
         this.props = props
 
-        if (this.lifecycle.constructor.getDerivedStateFromProps) {
-            this.state = Object.assign({}, this.state, this.lifecycle.constructor.getDerivedStateFromProps(props, this.state))
+        if (shouldComponentUpdate) {
+            this.connect()
+            this.publish()
         }
-        
-        this.connect()
-        this.publish()
     }
 
     setState(updater: (prevState: Readonly<State>, props: Props) => Partial<State>, callback?: Function) {
@@ -202,7 +217,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.callbacks.push(callback)
         }
 
-        this.state = Object.assign({}, this.state, updater(this.state, this.props))
+        this.nextState = Object.assign({}, this.nextState || this.state, updater(this.nextState || this.state, this.props))
         
         // If `setState` is called within `componentWillReceiveProps`, then
         // a `connect` and `publish` is already scheduled immediately
@@ -213,8 +228,21 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         // called. In this case, we don't want to connect/publish, as some
         // children may have already been removed.
         if (!this.isReceivingProps && !this.isDisposing) {
-            this.connect()
-            this.publish()
+            let shouldComponentUpdate = true
+            let shouldForceUpdate = !this.lifecycle.shouldComponentUpdate
+            if (!shouldForceUpdate) {
+                this.pushFix()
+                shouldComponentUpdate = this.lifecycle.shouldComponentUpdate!(this.props, this.nextState)
+                this.popFix()
+            }
+
+            this.state = this.nextState
+            delete this.nextState
+
+            if (shouldComponentUpdate) {
+                this.connect()
+                this.publish()
+            }
         }
     }
 
@@ -412,10 +440,12 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         let shouldComponentPublish = true
         let shouldForcePublish =
             !this.previousPublish ||
-            !this.lifecycle.shouldComponentUpdate
+            !this.lifecycle.shouldComponentPublish
+
         if (!shouldForcePublish) {
-            this.pushFix(this.previousPublish)
-            shouldComponentPublish = this.lifecycle.shouldComponentUpdate!(this.props, this.state, this.subs)
+            let { props, state, subs } = this.previousPublish
+            this.pushFix()
+            shouldComponentPublish = this.lifecycle.shouldComponentPublish!(props, state, subs)
             this.popFix()
         }
         
@@ -424,12 +454,12 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.pushFix()
             this.emitter.publish(this.lifecycle.publish())
             this.popFix()
-        }
 
-        this.previousPublish = {
-            props: this.props,
-            state: this.state,
-            subs: (this.subs !== undefined && typeof this.subs === 'object') ? Object.assign({}, this.subs) : this.subs,
+            this.previousPublish = {
+                props: this.props,
+                state: this.state,
+                subs: (this.subs !== undefined && typeof this.subs === 'object') ? Object.assign({}, this.subs) : this.subs,
+            }
         }
     }
 

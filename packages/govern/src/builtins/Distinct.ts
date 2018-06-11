@@ -16,9 +16,9 @@ export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>,
         return this.impl.props.children
     }
 
-    shouldComponentUpdate(nextProps, nextState, nextSubs) {
+    shouldComponentPublish(prevProps, prevState, prevSubs) {
         let comparator = this.impl.props.by || isReferenceEqual
-        return !comparator(nextSubs, this.impl.fixed[0].subs)
+        return !comparator(prevSubs, this.impl.subs)
     }
 
     publish() {
