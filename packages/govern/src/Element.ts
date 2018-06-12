@@ -206,6 +206,79 @@ export function createElement<Value, Props>(
 }
 
 
+export function cloneElement<Value, Props>(
+    element: SFCElement<Value, Props>,
+    props: Attributes & Props | null,
+    ...children: GovernNode[]): SFCElement<Value, Props>;
+export function cloneElement<Value, Props>(
+    element: ComponentElement<Value, Props>,
+    props: Attributes & Props | null,
+    ...children: GovernNode[]): ComponentElement<Value, Props>;
+export function cloneElement<Value, Props>(
+    element: GovernElement<Value, Props>,
+    props: Attributes & Props | null,
+    ...children: GovernNode[]
+): GovernElement<Value, Props>;
+
+export function cloneElement<Value, Props>(
+    element: any,
+    config: Attributes & Props | null,
+    ...children: GovernNode[]
+): GovernElement<Value, Props> {
+    let propName;
+
+	// Original props are copied
+	const props = Object.assign({}, element.props)
+
+	// Reserved names are extracted
+	let key = element.key;
+	
+	if (config != null) {
+		if (hasValidKey(config)) {
+			key = '' + config.key;
+		}
+
+		// Remaining properties override existing props
+		let defaultProps;
+		if (element.type && element.type.defaultProps) {
+			defaultProps = element.type.defaultProps;
+		}
+		for (propName in config) {
+			if (
+				Object.prototype.hasOwnProperty.call(config, propName) &&
+				!RESERVED_PROPS.hasOwnProperty(propName)
+			) {
+				if (config[propName] === undefined && defaultProps !== undefined) {
+					// Resolve default props
+					props[propName] = defaultProps[propName];
+				} else {
+					props[propName] = config[propName];
+				}
+			}
+		}
+	}
+
+	// Children can be more than one argument, and those are transferred onto
+	// the newly allocated props object.
+	const childrenLength = arguments.length - 2;
+	if (childrenLength === 1) {
+		props.children = children;
+	} else if (childrenLength > 1) {
+		const childArray = Array(childrenLength);
+		for (let i = 0; i < childrenLength; i++) {
+			childArray[i] = arguments[i + 2];
+		}
+		props.children = childArray;
+	}
+
+	return {
+        type: element.type,
+        props: props as Props,
+        key,
+        value: <any>undefined,
+    }
+}
+
 export function convertToElement(value): GovernElement<any, any> {
     if (isValidElement(value)) {
         return value
