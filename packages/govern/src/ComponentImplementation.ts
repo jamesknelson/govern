@@ -274,8 +274,8 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         // Create a new `subs` object, keeping around appropriate previous
         // values, so we don't have to rerequest them from subscribed
         // stores.
-        if (nextRootElement.type === 'combine') {
-            this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
+        if (nextRootElement.type === 'combine' && typeHasChanged) {
+            this.subs = {} as any
         }
 
         // A list of keys on the existing `this.children` that need to be
@@ -395,7 +395,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
             this.subs = value
         }
         else {
-            this.subs[child.index] = value
+            this.subs = Object.assign({}, this.subs, { [child.index]: value })
         }
     }
 
@@ -405,18 +405,8 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         // within `connect`?
         let isExpectingChange = this.expectingChildChangeFor === key
 
-        if (!isExpectingChange) {
-            if (!this.emitter.dispatcher.isDispatching) {
-                throw new Error(`A Govern component cannot receive new values from children outside of a dispatch.`)
-            }
- 
-            // This method wasn't called while wrapped in `connect`, so if our
-            // current child is a `<combine />`, we'll need to shallow clone our
-            // child before updating it. Otherwise we'll also overwrite our last
-            // published child, breaking `shouldComponentPublish`.
-            if (this.lastSubscribeElement && this.lastSubscribeElement.type === 'combine') {
-                this.subs = Object.assign({}, this.subs)
-            }
+        if (!isExpectingChange && !this.emitter.dispatcher.isDispatching) {
+            throw new Error(`A Govern component cannot receive new values from children outside of a dispatch.`)
         }
 
         // Mutatively update `subs`
