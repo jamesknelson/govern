@@ -16,9 +16,8 @@ describe('Distinct', () => {
       })
     }
   
-    let counterStore = instantiate(createElement(TestComponent))
     let counterUpdates = 0
-    let counterHarness = createTestHarness(counterStore, () => { counterUpdates++ })
+    let counterHarness = createTestHarness(createElement(TestComponent), () => { counterUpdates++ })
 
     expect(counterUpdates).toEqual(0)
 
@@ -50,9 +49,8 @@ describe('Distinct', () => {
       }
     }
   
-    let counterStore = instantiate(createElement(TestComponent))
     let counterUpdates = 0
-    let counterHarness = createTestHarness(counterStore, () => { counterUpdates++ })
+    let counterHarness = createTestHarness(createElement(TestComponent), () => { counterUpdates++ })
 
     expect(counterUpdates).toEqual(0)
 

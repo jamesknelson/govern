@@ -54,15 +54,16 @@ describe('Batching', () => {
     let firstNameGovernor = instantiate(createElement(FirstName, { userStore }))
     let lastNameGovernor = instantiate(createElement(LastName, { userStore }))
     
-    let fullNameGovernor = instantiate(createElement(JoinedObservables, {
-      firstName: firstNameGovernor,
-      lastName: lastNameGovernor
-    }))
-    
     let updateCount = 0
-    let harness = createTestHarness(fullNameGovernor, () => {
-      updateCount++
-    })
+    let harness = createTestHarness(
+      createElement(JoinedObservables, {
+        firstName: firstNameGovernor,
+        lastName: lastNameGovernor
+      }),
+      () => {
+        updateCount++
+      }
+    )
 
     expect(updateCount).toEqual(0)
     expect(harness.value).toEqual(' ')

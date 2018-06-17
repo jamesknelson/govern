@@ -23,16 +23,15 @@ describe('key', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent))
 
     harness.dispatch(() => {
       harness.value.increaseFirst()
     })
     expect(harness.value.secondCount).toBe(0)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value.secondCount).toBe(1)
-    harness.setProps({ updated: false })
+    harness.changeElement(createElement(TestComponent, { updated: false }))
     expect(harness.value.secondCount).toBe(0)
   })
 
@@ -56,14 +55,13 @@ describe('key', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent))
 
     harness.dispatch(() => {
       harness.value.increaseLast()
     })
     expect(harness.value.secondCount).toBe(1)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value.secondCount).toBe(undefined)
     expect(harness.value.firstCount).toBe(1)
   })

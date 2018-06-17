@@ -47,8 +47,10 @@ describe('Dipatcher', () => {
       }
 		
 			doFetch = () => {
-        this.setState({
-          child: createElement(DispatchComponent)
+        this.dispatch(() => {
+          this.setState({
+            child: createElement(DispatchComponent)
+          })
         })
       }
     }
@@ -58,9 +60,7 @@ describe('Dipatcher', () => {
     // `subscribe` listeners are called on flush
     let subscription = store.subscribe(() => {
       subscription.unsubscribe()
-      store.UNSAFE_dispatch(() => {
-        store.getValue().doFetch()
-      })
+      store.getValue().doFetch()
     })
 
     // cause something to be emitted to subscription

@@ -47,26 +47,19 @@ export class Store<Value, Props=any> implements DispatchedObservable<Value> {
         return this.governor.emitter.getValue()
     }
 
-    setProps(props: Props): void {
-        this.governor.emitter.enqueueAction(() => {
-            this.governor.setProps(props)
-        })
-    }
     dispose(): void {
         this.governor.emitter.enqueueAction(this.governor.dispose)
     }
 
     /**
-     * Dispatch an action on the store.
+     * This waits until all currently queued actions and flushes have completed
+     * before running the argument function.
      * 
-     * If this method is called from within another store, it may cause
-     * multiple flushes, which can make side effects harder to reason about.
-     * 
-     * As such, this method is not safe to use within Govern components.
-     * However, it is made available as it necessary (and safe) for calling
-     * from within React components.
+     * As you can't run actions during a flush, and most React components are
+     * updated during a flush, this can be useful for calling app code from
+     * within your UI components' lifecycle methods.
      */
-    UNSAFE_dispatch = (fn: () => void) => {
+    enqueueAction = (fn: () => void) => {
         this.governor.emitter.enqueueAction(fn)
     }
 }

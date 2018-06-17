@@ -45,9 +45,8 @@ describe('Component', () => {
 			}
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(store)
-    harness.setProps({ updated: true })
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(didUpdateCallCount).toBe(1)
     expect(harness.value).toEqual({ a: 1 })
   })
@@ -72,9 +71,8 @@ describe('Component', () => {
 			}
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(store)
-    harness.setProps({ updated: true })
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toEqual({ a: 2 })
     expect(didUpdateCallCount).toBe(2)
   })
@@ -98,10 +96,9 @@ describe('Component', () => {
 			}
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
     expect(didUpdateCallCount).toBe(0)
-    let harness = createTestHarness(store)
-    harness.setProps({ updated: true })
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(didUpdateCallCount).toBe(2)
     expect(harness.value.a.count).toEqual(1)
   })
@@ -121,12 +118,11 @@ describe('Component', () => {
       }
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    let harness = createTestHarness(store, () => {
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }), () => {
       updateCount++
     })
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toEqual({ a: 2 })
   })
 
@@ -137,17 +133,16 @@ describe('Component', () => {
       }
 
       render() {
-        return null
+        return this.props.updated
       }
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
     let updateCount = 0
-    let harness = createTestHarness(store, () => {
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }), () => {
       updateCount++
     })
     expect(updateCount).toBe(0)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(updateCount).toBe(0)
   })
 
@@ -177,9 +172,8 @@ describe('Component', () => {
       }
     }
     
-    let store = instantiate(createElement(TestComponent, { updated: false }))
-    let harness = createTestHarness(store)
-    harness.setProps({ updated: true })
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(state).toEqual({ x: 1 })
     expect(props).toEqual({ updated: false })
     expect(nextState).toEqual({ x: 2 })
@@ -208,9 +202,8 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
-    harness.setProps({ updated: true })
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toEqual({
       updated: true,
       child: {
@@ -234,10 +227,9 @@ describe('Component', () => {
         return combine(children)
       }
     }
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(harness.value).toEqual({ a: 'a', b: 'a' })
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toEqual({ a: 'a' })
   })
 
@@ -261,10 +253,9 @@ describe('Component', () => {
         )
       }
     }
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(childConstructorCount).toEqual(1)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(childConstructorCount).toEqual(2)
   })
 
@@ -283,10 +274,9 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(harness.value.inner.count).toEqual(0)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value.inner.count).toEqual(1)
   })
 
@@ -305,8 +295,7 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent))
     harness.dispatch(() => {
       harness.value.update()
     })
@@ -326,8 +315,7 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent, { hello: 'derive' }))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent, { hello: 'derive' }))
     expect(harness.value).toBe('world')
   })
 
@@ -344,10 +332,9 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(harness.value).toBe(undefined)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toBe('world')
   })
 
@@ -366,8 +353,7 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent))
     expect(harness.value.outer.inner.count).toBe(0)
     harness.dispatch(() => {
       harness.value.outer.inner.increase()
@@ -390,8 +376,7 @@ describe('Component', () => {
       }
     }
 
-    let store = instantiate(createElement(TestComponent))
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(TestComponent))
     expect(harness.value[0].count).toBe(0)
     harness.dispatch(() => {
       harness.value[0].increase()

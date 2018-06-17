@@ -18,43 +18,34 @@ describe('FlatMap', () => {
     }
 
     let element = flatMap(createElement(Test, { a: 'test' }), output => combine({ c: output.b }))
-    let store = instantiate(element)
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(element)
 
     expect(harness.value).toEqual({ c: 'test' })
   })
 
   it("accepts changes to from element's props", () => {
-    let element = flatMap(
-        createElement(Double, { x: 1 }),
+    let getElement = (x) => flatMap(
+        createElement(Double, { x }),
         x => combine({ x: createElement(Double, { x }) })
     )
-    let store = instantiate(element)
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(getElement(1))
     expect(harness.value).toEqual({ x: 4 })
     harness.dispatch(() => {
-      harness.setProps({
-          from: createElement(Double, { x: 2 }),
-          to: x => combine({ x: createElement(Double, { x }) })
-      })
+      harness.changeElement(getElement(2))
       expect(harness.value).toEqual({ x: 4 })
     })
     expect(harness.value).toEqual({ x: 8 })
   })
 
   it("accepts changes to map fn", () => {
-    let element = flatMap(
+    let getElement = (multiplier: number) => flatMap(
         createElement(Double, { x: 1 }),
-        output => combine({ x: createElement(Double, { x: output }) }),
+        output => combine({ x: createElement(Double, { x: output*multiplier }) }),
     )
-    let store = instantiate(element)
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(getElement(1))
     expect(harness.value).toEqual({ x: 4 })
     harness.dispatch(() => {
-      harness.setProps({
-          from: createElement(Double, { x: 1 }),
-          to: output => combine({ x: createElement(Double, { x: output*2 }) }),
-      })
+      harness.changeElement(getElement(2))
       expect(harness.value).toEqual({ x: 4 })
     })
     expect(harness.value).toEqual({ x: 8 })
@@ -69,13 +60,12 @@ describe('FlatMap', () => {
     let model = instantiate(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
-    let store = instantiate(
+    let harness = createTestHarness(
       flatMap(
         model,
         model => createElement(PickFirstName, { name: model.value })
       )
     )
-    let harness = createTestHarness(store)
     expect(harness.value).toEqual("")
     harness.dispatch(() => {
       model.getValue().change({ firstName: 'James', lastName: 'Nelson' })
@@ -95,7 +85,7 @@ describe('FlatMap', () => {
       }
     }
 
-    let harness = createTestHarness(instantiate(createElement(TestComponent)))
+    let harness = createTestHarness(createElement(TestComponent))
     expect(harness.value.count).toEqual(0)
     harness.dispatch(() => {
       harness.value.decrease()
@@ -116,13 +106,13 @@ describe('FlatMap', () => {
       }
     }
 
-    let harness = createTestHarness(instantiate(createElement(TestComponent)))
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(harness.value.count).toEqual(0)
     harness.dispatch(() => {
       harness.value.increase()
     })
     expect(harness.value.count).toEqual(1)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value.count).toEqual(1)
   })
 
@@ -136,14 +126,13 @@ describe('FlatMap', () => {
       }
     }
 
-    let harness = createTestHarness(instantiate(createElement(TestComponent)))
+    let harness = createTestHarness(createElement(TestComponent))
     harness.dispatch(() => {})
     expect(harness.value.count).toEqual(2)
   })
 
   it("a change in `from` can cause a change in `to` element", () => {
     let selector = createCounter()
-    let selectorHarness = createTestHarness(selector)
     let counters = [createCounter(1), createCounter(3)]
 
 
@@ -153,13 +142,11 @@ describe('FlatMap', () => {
       }
     }
 
-    let harness = createTestHarness(instantiate(createElement(TestComponent)))
+    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
     expect(harness.value.count).toEqual(1)
-    selectorHarness.dispatch(() => {
-      selectorHarness.value.increase()
-    })
+    selector.getValue().increase()
     expect(harness.value.count).toEqual(3)
-    harness.setProps({ updated: true })
+    harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value.count).toEqual(3)
   })
 
@@ -179,10 +166,11 @@ describe('FlatMap', () => {
       }
     }
 
-    let oddStore = instantiate(flatMap(createElement(Counter), value => createElement(OddSelector, { count: value.count, increase: value.increase })))
-
     let oddUpdates = 0
-    let oddHarness = createTestHarness(oddStore, () => { oddUpdates++ })
+    let oddHarness = createTestHarness(
+      flatMap(createElement(Counter), value => createElement(OddSelector, { count: value.count, increase: value.increase })),
+      () => { oddUpdates++ }
+    )
     
     expect(oddHarness.value.count).toEqual(0)
 

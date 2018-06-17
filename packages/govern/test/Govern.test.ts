@@ -91,8 +91,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
 
   let element = createElement(TestComponent)
   let store = instantiate(element)
-  let mapStore = instantiate(flatMap(store, x => constant(x)))
-  let harness = createTestHarness(mapStore)  
+  let harness = createTestHarness(flatMap(store, x => constant(x)))  
   
   harness.dispatch(() => {
     harness.value.model.change('test')
@@ -153,12 +152,10 @@ test("children can cause their own disposal", () => {
     }
   }
 
-  let item = instantiate(createElement(Item))
-
   class List extends Component {
     state = {
       items: {
-        a: item
+        a: createElement(Item)
       }
     }
 
@@ -175,12 +172,8 @@ test("children can cause their own disposal", () => {
     }
   }
 
-  let list = instantiate(createElement(List))
-  
-  let harness = createTestHarness(item)
-  harness.dispatch(() => {
-    harness.value.change(1)
-  })
+  let list = createTestHarness(createElement(List))
 
-  expect(list.getValue()).toEqual({})
+  list.value.a.change(1)
+  expect(list.value).toEqual({})
 })

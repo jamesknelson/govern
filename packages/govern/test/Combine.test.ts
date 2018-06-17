@@ -10,26 +10,24 @@ describe('Combine', () => {
 
   it("outputs embedded elements", () => {
     let Counter = createCounterClass()
-    let store = instantiate(combine({
+    let harness = createTestHarness(combine({
         a: createElement(Counter, null),
         b: 2
     }))
-    let harness = createTestHarness(store)
     expect(harness.value.a.count).toEqual(0)
   })
 
   it("handles addition and removal of elements", () => {
     let Counter = createCounterClass()
-    let store = instantiate<any, any>(combine({
+    let harness = createTestHarness<any>(combine({
         a: createElement(Counter, null),
     }))
-    let harness = createTestHarness(store)
 
-    harness.setProps({
-        children: {
+    harness.changeElement(
+        combine({
             b: createElement(Counter, null)
-        }
-    })
+        })
+    )
     expect(harness.value.a).toEqual(undefined)
     expect(harness.value.b.count).toEqual(0)
   })
@@ -48,16 +46,15 @@ describe('Combine', () => {
         }
     }
 
-    let store = instantiate(combine({
+    let harness = createTestHarness(combine({
         doubled: createElement(Double, { x: 2 }),
     }))
-    let harness = createTestHarness(store)
     expect(harness.value).toEqual({ doubled: 4 })
-    harness.setProps({
-        children: {
+    harness.changeElement(
+        combine({
             doubled: createElement(Double, { x: 4 }),
-        }
-    })
+        })
+    )
     expect(instantiationCount).toEqual(1)
     expect(harness.value).toEqual({ doubled: 8 })
   })

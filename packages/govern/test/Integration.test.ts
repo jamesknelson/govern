@@ -163,7 +163,7 @@ describe("Model", () => {
   })
 
   it('notifies changes', () => {
-    let store = instantiate(
+    let harness = createTestHarness(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -171,7 +171,6 @@ describe("Model", () => {
         }
       })
     )
-    let harness = createTestHarness(store)
     harness.dispatch(() => {
       harness.value.change({
         email: 'james@jamesknelson.com'
@@ -197,10 +196,7 @@ describe("FormController", () => {
       }
     }
     let data = instantiate(createElement(Constant))
-    let store = instantiate(
-      createElement(FormController, { data })
-    )
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(FormController, { data }))
     expect(harness.value.data).toBe(null)
     expect(harness.value.model.error.email).toBeTruthy()
   })
@@ -208,10 +204,7 @@ describe("FormController", () => {
   it('emits a new model when initial data is received', () => {
     let dataSource = instantiate(createElement(DataSource, {}))
     let dataSourceData = instantiate(createElement(DataSourceData, { dataSource }))
-    let store = instantiate(
-      createElement(FormController, { data: dataSourceData })
-    )
-    let harness = createTestHarness(store)
+    let harness = createTestHarness(createElement(FormController, { data: dataSourceData }))
     let received = {
       name: 'James',
       email: 'james@jamesknelson.com'
