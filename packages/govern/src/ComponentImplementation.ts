@@ -11,17 +11,17 @@ import { createObservableGovernor, GovernObservableGovernor } from './GovernObse
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> {
+export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any> {
     constructor: Function & {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
     }
 
     componentWillReceiveProps?(nextProps: Props): void;
 
-    render(): GovernObservable<Subs> | GovernElement<Subs> | Subs | null;
+    render(): GovernObservable<Value> | GovernElement<Value> | Value | null;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
-    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
+    shouldComponentPublish?(prevProps?: Props, prevState?: State, prevValue?: Value): boolean;
 
     getPublishedValue?(): any
 
@@ -32,7 +32,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> 
     // `componentWillReceiveSubs`. I've opted for this method instead, as it
     // is more obvious that an unguarded `setState` will cause an infinite
     // loop.
-    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevValue?: Value): void;
     componentDidMount?(): void;
 
     // This will be called after a component's published value has been flushed
@@ -54,13 +54,13 @@ export interface ChildSubscription {
     governor: GovernObservableGovernor<any, any>,
 }
 
-export class ComponentImplementation<Props, State, Subs> implements GovernObservableGovernor<Subs, Props> {
+export class ComponentImplementation<Props, State, Value> implements GovernObservableGovernor<Value, Props> {
     props: Props;
     state: State;
-    subs: Subs;
+    subs: Value;
 
     // What the associated Component instance sees.
-    fixed: { props: Props, state: State, subs: Subs }[] = [];
+    fixed: { props: Props, state: State, subs: Value }[] = [];
 
     // Arbitrary functions to be run after componentDidUpdate
     callbacks: Function[] = []
@@ -93,22 +93,22 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
 
     // Keep track of previous props, state and subs, so we can pass them
     // through to componentDidUpdate.
-    lastUpdate: { props: Props, state: State, subs: Subs }
+    lastUpdate: { props: Props, state: State, subs: Value }
 
-    lifecycle: ComponentImplementationLifecycle<Props, State, Subs>
+    lifecycle: ComponentImplementationLifecycle<Props, State, Value>
 
     // Holds any state that has been "set", but not yet set on this.state
     nextState: State
 
     // Keep the previously published values around for shouldComponentPublish
-    previousPublish: { props: Props, state: State, subs: Subs };
+    previousPublish: { props: Props, state: State, subs: Value };
 
     // A pipe for events out of this object
-    emitter: DispatcherEmitter<Subs>
+    emitter: DispatcherEmitter<Value>
 
     willDispose: boolean = false
 
-    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Subs>, props: Props) {
+    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
     }
@@ -120,7 +120,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
     getFix() {
         return this.fixed[0] || { props: this.props, state: this.state, subs: this.subs }
     }
-    pushFix(fix?: { props: Props, state: State, subs: Subs }) {
+    pushFix(fix?: { props: Props, state: State, subs: Value }) {
         this.fixed.unshift(fix ? fix : {
             props: this.props,
             state: this.state,
@@ -256,7 +256,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         this.popFix()
 
         if (result === undefined) {
-            console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
+            console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its render method. If you really want to return an empty value, return "null" instead.`)
         }
 
         let lastRootElement = this.lastSubscribeElement
@@ -330,7 +330,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         this.children.set(key, child)
 
         if (element.type === 'constant') {
-            this.setSubs(key, element.props.of)
+            this.setValue(key, element.props.of)
         }
         else {
             let target = new ComponentTarget(this, key)
@@ -341,7 +341,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
 
             child.subscription = { governor, target }
             governor.emitter.subscribePublishTarget(target)
-            this.setSubs(key, governor.emitter.getValue())
+            this.setValue(key, governor.emitter.getValue())
         }
     }
 
@@ -357,7 +357,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         }
 
         if (!child.subscription) {
-            this.setSubs(key, nextProps.of)
+            this.setValue(key, nextProps.of)
         }
         else if (child.element.type !== 'subscribe') {
             // Observables will immediately emit their new value
@@ -386,7 +386,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         this.children.delete(key)
     }
 
-    setSubs(key: string, value: any) {
+    setValue(key: string, value: any) {
         let child = this.children.get(key)!
 
         child.value = value
@@ -420,7 +420,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         }
 
         // Mutatively update `subs`
-        this.setSubs(key, value)
+        this.setValue(key, value)
 
         // We don't need to `publish` if there is already one scheduled.
         if (!isExpectingChange && !this.isReceivingProps && !this.isDisposing) {

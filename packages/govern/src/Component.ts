@@ -16,19 +16,19 @@ export interface ComponentClass<Value, Props> extends GovernableClass<Value, Pro
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Subs=any> extends ComponentImplementationLifecycle<Props, State, Subs> {
-    render(): GovernObservable<Subs> | GovernElement<Subs, any> | Subs | null;
+export interface ComponentLifecycle<Props={}, State={}, Value=any> extends ComponentImplementationLifecycle<Props, State, Value> {
+    render(): GovernObservable<Value> | GovernElement<Value, any> | Value | null;
 }
 
-export interface Component<Props={}, State={}, Subs=any> extends ComponentLifecycle<Props, State, Subs> { }
+export interface Component<Props={}, State={}, Value=any> extends ComponentLifecycle<Props, State, Value> { }
 
 type RenderType<T> =
     T extends () => GovernElement<infer ElementSnapshot, any> ? ElementSnapshot :
     T extends () => infer ConstantSnapshot ? ConstantSnapshot :
     any;
 
-export abstract class Component<Props, State={}, Subs=any, Value=any> implements Governable<any, Props>, ComponentLifecycle<Props, State, Subs> {
-    protected impl: ComponentImplementation<Props, State, Subs>;
+export abstract class Component<Props, State={}, Value=any> implements Governable<any, Props>, ComponentLifecycle<Props, State, Value> {
+    protected impl: ComponentImplementation<Props, State, Value>;
 
     constructor(props: Props) {
         this.impl = new ComponentImplementation(this, props)
@@ -40,7 +40,7 @@ export abstract class Component<Props, State={}, Subs=any, Value=any> implements
 
     get subs(): RenderType<this["render"]> {
         if (this.impl.isRunningSubscribe) {
-            throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
+            throw new Error(`You cannot access a component's "value" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
         return this.impl.getFix().subs as any
     }
@@ -84,11 +84,11 @@ export abstract class Component<Props, State={}, Subs=any, Value=any> implements
         return this.impl.createObservableGovernor(dispatcher)
     }
 
-    shouldComponentPublish(prevProps, prevState, prevSubs) {
-        return this.subs === undefined || this.subs !== prevSubs
+    shouldComponentPublish(prevProps, prevState, prevValue) {
+        return this.subs === undefined || this.subs !== prevValue
     }
 
-    abstract render(): GovernElement<Subs> | Subs | null;
+    abstract render(): GovernElement<Value> | Value | null;
 }
 
 export function getDisplayName(componentClass) {
