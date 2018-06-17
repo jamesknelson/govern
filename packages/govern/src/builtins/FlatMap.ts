@@ -27,7 +27,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         this.impl = new ComponentImplementation(this, props)
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: FlatMapProps<FromValue, ToValue>) {
+    componentWillReceiveProps(nextProps: FlatMapProps<FromValue, ToValue>) {
         this.receiveProps(nextProps)
     }
 

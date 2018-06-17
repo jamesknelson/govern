@@ -21,7 +21,7 @@ export interface ComponentLifecycle<Props={}, State={}, Subs=any> {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
     }
 
-    UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
+    componentWillReceiveProps?(nextProps: Props): void;
 
     render(): GovernElement<Subs, any> | null;
 

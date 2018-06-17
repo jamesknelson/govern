@@ -15,7 +15,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> 
         getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
     }
 
-    UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
+    componentWillReceiveProps?(nextProps: Props): void;
     render(): any;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
@@ -172,10 +172,10 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
             throw new Error(`setProps cannot be called outside of a dispatch.`)
         }
 
-        if (this.lifecycle.UNSAFE_componentWillReceiveProps) {
+        if (this.lifecycle.componentWillReceiveProps) {
             this.pushFix()
             this.isReceivingProps = true
-            this.lifecycle.UNSAFE_componentWillReceiveProps(props)
+            this.lifecycle.componentWillReceiveProps(props)
             this.isReceivingProps = false
             this.popFix()
         }
