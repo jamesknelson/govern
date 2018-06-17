@@ -27,12 +27,16 @@ describe('instantiate', () => {
         a: 1
       }
 
-      publish() {
-        return {
+      subscribe() {
+        return constant({
           a: this.props.a,
           b: 2,
           c: this.props.c,
-        }
+        })
+      }
+
+      publish() {
+        return this.subs
       }
     }
 
@@ -69,15 +73,19 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
   class Model<T> extends Component {
     state = { value: undefined }
 
-    publish() {
-      return {
+    subscribe() {
+      return constant({
         value: this.state.value,
         change: value => {
           this.dispatch(() => {
             this.setState({ value }) 
           })
         },
-      }
+      })
+    }
+
+    publish() {
+      return this.subs
     }
   }
 
@@ -115,15 +123,19 @@ test("can dispose mapped items", async () => {
   class Model<T> extends Component {
     state = { value: undefined }
 
-    publish() {
-      return {
+    subscribe() {
+      return constant({
         value: this.state.value,
         change: value => {
           this.dispatch(() => {
             this.setState({ value }) 
           })
         },
-      }
+      })
+    }
+
+    publish() {
+      return this.subs
     }
   }
 
@@ -158,11 +170,15 @@ test("children can cause their own disposal", () => {
       value: undefined
     }
 
-    publish() {
-      return {
+    subscribe() {
+      return constant({
         value: this.state.value,
         change: (value) => this.setState({ value })
-      }
+      })
+    }
+
+    publish() {
+      return this.subs
     }
   }
 
@@ -200,8 +216,4 @@ test("children can cause their own disposal", () => {
   })
 
   expect(list.getValue()).toEqual({})
-
-  return new Promise(resolve => {
-    setTimeout(resolve, 0)
-  })
 })

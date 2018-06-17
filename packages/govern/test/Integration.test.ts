@@ -1,4 +1,4 @@
-import { flatMap, combine, createElement, instantiate, Component, Store, SFC } from '../src'
+import { map, flatMap, combine, createElement, instantiate, Component, Store, SFC, constant } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -18,12 +18,16 @@ function createModelClass() {
       this.setState({ value }) 
     }
 
-    publish() {
-      return {
+    subscribe() {
+      return constant({
         change: this.change,
         value: this.state.value,
         error: this.props.validate(this.state.value)
-      }
+      })
+    }
+
+    publish() {
+      return this.subs
     }
   }
 
@@ -33,49 +37,54 @@ function createModelClass() {
     }
 
     subscribe() {
-      return combine({
-        name: createElement(ModelPrimitive, {
-          defaultValue: this.props.defaultValue.name as string,
-          validate: (value) => {
-            if (!value) {
-              return ["Please enter your name"]
+      return map(
+        combine({
+          name: createElement(ModelPrimitive, {
+            defaultValue: this.props.defaultValue.name as string,
+            validate: (value) => {
+              if (!value) {
+                return ["Please enter your name"]
+              }
             }
-          }
-        }),
-        email: createElement(ModelPrimitive, {
-          defaultValue: this.props.defaultValue.email,
-          validate: (value) => {
-            if (!value || value.indexOf('@') === -1) {
-              return ["Please enter an e-mail address"]
+          }),
+          email: createElement(ModelPrimitive, {
+            defaultValue: this.props.defaultValue.email,
+            validate: (value) => {
+              if (!value || value.indexOf('@') === -1) {
+                return ["Please enter an e-mail address"]
+              }
             }
-          }
+          }),
         }),
-      })
+        ({ name, email }) => {
+          let error = {} as any
+          if (name.error) error.name = name.error
+          if (email.error) error.email = email.error
+          if (!Object.keys(error).length) error = undefined
+
+          return {
+            children: { name, email },
+            value: {
+              name: name.value,
+              email: email.value,
+            },
+            error: error,
+            change: this.change,
+          }
+        }
+      )
     }
 
     publish() {
-      let error = {} as any
-      if (this.subs.name.error) error.name = this.subs.name.error
-      if (this.subs.email.error) error.email = this.subs.email.error
-      if (!Object.keys(error).length) error = undefined
-
-      return {
-        children: this.subs,
-        value: {
-          name: this.subs.name.value,
-          email: this.subs.email.value,
-        },
-        error: error,
-        change: this.change,
-      }
+      return this.subs
     }
 
     change = (value) => {
       if (value.name) {
-        this.subs.name.change(value.name)
+        this.subs.children.name.change(value.name)
       }
       if (value.email) {
-        this.subs.email.change(value.email)
+        this.subs.children.email.change(value.email)
       }
     }
   }
@@ -93,14 +102,17 @@ function createDataSourceClass() {
     }
 
     subscribe() {
-      return this.state.store && combine(this.state.store)
+      return map(
+        this.state.store && combine(this.state.store),
+        data => ({
+          receive: this.receive,
+          data,
+        })
+      )
     }
 
     publish() {
-      return {
-        receive: this.receive,
-        data: this.subs
-      }
+      return this.subs
     }
   }
 }
@@ -200,8 +212,12 @@ describe("FormController", () => {
   it('initializes with empty observable', () => {
     let empty = {}
     class Constant extends Component {
-      publish() {
+      subscribe() {
         return null
+      }
+
+      publish() {
+        return this.subs
       }
     }
     let data = instantiate(createElement(Constant))
@@ -211,10 +227,6 @@ describe("FormController", () => {
     let harness = createTestHarness(store)
     expect(harness.value.data).toBe(null)
     expect(harness.value.model.error.email).toBeTruthy()
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it('emits a new model when initial data is received', () => {
@@ -233,9 +245,5 @@ describe("FormController", () => {
     })
     expect(harness.value.data).toEqual(received)
     expect(harness.value.model.error).toBeFalsy()
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 })

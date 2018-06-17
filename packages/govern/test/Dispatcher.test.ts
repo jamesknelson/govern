@@ -12,8 +12,12 @@ describe('Dipatcher', () => {
         super(props)
       }
 
-      publish() {
+      subscribe() {
         return null
+      }
+
+      publish() {
+        return this.subs
       }
 
       componentDidInstantiate() {

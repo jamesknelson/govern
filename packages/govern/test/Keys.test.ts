@@ -1,4 +1,4 @@
-import { combine, combineArray, createElement, instantiate, Component, Store, SFC } from '../src'
+import { combine, combineArray, createElement, instantiate, map, Component, Store, SFC } from '../src'
 import { createCounterClass } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -8,19 +8,22 @@ describe('key', () => {
 
     class TestComponent extends Component<{ updated }> {
       subscribe() {
-        return combineArray([
-          createElement(Counter, { key: this.props.updated ? 'b' : 'a' }),
-          createElement(Counter, { key: this.props.updated ? 'a' : 'b' }),
-        ])
+        return map(
+          combineArray([
+            createElement(Counter, { key: this.props.updated ? 'b' : 'a' }),
+            createElement(Counter, { key: this.props.updated ? 'a' : 'b' }),
+          ]),
+          subs => ({
+            increaseFirst: () => {
+              subs[0].increase()
+            },
+            secondCount: subs[1].count,
+          })
+        )
       }
 
       publish() {
-        return {
-          increaseFirst: () => {
-            this.subs[0].increase()
-          },
-          secondCount: this.subs[1].count,
-        }
+        return this.subs
       }
     }
 
@@ -47,17 +50,17 @@ describe('key', () => {
         ]).concat([
           createElement(Counter, { key: 'b' }),
         ]))
-        return el
+        return map(el, subs => ({
+          increaseLast: () => {
+            subs[1].increase()
+          },
+          firstCount: subs[0].count,
+          secondCount: subs[1] && subs[1].count,
+        }))
       }
 
       publish() {
-        return {
-          increaseLast: () => {
-            this.subs[1].increase()
-          },
-          firstCount: this.subs[0].count,
-          secondCount: this.subs[1] && this.subs[1].count,
-        }
+        return this.subs
       }
     }
 

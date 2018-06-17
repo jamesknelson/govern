@@ -1,5 +1,5 @@
 import { createCounter, createCounterClass } from './utils/createCounter'
-import { combine, createElement, instantiate, Component, SFC, StoreType } from '../src'
+import { combine, createElement, instantiate, Component, SFC, constant } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Combine', () => {
@@ -43,8 +43,12 @@ describe('Combine', () => {
             instantiationCount++
         }
 
+        subscribe() {
+            return constant(this.props.x*2)
+        }
+
         publish() {
-            return this.props.x*2
+            return this.subs
         }
     }
 

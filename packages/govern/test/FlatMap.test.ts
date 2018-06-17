@@ -5,15 +5,23 @@ import { createCounter, createCounterClass } from './utils/createCounter';
 
 describe('FlatMap', () => {
   class Double extends Component<{x: number}> {
+    subscribe() {
+      return constant(this.props.x*2)
+    }
+
     publish() {
-        return this.props.x*2
+      return this.subs
     }
   }
 
   it("maps initial value", () => {
     class Test extends Component<{a: string}> {
+      subscribe() {
+          return constant({ b: this.props.a })
+      }
+
       publish() {
-          return { b: this.props.a }
+        return this.subs
       }
     }
 
@@ -132,10 +140,6 @@ describe('FlatMap', () => {
     expect(harness.value.count).toEqual(1)
     harness.setProps({ updated: true })
     expect(harness.value.count).toEqual(1)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("transactions on flat-mapped elements complete as expected", () => {
@@ -191,11 +195,15 @@ describe('FlatMap', () => {
         return !(nextProps.count % 2)
       }
 
-      publish() {
-        return {
+      subscribe() {
+        return constant({
           count: this.props.count,
           increase: this.props.increase,
-        }
+        })
+      }
+
+      publish() {
+        return this.subs
       }
     }
 

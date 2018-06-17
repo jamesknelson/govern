@@ -1,19 +1,23 @@
 import * as React from 'react'
-import { createElement, isValidElement, Component } from '../src'
+import { createElement, isValidElement, Component, constant } from '../src'
 
 
 describe('isValidElement', () => {
     class TestComponent extends Component<any, { a: number, b: number, c: number }> {
         static defaultProps = {
-          a: 1
+            a: 1
         }
-  
-        publish() {
-          return {
+
+        subscribe() {
+            return constant({
                 a: this.props.a,
                 b: 2,
                 c: this.props.c,
-          }
+            })
+        }
+  
+        publish() {
+            return this.subs
         }
     }
 

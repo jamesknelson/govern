@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, Store, SFC } from '../src'
+import { combine, createElement, instantiate, Component, Store, SFC, constant } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -103,9 +103,7 @@ describe('Component', () => {
       }
       
       publish() {
-        return {
-          a: this.subs.a.count
-        }
+        return this.subs
       }
 		
 			componentDidUpdate(prevProps, prevState, prevSubs) {
@@ -121,7 +119,7 @@ describe('Component', () => {
     let harness = createTestHarness(store)
     harness.setProps({ updated: true })
     expect(didUpdateCallCount).toBe(2)
-    expect(harness.value).toEqual({ a: 1 })
+    expect(harness.value.a.count).toEqual(1)
   })
 
   it("setState within UNSAFE_componentWillReceiveProps is reflected within the output", () => {
@@ -157,9 +155,13 @@ describe('Component', () => {
       shouldComponentUpdate() {
         return false
       }
+
+      subscribe() {
+        return null
+      }
       
       publish() {
-        return null
+        return this.subs
       }
     }
     
@@ -193,9 +195,13 @@ describe('Component', () => {
         nextProps = _nextProps
         return false
       }
+
+      subscribe() {
+        return null
+      }
       
       publish() {
-        return null
+        return this.subs
       }
     }
     
@@ -213,24 +219,28 @@ describe('Component', () => {
       shouldComponentUpdate(prevProps, prevState) {
         return false
       }
+
+      subscribe() {
+        return constant("hello")
+      }
       
       publish() {
-        return "hello"
+        return this.subs
       }
     }
 
     class TestComponent extends Component<{ updated }> {
       subscribe() {
         return combine({
-          test: createElement(TestChildComponent)
+          child: combine({
+            test: createElement(TestChildComponent)
+          }),
+          updated: this.props.updated,
         })
       }
 
       publish() {
-        return {
-          child: this.subs,
-          updated: this.props.updated,
-        }
+        return this.subs
       }
     }
 
@@ -277,8 +287,11 @@ describe('Component', () => {
         super(props)
         childConstructorCount++
       }
+      subscribe() {
+        return constant("test")
+      }
       publish() {
-        return "test"
+        return this.subs
       }
     }
     class TestComponent extends Component<{ updated }> {
@@ -290,7 +303,7 @@ describe('Component', () => {
         )
       }
       publish() {
-        return null
+        return this.subs
       }
     }
     let store = instantiate(createElement(TestComponent))
@@ -315,15 +328,15 @@ describe('Component', () => {
       }
 
       publish() {
-        return this.subs.inner.count
+        return this.subs
       }
     }
 
     let store = instantiate(createElement(TestComponent))
     let harness = createTestHarness(store)
-    expect(harness.value).toEqual(0)
+    expect(harness.value.inner.count).toEqual(0)
     harness.setProps({ updated: true })
-    expect(harness.value).toEqual(1)
+    expect(harness.value.inner.count).toEqual(1)
   })
 
   it("events can be received from combined stores in the same transaction as a setState", () => {
@@ -332,18 +345,16 @@ describe('Component', () => {
     class TestComponent extends Component<{ updated }> {
       subscribe() {
         return combine({
-          inner: counterStore
+          child: counterStore,
+          update: () => {
+            this.setState({})
+            this.subs.child.increase()
+          }
         })
       }
 
       publish() {
-        return {
-          child: this.subs.inner.count,
-          update: () => {
-            this.setState({})
-            this.subs.inner.increase()
-          },
-        }
+        return this.subs
       }
     }
 
@@ -352,7 +363,7 @@ describe('Component', () => {
     harness.dispatch(() => {
       harness.value.update()
     })
-    expect(harness.value.child).toEqual(1)
+    expect(harness.value.child.count).toEqual(1)
   })
 
   it("calls getDerivedStateFromProps on instantiation", () => {
@@ -363,8 +374,12 @@ describe('Component', () => {
         return props.hello ? { hello: 'world' } : {}
       }
 
+      subscribe() {
+        return constant(this.state.hello)
+      }
+
       publish() {
-        return this.state.hello
+        return this.subs
       }
     }
 
@@ -381,8 +396,12 @@ describe('Component', () => {
         return props.updated ? { hello: 'world' } : {}
       }
 
+      subscribe() {
+        return constant(this.state.hello)
+      }
+
       publish() {
-        return this.state.hello
+        return this.subs
       }
     }
 
@@ -408,17 +427,17 @@ describe('Component', () => {
       }
 
       publish() {
-        return this.subs.outer.inner
+        return this.subs
       }
     }
 
     let store = instantiate(createElement(TestComponent))
     let harness = createTestHarness(store)
-    expect(harness.value.count).toBe(0)
+    expect(harness.value.outer.inner.count).toBe(0)
     harness.dispatch(() => {
-      harness.value.increase()
+      harness.value.outer.inner.increase()
     })
-    expect(harness.value.count).toBe(1)
+    expect(harness.value.outer.inner.count).toBe(1)
   })
 
   it("can subscribe to arrays of stores", () => {
