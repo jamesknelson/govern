@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, SFC } from '../../src'
+import { combine, createElement, instantiate, Component, SFC, constant } from '../../src'
 
 export function createCounter(initialValue = 0) {
     const Counter = createCounterClass()
@@ -18,11 +18,11 @@ export function createCounterClass() {
             this.setState(({ count }) => ({ count: count + 1 }))
         }
 
-        publish() {
-            return {
+        render() {
+            return constant({
                 count: this.state.count,
                 increase: this.increase,
-            }
+            })
         }
     }
 }

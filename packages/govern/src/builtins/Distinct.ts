@@ -12,17 +12,13 @@ export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>,
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    render() {
         return this.impl.props.children
     }
 
     shouldComponentPublish(prevProps, prevState, prevSubs) {
         let comparator = this.impl.props.by || isReferenceEqual
         return !comparator(prevSubs, this.impl.subs)
-    }
-
-    publish() {
-        return this.impl.subs
     }
 
     createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<Value> {

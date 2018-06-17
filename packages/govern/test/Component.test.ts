@@ -8,14 +8,10 @@ describe('Component', () => {
     let didCallDidUpdate = false
 
 		class TestComponent extends Component<{}> {
-			subscribe() {
+			render() {
 			  return combine({
 				  a: 1
 			  })
-      }
-
-      publish() {
-        return this.subs
       }
 		
 			componentDidInstantiate() {
@@ -38,14 +34,10 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			subscribe() {
+			render() {
 			  return combine({
 				  a: this.state.a
 			  })
-      }
-      
-      publish() {
-        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -66,14 +58,10 @@ describe('Component', () => {
 		class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			subscribe() {
+			render() {
         return combine({
 				  a: this.state.a
 			  })
-      }
-      
-      publish() {
-        return this.subs
       }
 		
 			componentDidUpdate(nextProps, nextState, nextOutput) {
@@ -96,14 +84,10 @@ describe('Component', () => {
     let counter = createCounter()
 
 		class TestComponent extends Component<{ updated }, { a }> {
-      subscribe() {
+      render() {
 			  return combine({
           a: counter,
         })
-      }
-      
-      publish() {
-        return this.subs
       }
 		
 			componentDidUpdate(prevProps, prevState, prevSubs) {
@@ -130,14 +114,10 @@ describe('Component', () => {
         this.setState({ a: 2 })
 			}
 
-			subscribe() {
+			render() {
 			  return combine({
 				  a: this.state.a
 			  })
-      }
-      
-      publish() {
-        return this.subs
       }
     }
     
@@ -156,12 +136,8 @@ describe('Component', () => {
         return false
       }
 
-      subscribe() {
+      render() {
         return null
-      }
-      
-      publish() {
-        return this.subs
       }
     }
     
@@ -196,12 +172,8 @@ describe('Component', () => {
         return false
       }
 
-      subscribe() {
+      render() {
         return null
-      }
-      
-      publish() {
-        return this.subs
       }
     }
     
@@ -220,27 +192,19 @@ describe('Component', () => {
         return false
       }
 
-      subscribe() {
+      render() {
         return constant("hello")
-      }
-      
-      publish() {
-        return this.subs
       }
     }
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         return combine({
           child: combine({
             test: createElement(TestChildComponent)
           }),
           updated: this.props.updated,
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -257,20 +221,17 @@ describe('Component', () => {
 
   it(`removing a property of a <combine /> connected child removes its value from subs`, () => {
     class Constant extends Component {
-      publish() {
-        return 'a'
+      render() {
+        return constant('a')
       }
     }
     let observable = instantiate(createElement(Constant))
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         let children = { a: observable, b: observable }
         if (this.props.updated) delete children.b
         return combine(children)
-      }
-      publish() {
-        return this.subs
       }
     }
     let store = instantiate(createElement(TestComponent))
@@ -287,23 +248,17 @@ describe('Component', () => {
         super(props)
         childConstructorCount++
       }
-      subscribe() {
+      render() {
         return constant("test")
-      }
-      publish() {
-        return this.subs
       }
     }
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         return (
           this.props.updated
             ? [createElement(Child)]
             : {'0': createElement(Child)} as any
         )
-      }
-      publish() {
-        return this.subs
       }
     }
     let store = instantiate(createElement(TestComponent))
@@ -321,14 +276,10 @@ describe('Component', () => {
         this.subs.inner.increase()
       }
 
-      subscribe() {
+      render() {
         return combine({
           inner: counterStore
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -343,7 +294,7 @@ describe('Component', () => {
     let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         return combine({
           child: counterStore,
           update: () => {
@@ -351,10 +302,6 @@ describe('Component', () => {
             this.subs.child.increase()
           }
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -374,12 +321,8 @@ describe('Component', () => {
         return props.hello ? { hello: 'world' } : {}
       }
 
-      subscribe() {
+      render() {
         return constant(this.state.hello)
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -396,12 +339,8 @@ describe('Component', () => {
         return props.updated ? { hello: 'world' } : {}
       }
 
-      subscribe() {
+      render() {
         return constant(this.state.hello)
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -418,16 +357,12 @@ describe('Component', () => {
     class TestComponent extends Component<{ updated }, any> {
       state = {} as any
 
-      subscribe() {
+      render() {
         return {
           outer: {
             inner: counterStore
           }
         } as any
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -447,15 +382,11 @@ describe('Component', () => {
     class TestComponent extends Component<{ updated }, any> {
       state = {} as any
 
-      subscribe() {
+      render() {
         return [
           counter1Store,
           counter2Store,
         ] as any
-      }
-
-      publish() {
-        return this.subs
       }
     }
 

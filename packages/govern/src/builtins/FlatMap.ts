@@ -44,16 +44,12 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         }
     }
 
-    subscribe() {
+    render() {
         return this.impl.props.to(this.from.value)
     }
 
     shouldComponentPublish(prevProps, prevState, prevSubs) {
         return this.impl.subs === undefined || this.impl.subs !== prevSubs
-    }
-
-    publish() {
-        return this.impl.subs
     }
 
     // Reimplement impl's `createStoreGovernor`, so that we can get a value

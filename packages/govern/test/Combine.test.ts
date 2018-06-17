@@ -43,12 +43,8 @@ describe('Combine', () => {
             instantiationCount++
         }
 
-        subscribe() {
+        render() {
             return constant(this.props.x*2)
-        }
-
-        publish() {
-            return this.subs
         }
     }
 

@@ -12,12 +12,8 @@ describe('Dipatcher', () => {
         super(props)
       }
 
-      subscribe() {
+      render() {
         return null
-      }
-
-      publish() {
-        return this.subs
       }
 
       componentDidInstantiate() {
@@ -34,7 +30,7 @@ describe('Dipatcher', () => {
         dummy: false,
       }
 
-			subscribe() {
+			render() {
         return map(
           this.state.child || null,
           () => ({
@@ -42,10 +38,6 @@ describe('Dipatcher', () => {
             doSetState: this.doSetState
           })
         )
-      }
-
-      publish() {
-        return this.subs
       }
 
       doSetState = () => {

@@ -12,12 +12,18 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    render() {
         return this.impl.props.from
     }
 
-    publish() {
+    getPublishedValue() {
         return this.impl.props.to(this.impl.subs)
+    }
+
+    shouldComponentPublish() {
+        // We always need to publish, as the `to` function could return
+        // something different even if nothing else has changed.
+        return true
     }
 
     createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<ToValue> {

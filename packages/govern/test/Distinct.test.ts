@@ -39,7 +39,7 @@ describe('Distinct', () => {
     let counter = createCounter()
 
     class TestComponent extends Component {
-      subscribe() {
+      render() {
         return combine({
           count: distinct(
             map(counter, x => Math.floor(x.count / 2)),
@@ -47,10 +47,6 @@ describe('Distinct', () => {
           ),
           increase: counter.getValue().increase,
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
   

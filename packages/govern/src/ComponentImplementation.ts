@@ -16,12 +16,12 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     }
 
     UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
-    subscribe?(): any;
+    render(): any;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
     shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
 
-    publish(): Value
+    getPublishedValue?(): Value
 
     // These lifecycle methods will be called after other Govern components have
     // received a published value, but before the update is flushed to the UI.
@@ -247,10 +247,10 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     }
 
     connect() {
-        if (this.lifecycle.subscribe) {
+        if (this.lifecycle.render) {
             this.pushFix()
             this.isRunningSubscribe = true
-            let result = this.lifecycle.subscribe()
+            let result = this.lifecycle.render()
             this.isRunningSubscribe = false
             this.popFix()
 
@@ -451,10 +451,13 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         
         // Publish a new value based on the current props, state and subs.
         if (shouldComponentPublish) {
-            this.pushFix()
-            this.emitter.publish(this.lifecycle.publish())
-            this.popFix()
-
+            let publishedValue = this.subs as any
+            if (this.lifecycle.getPublishedValue) {
+                this.pushFix()
+                publishedValue = this.lifecycle.getPublishedValue() as any
+                this.popFix()
+            }
+            this.emitter.publish(publishedValue)
             this.previousPublish = {
                 props: this.props,
                 state: this.state,

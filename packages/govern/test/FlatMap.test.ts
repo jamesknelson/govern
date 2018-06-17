@@ -5,23 +5,15 @@ import { createCounter, createCounterClass } from './utils/createCounter';
 
 describe('FlatMap', () => {
   class Double extends Component<{x: number}> {
-    subscribe() {
+    render() {
       return constant(this.props.x*2)
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
   it("maps initial value", () => {
     class Test extends Component<{a: string}> {
-      subscribe() {
+      render() {
           return constant({ b: this.props.a })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -95,15 +87,11 @@ describe('FlatMap', () => {
     let counterStore = createCounter()
     
     class TestComponent extends Component {
-      subscribe() {
+      render() {
         return combine({
           decrease: flatMap(counterStore, value => constant(value.increase)),
           count: flatMap(counterStore, value => constant(0-value.count))
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -123,12 +111,8 @@ describe('FlatMap', () => {
     let Counter = createCounterClass()
 
     class TestComponent extends Component {
-      subscribe() {
+      render() {
         return flatMap(constant(createElement(Counter)), value => value)
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -147,12 +131,8 @@ describe('FlatMap', () => {
     let Counter = createCounterClass()
 
     class TestComponent extends Component {
-      subscribe() {
+      render() {
         return flatMap(counter, value => createElement(Counter, { initialValue: 2 }))
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -168,12 +148,8 @@ describe('FlatMap', () => {
 
 
     class TestComponent extends Component {
-      subscribe() {
+      render() {
         return flatMap(selector, value => counters[value.count])
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -195,15 +171,11 @@ describe('FlatMap', () => {
         return !(nextProps.count % 2)
       }
 
-      subscribe() {
+      render() {
         return constant({
           count: this.props.count,
           increase: this.props.increase,
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 

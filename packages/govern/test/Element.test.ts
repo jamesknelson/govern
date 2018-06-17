@@ -8,16 +8,12 @@ describe('isValidElement', () => {
             a: 1
         }
 
-        subscribe() {
+        render() {
             return constant({
                 a: this.props.a,
                 b: 2,
                 c: this.props.c,
             })
-        }
-  
-        publish() {
-            return this.subs
         }
     }
 

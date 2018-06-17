@@ -12,12 +12,8 @@ export class CombineArray<ItemValue> implements Governable<ItemValue[], CombineA
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    render() {
         return createElement('combineArray', this.impl.props)
-    }
-
-    publish() {
-        return this.impl.subs
     }
 
     createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<ItemValue[]> {

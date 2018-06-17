@@ -20,7 +20,7 @@ describe('Batching', () => {
   }
 
   class JoinedObservables extends Component<{ firstName: Store<string>, lastName: Store<string> }> {
-    subscribe() {
+    render() {
       let { firstName, lastName } = this.props
       return map(
         combine({
@@ -29,9 +29,6 @@ describe('Batching', () => {
         }),
         ({ firstName, lastName }) => firstName + ' ' + lastName
       )
-    }
-    publish() {
-      return this.subs
     }
   }
 

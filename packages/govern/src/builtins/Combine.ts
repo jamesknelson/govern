@@ -12,12 +12,8 @@ export class Combine<CombinedValue> implements Governable<CombinedValue, Combine
         this.impl = new ComponentImplementation(this, props)
     }
 
-    subscribe() {
+    render() {
         return createElement('combine', this.impl.props)
-    }
-
-    publish() {
-        return this.impl.subs
     }
 
     createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<CombinedValue> {

@@ -5,23 +5,15 @@ import { createCounter, createCounterClass } from './utils/createCounter';
 
 describe('Map', () => {
   class Double extends Component<{x: number}> {
-    subscribe() {
+    render() {
       return constant(this.props.x*2)
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
   it("doesn't flattern the result", () => {
     class Test extends Component<{a: string}> {
-      subscribe() {
+      render() {
         return constant({ b: this.props.a })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -34,26 +26,18 @@ describe('Map', () => {
 
   it("can map to a child of a combined and flattened store", () => {
     class InnerStore extends Component {
-      subscribe() {
+      render() {
         return constant({
           name: 'bob'
         })
       }
-
-      publish() {
-        return this.subs
-      }
     }
 
     class OuterStore extends Component {
-      subscribe() {
+      render() {
         return combine({
           inner: createElement(InnerStore)
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 

@@ -18,16 +18,12 @@ function createModelClass() {
       this.setState({ value }) 
     }
 
-    subscribe() {
+    render() {
       return constant({
         change: this.change,
         value: this.state.value,
         error: this.props.validate(this.state.value)
       })
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
@@ -36,7 +32,7 @@ function createModelClass() {
       defaultValue: {},
     }
 
-    subscribe() {
+    render() {
       return map(
         combine({
           name: createElement(ModelPrimitive, {
@@ -75,10 +71,6 @@ function createModelClass() {
       )
     }
 
-    publish() {
-      return this.subs
-    }
-
     change = (value) => {
       if (value.name) {
         this.subs.children.name.change(value.name)
@@ -101,7 +93,7 @@ function createDataSourceClass() {
       this.setState({ store })
     }
 
-    subscribe() {
+    render() {
       return map(
         this.state.store && combine(this.state.store),
         data => ({
@@ -109,10 +101,6 @@ function createDataSourceClass() {
           data,
         })
       )
-    }
-
-    publish() {
-      return this.subs
     }
   }
 }
@@ -126,15 +114,11 @@ function createFormControllerClass() {
   return class FormController extends Component<{ data }> {
     awaitingData: boolean = true
 
-    subscribe() {
+    render() {
       return combine({
         data: this.props.data,
         model: createElement(Model, null)
       })
-    }
-
-    publish() {
-      return this.subs
     }
 
     componentDidInstantiate() {
@@ -198,10 +182,6 @@ describe("Model", () => {
       name: 'James',
       email: 'james@jamesknelson.com'
     })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 })
 
@@ -212,12 +192,8 @@ describe("FormController", () => {
   it('initializes with empty observable', () => {
     let empty = {}
     class Constant extends Component {
-      subscribe() {
+      render() {
         return null
-      }
-
-      publish() {
-        return this.subs
       }
     }
     let data = instantiate(createElement(Constant))

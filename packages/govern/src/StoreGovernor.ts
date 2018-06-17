@@ -74,12 +74,8 @@ export function createStoreGovernor<Value, Props>(element: GovernElement<Value, 
         // an anonymous Component class.
         let sfc = element.type as any
         let constructor = class extends Component<any, any> {
-            subscribe() {
+            render() {
                 return sfc(this.props)
-            }
-
-            publish() {
-                return this.subs
             }
         }
         instance = new constructor(element.props)

@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, SFC } from '../../src'
+import { combine, createElement, instantiate, Component, SFC, constant } from '../../src'
 
 export function createModelClass() {
     return class Model<T> extends Component<{ defaultValue: T }, any> {
@@ -13,11 +13,11 @@ export function createModelClass() {
             this.setState({ value })
         }
 
-        publish() {
-            return {
+        render() {
+            return constant({
                 value: this.state.value,
                 change: this.change,
-            }
+            })
         }
     }
 }

@@ -7,7 +7,7 @@ describe('key', () => {
     let Counter = createCounterClass()
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         return map(
           combineArray([
             createElement(Counter, { key: this.props.updated ? 'b' : 'a' }),
@@ -20,10 +20,6 @@ describe('key', () => {
             secondCount: subs[1].count,
           })
         )
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -44,7 +40,7 @@ describe('key', () => {
     let Counter = createCounterClass()
 
     class TestComponent extends Component<{ updated }> {
-      subscribe() {
+      render() {
         let el = combineArray((this.props.updated ? [] : [
           createElement(Counter, { key: 'a' }),
         ]).concat([
@@ -57,10 +53,6 @@ describe('key', () => {
           firstCount: subs[0].count,
           secondCount: subs[1] && subs[1].count,
         }))
-      }
-
-      publish() {
-        return this.subs
       }
     }
 

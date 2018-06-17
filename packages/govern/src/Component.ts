@@ -16,11 +16,28 @@ export interface ComponentClass<Value, Props> extends GovernableClass<Value, Pro
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> extends ComponentImplementationLifecycle<Props, State, Value, Subs> {
-    // While `ComponentImplementation` allows us to "subscribe" to any value,
-    // it only makes sense for components to subscribe to elements (as other
-    // values are treated as constants.)
-    subscribe?(): GovernElement<Subs, any> | null;
+export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> {
+    constructor: Function & {
+        getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
+    }
+
+    UNSAFE_componentWillReceiveProps?(nextProps: Props): void;
+
+    render(): GovernElement<Subs, any> | null;
+
+    shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
+    
+    // These lifecycle methods will be called after other Govern components have
+    // received a published value, but before the update is flushed to the UI.
+    // 
+    // They can be used in a similar way to a theoretical
+    // `componentWillReceiveSubs`. I've opted for this method instead, as it
+    // is more obvious that an unguarded `setState` will cause an infinite
+    // loop.
+    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
+    componentDidInstantiate?(): void;
+    
+    componentWillBeDisposed?(): void;
 }
 
 export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
@@ -38,7 +55,7 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         return (this.impl.getFix().props || {}) as Props
     }
 
-    get subs(): SubscribeType<this["subscribe"]> {
+    get subs(): SubscribeType<this["render"]> {
         if (this.impl.isRunningSubscribe) {
             throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
@@ -83,8 +100,6 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     createStoreGovernor(dispatcher: Dispatcher) {
         return this.impl.createStoreGovernor(dispatcher)
     }
-
-    abstract publish(): Value;
 
     shouldComponentPublish(prevProps, prevState, prevSubs) {
         return this.subs === undefined || this.subs !== prevSubs

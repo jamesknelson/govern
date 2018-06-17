@@ -27,16 +27,12 @@ describe('instantiate', () => {
         a: 1
       }
 
-      subscribe() {
+      render() {
         return constant({
           a: this.props.a,
           b: 2,
           c: this.props.c,
         })
-      }
-
-      publish() {
-        return this.subs
       }
     }
 
@@ -73,7 +69,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
   class Model<T> extends Component {
     state = { value: undefined }
 
-    subscribe() {
+    render() {
       return constant({
         value: this.state.value,
         change: value => {
@@ -83,21 +79,13 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
         },
       })
     }
-
-    publish() {
-      return this.subs
-    }
   }
 
   class TestComponent extends Component {
-    subscribe() {
+    render() {
       return combine({
         model: createElement(Model),
       })
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
@@ -123,7 +111,7 @@ test("can dispose mapped items", async () => {
   class Model<T> extends Component {
     state = { value: undefined }
 
-    subscribe() {
+    render() {
       return constant({
         value: this.state.value,
         change: value => {
@@ -133,21 +121,13 @@ test("can dispose mapped items", async () => {
         },
       })
     }
-
-    publish() {
-      return this.subs
-    }
   }
 
   class TestComponent extends Component {
-    subscribe() {
+    render() {
       return combine({
         model: createElement(Model),
       })
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
@@ -156,11 +136,6 @@ test("can dispose mapped items", async () => {
   let mapStore = instantiate(store.flatMap(x => constant(x)))
 
   mapStore.dispose()
-
-  // Wait for any exceptions thrown by the transaction checker
-  return new Promise(resolve => {
-    setTimeout(resolve, 0)
-  })
 })
 
 
@@ -170,15 +145,11 @@ test("children can cause their own disposal", () => {
       value: undefined
     }
 
-    subscribe() {
+    render() {
       return constant({
         value: this.state.value,
         change: (value) => this.setState({ value })
       })
-    }
-
-    publish() {
-      return this.subs
     }
   }
 
@@ -191,12 +162,8 @@ test("children can cause their own disposal", () => {
       }
     }
 
-    subscribe() {
+    render() {
       return combine(this.state.items)
-    }
-
-    publish() {
-      return this.subs
     }
 
     componentDidUpdate() {
