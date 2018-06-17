@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, map, Component, Store, SFC } from '../src'
+import { combine, createElement, createObservable, map, Component, GovernObservable, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -55,7 +55,7 @@ describe('Dipatcher', () => {
       }
     }
     
-    let store = instantiate(createElement(TestComponent, null))
+    let store = createObservable(createElement(TestComponent, null))
 
     // `subscribe` listeners are called on flush
     let subscription = store.subscribe(() => {

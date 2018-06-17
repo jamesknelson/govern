@@ -1,5 +1,5 @@
 import { Dispatcher } from './Dispatcher'
-import { EmitterStoreSubscription, DispatcherEmitter } from './DispatcherEmitter'
+import { EmitterObservableSubscription, DispatcherEmitter } from './DispatcherEmitter'
 import { Subscription } from './Subscription'
 
 
@@ -57,7 +57,7 @@ export interface PublishTarget<T> extends Target<T> {
     emitter: DispatcherEmitter<T>;
 
     // Receives the subscription object when `subscribe` is called
-    start(subscription: EmitterStoreSubscription): void
+    start(subscription: EmitterObservableSubscription): void
 
     /**
      * Notify the target of a new value.

@@ -2,7 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { MapProps } from '../Core'
 import { createElement } from '../Element'
 import { Dispatcher } from '../Dispatcher'
-import { Governable, StoreGovernor } from '../StoreGovernor'
+import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
 export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, FromValue> {
@@ -26,7 +26,7 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
         return true
     }
 
-    createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<ToValue> {
-        return this.impl.createStoreGovernor(dispatcher)
+    createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<ToValue> {
+        return this.impl.createObservableGovernor(dispatcher)
     }
 }

@@ -1,6 +1,6 @@
 import { closedSubscription, Subscription } from './Subscription'
 import { DispatcherEmitter } from './DispatcherEmitter'
-import { StoreGovernor } from './StoreGovernor'
+import { GovernObservableGovernor } from './GovernObservableGovernor'
 
 
 export class Dispatcher {
@@ -110,7 +110,7 @@ export class Dispatcher {
         childDispatcher.enqueueAction = this.enqueueAction
     }
 
-    createEmitter<T>(governor: StoreGovernor<T>): DispatcherEmitter<T> {
+    createEmitter<T>(governor: GovernObservableGovernor<T>): DispatcherEmitter<T> {
         let emitter = new DispatcherEmitter<T>(this, governor)
         this.emitterPriorities.set(emitter, new Set())
         return emitter

@@ -1,4 +1,4 @@
-import { distinct, combine, constant, map, createElement, instantiate, Component, SFC } from '../src'
+import { distinct, combine, constant, map, createElement, createObservable, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 import { createCounter, createCounterClass } from './utils/createCounter';

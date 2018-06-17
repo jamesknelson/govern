@@ -1,4 +1,4 @@
-import { map, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { map, combine, constant, createElement, createObservable, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 import { createCounter, createCounterClass } from './utils/createCounter';
@@ -44,12 +44,12 @@ describe('Map', () => {
       return props.children
     }
 
-    let store = instantiate(createElement(OuterStore))
+    let store = createObservable(createElement(OuterStore))
     let mappedElement = map(store, x => x.inner)
     let flat = createElement(Flatten, {
       children: mappedElement
     })
-    let mappedStore = instantiate(flat)
+    let mappedStore = createObservable(flat)
 
     expect(mappedStore.getValue()).toEqual({ name: 'bob' })
   })

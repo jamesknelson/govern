@@ -1,10 +1,10 @@
 import { createCounter, createCounterClass } from './utils/createCounter'
-import { combine, createElement, instantiate, Component, SFC, constant } from '../src'
+import { combine, createElement, createObservable, Component, SFC, constant } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Combine', () => {
   it("outputs plain objects", () => {
-    let governor = instantiate(combine({ a: 1, b: 2 }))
+    let governor = createObservable(combine({ a: 1, b: 2 }))
     expect(governor.getValue()).toEqual({ a: 1, b: 2 })
   })
 

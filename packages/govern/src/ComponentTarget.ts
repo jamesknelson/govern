@@ -1,12 +1,12 @@
 import { ComponentImplementation } from './ComponentImplementation'
-import { DispatcherEmitter, EmitterStoreSubscription } from './DispatcherEmitter'
+import { DispatcherEmitter, EmitterObservableSubscription } from './DispatcherEmitter'
 import { PublishTarget } from './Target'
 
 export class ComponentTarget<T> implements PublishTarget<T> {
     impl: ComponentImplementation<any, any, any, any>
     emitter: DispatcherEmitter<T>;
     key: string
-    subscription: EmitterStoreSubscription;
+    subscription: EmitterObservableSubscription;
 
     isPublishTarget = true as true
 
@@ -16,7 +16,7 @@ export class ComponentTarget<T> implements PublishTarget<T> {
         this.key = key
     }
 
-    start(subscription: EmitterStoreSubscription): void {
+    start(subscription: EmitterObservableSubscription): void {
         this.subscription = subscription
     }
 

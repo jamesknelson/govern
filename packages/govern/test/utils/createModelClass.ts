@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, SFC, constant } from '../../src'
+import { combine, createElement, createObservable, Component, SFC, constant } from '../../src'
 
 export function createModelClass() {
     return class Model<T> extends Component<{ defaultValue: T }, any> {

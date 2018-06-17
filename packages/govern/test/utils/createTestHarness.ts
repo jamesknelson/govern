@@ -1,4 +1,4 @@
-import { Component, ElementType, GovernElement, Store, createElement, instantiate, map } from '../../src'
+import { Component, ElementType, GovernElement, GovernObservable, createElement, createObservable, map } from '../../src'
 
 interface HarnessProps<Value> {
   element: GovernElement<Value, any>
@@ -45,7 +45,7 @@ class Harness<Value> extends Component<HarnessProps<Value>, any, HarnessSnapshot
 
 export function createTestHarness<Value>(element: GovernElement<Value, any>, onChange?: () => void): { dispatch: Function, value: Value, changeElement: Function } {
   let observable =
-    instantiate(
+    createObservable(
       createElement(Harness as ElementType<Harness<Value>>, {
         element,
       })

@@ -3,7 +3,7 @@ import { convertToElement, doElementsReconcile, isValidElement, GovernElement } 
 import { ComponentTarget } from './ComponentTarget'
 import { DispatcherEmitter } from './DispatcherEmitter'
 import { Dispatcher } from './Dispatcher';
-import { createStoreGovernor, StoreGovernor } from './StoreGovernor'
+import { createObservableGovernor, GovernObservableGovernor } from './GovernObservableGovernor'
 
 // A symbol used to represent a child node that isn't within an object or
 // array. It is typed as a string, as TypeScript doesn't yet support indexing
@@ -49,10 +49,10 @@ interface Child {
 
 export interface ChildSubscription {
     target: ComponentTarget<any>,
-    governor: StoreGovernor<any, any>,
+    governor: GovernObservableGovernor<any, any>,
 }
 
-export class ComponentImplementation<Props, State, Value, Subs> implements StoreGovernor<Value, Props> {
+export class ComponentImplementation<Props, State, Value, Subs> implements GovernObservableGovernor<Value, Props> {
     props: Props;
     state: State;
     subs: Subs;
@@ -337,10 +337,10 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         }
         else {
             let target = new ComponentTarget(this, key)
-            let governor: StoreGovernor<any, any> =
+            let governor: GovernObservableGovernor<any, any> =
                 element.type == 'subscribe'
                     ? element.props.to.governor
-                    : createStoreGovernor(element, this.emitter.dispatcher)
+                    : createObservableGovernor(element, this.emitter.dispatcher)
 
             child.subscription = { governor, target }
             governor.emitter.subscribePublishTarget(target)
@@ -363,7 +363,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             this.setSubs(key, nextProps.of)
         }
         else if (child.element.type !== 'subscribe') {
-            // Stores will immediately emit their new value
+            // Observables will immediately emit their new value
             // on `setProps`, ensuring that `subs` is updated.
             this.expectingChildChangeFor = key
             child.subscription.governor.setProps(nextProps)
@@ -466,7 +466,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         }
     }
 
-    createStoreGovernor(initialDispatcher: Dispatcher): this {
+    createObservableGovernor(initialDispatcher: Dispatcher): this {
         // Make sure to use `this.emitter.dispatcher` instead of the `_dispatcher`
         // argument, in case a new dispatcher was assigned during `connect`.
         this.emitter = initialDispatcher.createEmitter(this)

@@ -6,8 +6,8 @@ import { Distinct } from './builtins/Distinct'
 import { Component } from './Component'
 import { Dispatcher } from './Dispatcher'
 import { GovernElement, isValidElement } from './Element'
-import { Store } from './Store'
-import { StoreGovernor } from './StoreGovernor'
+import { GovernObservable } from './GovernObservable'
+import { GovernObservableGovernor } from './GovernObservableGovernor'
 import { Subscription } from './Subscription'
 import { FlushTarget, PublishTarget, Target } from './Target'
 import { DispatcherEmitter } from './DispatcherEmitter';
@@ -24,7 +24,7 @@ const BuiltInComponents = {
 
 
 export interface Governable<Value, Props> {
-    createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<Value, Props>;
+    createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<Value, Props>;
 }
 
 export interface GovernableClass<Value, Props> {
@@ -33,10 +33,10 @@ export interface GovernableClass<Value, Props> {
     displayName?: string;
 }
 
-// An interface used iternally within Govern to control a store instance.
+// An interface used iternally within Govern to control an observable instance.
 // The publicly consumable parts of this are exposed to the outside world
-// through the `Store` class.
-export interface StoreGovernor<Value, Props=any> {
+// through the `Observable` class.
+export interface GovernObservableGovernor<Value, Props=any> {
     emitter: DispatcherEmitter<Value>;
     
     setProps(props: Props): void;
@@ -53,7 +53,7 @@ export interface StoreGovernor<Value, Props=any> {
     performPost(): boolean;
 }
 
-export function createStoreGovernor<Value, Props>(element: GovernElement<Value, Props>, dispatcher: Dispatcher): StoreGovernor<Value, Props> {
+export function createObservableGovernor<Value, Props>(element: GovernElement<Value, Props>, dispatcher: Dispatcher): GovernObservableGovernor<Value, Props> {
     let instance: Governable<Value, Props>
 
     // Create a component instance for the element, with the specified
@@ -65,7 +65,7 @@ export function createStoreGovernor<Value, Props>(element: GovernElement<Value, 
         }
         instance = new constructor(element.props)
     }
-    else if (element.type.prototype.createStoreGovernor) {
+    else if (element.type.prototype.createObservableGovernor) {
         let constructor = element.type as any
         instance = new constructor(element.props)
     }
@@ -85,5 +85,5 @@ export function createStoreGovernor<Value, Props>(element: GovernElement<Value, 
     }
 
     // Return the component instance's governor.
-    return instance.createStoreGovernor(dispatcher)
+    return instance.createObservableGovernor(dispatcher)
 }

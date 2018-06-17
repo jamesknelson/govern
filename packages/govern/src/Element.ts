@@ -22,9 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import { GovernableClass } from './StoreGovernor'
+import { GovernableClass } from './GovernObservableGovernor'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, DistinctProps } from './Core'
-import { Store, isValidStore } from './Store'
+import { GovernObservable, isValidObservable } from './GovernObservable'
 import { isPlainObject } from './utils/isPlainObject'
 
 const RESERVED_PROPS = {
@@ -283,7 +283,7 @@ export function convertToElement(value): GovernElement<any, any> {
     if (isValidElement(value)) {
         return value
     }
-    else if (isValidStore(value)) {
+    else if (isValidObservable(value)) {
         return {
             type: 'subscribe',
             props: { to: value },

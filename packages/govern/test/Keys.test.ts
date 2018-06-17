@@ -1,4 +1,4 @@
-import { combine, combineArray, createElement, instantiate, map, Component, Store, SFC } from '../src'
+import { combine, combineArray, createElement, createObservable, map, Component, GovernObservable, SFC } from '../src'
 import { createCounterClass } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 

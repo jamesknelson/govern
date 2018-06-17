@@ -2,7 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { CombineArrayChildren, CombineArrayProps } from '../Core'
 import { createElement } from '../Element'
 import { Dispatcher } from '../Dispatcher'
-import { Governable, StoreGovernor } from '../StoreGovernor'
+import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
 export class CombineArray<ItemValue> implements Governable<ItemValue[], CombineArrayProps<ItemValue>>, ComponentImplementationLifecycle<CombineArrayProps<ItemValue>, {}, ItemValue[], ItemValue[]> {
@@ -16,7 +16,7 @@ export class CombineArray<ItemValue> implements Governable<ItemValue[], CombineA
         return createElement('combineArray', this.impl.props)
     }
 
-    createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<ItemValue[]> {
-        return this.impl.createStoreGovernor(dispatcher)
+    createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<ItemValue[]> {
+        return this.impl.createObservableGovernor(dispatcher)
     }
 }

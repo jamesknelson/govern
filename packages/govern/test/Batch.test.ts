@@ -1,25 +1,25 @@
-import { map, combine, createElement, GovernElement, instantiate, Store, Component, SFC } from '../src'
+import { map, combine, createElement, GovernElement, createObservable, GovernObservable, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 
 type ReturnType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
 
 describe('Batching', () => {
-  function FirstName(props: { userStore: Store<{ firstName: string, lastName: string }> }) {
+  function FirstName(props: { userStore: GovernObservable<{ firstName: string, lastName: string }> }) {
     return map(
       props.userStore,
       state => state.firstName
     )
   }
 
-  function LastName(props: { userStore: Store<{ firstName: string, lastName: string }> }) {
+  function LastName(props: { userStore: GovernObservable<{ firstName: string, lastName: string }> }) {
     return map(
       props.userStore,
       state => state.lastName
     )
   }
 
-  class JoinedObservables extends Component<{ firstName: Store<string>, lastName: Store<string> }> {
+  class JoinedObservables extends Component<{ firstName: GovernObservable<string>, lastName: GovernObservable<string> }> {
     render() {
       let { firstName, lastName } = this.props
       return map(
@@ -41,18 +41,18 @@ describe('Batching', () => {
    */
   it("batches multiple events that originate from the same governor", () => {
     let Model = createModelClass()
-    let modelGovernor = instantiate(
+    let modelGovernor = createObservable(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
-    let userStore = instantiate(
+    let userStore = createObservable(
       map(
         modelGovernor,
         model => model.value
       )
     )
 
-    let firstNameGovernor = instantiate(createElement(FirstName, { userStore }))
-    let lastNameGovernor = instantiate(createElement(LastName, { userStore }))
+    let firstNameGovernor = createObservable(createElement(FirstName, { userStore }))
+    let lastNameGovernor = createObservable(createElement(LastName, { userStore }))
     
     let updateCount = 0
     let harness = createTestHarness(

@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, Store, SFC, constant } from '../src'
+import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -23,7 +23,7 @@ describe('Component', () => {
 			}
     }
     
-    let store = instantiate(createElement(TestComponent, null))
+    let store = createObservable(createElement(TestComponent, null))
     expect(didCallDidUpdate).toBe(false)
     expect(calledDidInstantiateWith).toEqual({ a: 1 })
   })
@@ -218,7 +218,7 @@ describe('Component', () => {
         return constant('a')
       }
     }
-    let observable = instantiate(createElement(Constant))
+    let observable = createObservable(createElement(Constant))
 
     class TestComponent extends Component<{ updated }> {
       render() {

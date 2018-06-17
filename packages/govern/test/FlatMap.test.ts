@@ -1,4 +1,4 @@
-import { flatMap, map, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, map, combine, constant, createElement, createObservable, Component, SFC } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 import { createCounter, createCounterClass } from './utils/createCounter';
@@ -57,7 +57,7 @@ describe('FlatMap', () => {
     }
 
     let Model = createModelClass()
-    let model = instantiate(
+    let model = createObservable(
         createElement(Model, { defaultValue: { firstName: "", lastName: "" } })
     )
     let harness = createTestHarness(

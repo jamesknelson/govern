@@ -2,7 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { DistinctProps } from '../Core'
 import { createElement } from '../Element'
 import { Dispatcher } from '../Dispatcher'
-import { Governable, StoreGovernor } from '../StoreGovernor'
+import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
 export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value, Value> {
@@ -21,8 +21,8 @@ export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>,
         return !comparator(prevSubs, this.impl.subs)
     }
 
-    createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<Value> {
-        return this.impl.createStoreGovernor(dispatcher)
+    createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<Value> {
+        return this.impl.createObservableGovernor(dispatcher)
     }
 }
 

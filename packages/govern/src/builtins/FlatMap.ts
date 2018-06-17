@@ -1,8 +1,8 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { FlatMapProps } from '../Core'
 import { Dispatcher } from '../Dispatcher'
-import { createStoreGovernor, Governable, StoreGovernor } from '../StoreGovernor'
-import { Store } from '../Store'
+import { createObservableGovernor, Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
+import { GovernObservable } from '../GovernObservable'
 import { GovernElement, createElement, convertToElement, doElementsReconcile } from '../Element'
 import { Subscription } from '../Subscription'
 import { PublishTarget } from '../Target'
@@ -10,7 +10,7 @@ import { DispatcherEmitter } from '../DispatcherEmitter';
 
 interface Child<FromValue> {
     element: GovernElement<FromValue>,
-    governor?: StoreGovernor<FromValue>,
+    governor?: GovernObservableGovernor<FromValue>,
     subscription?: Subscription,
     target?: PublishTarget<any>,
     value: FromValue,
@@ -52,10 +52,10 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         return this.impl.subs === undefined || this.impl.subs !== prevSubs
     }
 
-    // Reimplement impl's `createStoreGovernor`, so that we can get a value
+    // Reimplement impl's `createObservableGovernor`, so that we can get a value
     // from our `from` store/element before running the initial `connect` and
     // `publish`.
-    createStoreGovernor(initialDispatcher: Dispatcher) {
+    createObservableGovernor(initialDispatcher: Dispatcher) {
         this.impl.emitter = initialDispatcher.createEmitter(this.impl)
 
         this.receiveProps(this.impl.props)
@@ -81,7 +81,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         }
 
         if (elementHasChanged) {
-            let governor: StoreGovernor<any> | undefined
+            let governor: GovernObservableGovernor<any> | undefined
             let target: PublishTarget<any> | undefined
 
             if (fromElement.type === 'subscribe') {
@@ -90,7 +90,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
             }
             else if (fromElement.type !== 'constant') {
                 target = new FlatMapTarget(this)
-                governor = createStoreGovernor(fromElement, this.impl.emitter.dispatcher)
+                governor = createObservableGovernor(fromElement, this.impl.emitter.dispatcher)
             }
 
             if (governor) {

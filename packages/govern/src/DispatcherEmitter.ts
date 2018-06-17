@@ -1,7 +1,7 @@
 import { Dispatcher } from './Dispatcher'
 import { Subscription, closedSubscription } from './Subscription'
 import { FlushTarget, PublishTarget } from './Target'
-import { StoreGovernor } from './StoreGovernor';
+import { GovernObservableGovernor } from './GovernObservableGovernor';
 
 
 export class DispatcherEmitter<T=any> {
@@ -10,7 +10,7 @@ export class DispatcherEmitter<T=any> {
     // dispatcher.
     dispatcher: Dispatcher
 
-    governor: StoreGovernor<T>
+    governor: GovernObservableGovernor<T>
     hasError: boolean
     isStopped: boolean;
     flushTargets: FlushTarget<T>[]
@@ -18,7 +18,7 @@ export class DispatcherEmitter<T=any> {
     thrownError: any
     value: T
     
-    constructor(dispatcher: Dispatcher, governor: StoreGovernor<T>) {
+    constructor(dispatcher: Dispatcher, governor: GovernObservableGovernor<T>) {
         this.governor = governor
         this.dispatcher = dispatcher
         this.hasError = false
@@ -44,7 +44,7 @@ export class DispatcherEmitter<T=any> {
         
         this.publishTargets.push(publishTarget)
         
-        let subscription = new EmitterStoreSubscription(this, publishTarget)
+        let subscription = new EmitterObservableSubscription(this, publishTarget)
 
         publishTarget.start(subscription)
 
@@ -198,7 +198,7 @@ export class DispatcherEmitter<T=any> {
 }
 
 
-export class EmitterStoreSubscription implements Subscription {
+export class EmitterObservableSubscription implements Subscription {
     closed: boolean;
     emitter: DispatcherEmitter<any>
     

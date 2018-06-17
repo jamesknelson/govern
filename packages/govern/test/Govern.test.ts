@@ -1,7 +1,7 @@
-import { flatMap, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, combine, constant, createElement, createObservable, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
-describe('instantiate', () => {
+describe('createObservable', () => {
   it("creates stateless functional components", () => {
     const TestComponent: SFC<{ a: number, b: number, c: number }, any> = ({ a, c }) => {
       return combine({
@@ -16,7 +16,7 @@ describe('instantiate', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let store = instantiate(element)
+    let store = createObservable(element)
     let output = store.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
@@ -37,7 +37,7 @@ describe('instantiate', () => {
     }
 
     let element = createElement(TestComponent, { c: 3 })
-    let store = instantiate(element)
+    let store = createObservable(element)
     let output = store.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
@@ -90,7 +90,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
   }
 
   let element = createElement(TestComponent)
-  let store = instantiate(element)
+  let store = createObservable(element)
   let harness = createTestHarness(flatMap(store, x => constant(x)))  
   
   harness.dispatch(() => {
@@ -131,8 +131,8 @@ test("can dispose mapped items", async () => {
   }
 
   let element = createElement(TestComponent)
-  let store = instantiate(element)
-  let mapStore = instantiate(flatMap(store, x => constant(x)))
+  let store = createObservable(element)
+  let mapStore = createObservable(flatMap(store, x => constant(x)))
 
   mapStore.dispose()
 })

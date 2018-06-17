@@ -2,7 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { CombineChildren, CombineProps } from '../Core'
 import { createElement } from '../Element'
 import { Dispatcher } from '../Dispatcher'
-import { Governable, StoreGovernor } from '../StoreGovernor'
+import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
 export class Combine<CombinedValue> implements Governable<CombinedValue, CombineProps<CombinedValue>>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
@@ -16,7 +16,7 @@ export class Combine<CombinedValue> implements Governable<CombinedValue, Combine
         return createElement('combine', this.impl.props)
     }
 
-    createStoreGovernor(dispatcher: Dispatcher): StoreGovernor<CombinedValue> {
-        return this.impl.createStoreGovernor(dispatcher)
+    createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<CombinedValue> {
+        return this.impl.createObservableGovernor(dispatcher)
     }
 }

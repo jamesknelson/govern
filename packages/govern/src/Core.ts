@@ -1,18 +1,18 @@
 import { GovernElement } from './Element'
-import { GovernableClass } from './StoreGovernor'
-import { Store } from './Store'
+import { GovernableClass } from './GovernObservableGovernor'
+import { GovernObservable } from './GovernObservable'
 
 export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'distinct' | 'flatMap' | 'map' | 'subscribe'
 export type ComponentType<Value, Props> = GovernableClass<Value, Props> | StatelessComponent<Value, Props>;
 export type GovernType<Value = any, Props = any> = BuiltInType | ComponentType<Value, Props>;
-export type Subscribable<Value> = GovernElement<Value> | Store<Value>
+export type Subscribable<Value> = GovernElement<Value> | GovernObservable<Value>
 
 type ReturnOf<T> = T extends (...args: any[]) => infer R ? R : never;
-export type StoreValue<S extends Store<any>> = ReturnOf<S["getValue"]>
+export type StoreValue<S extends GovernObservable<any>> = ReturnOf<S["getValue"]>
 export type ElementValue<E extends GovernElement<any>> = E["value"]
 
 export type Value<X extends Subscribable<any>> =
-    X extends Store<infer T> ? T :
+    X extends GovernObservable<infer T> ? T :
     X extends GovernElement<infer T> ? T :
     never
 
@@ -26,7 +26,7 @@ type ComponentClass<Value> =
     })
 
 export type StoreOf<X extends ComponentClass<any> | StatelessComponent<any, any> | GovernElement<any, any>> =
-    Store<
+    GovernObservable<
         X extends ComponentClass<infer T> ? T :
         X extends StatelessComponent<infer T, any> ? T :
         X extends GovernElement<infer T, any> ? T :
@@ -77,11 +77,11 @@ export type DistinctProps<Value> = {
 }
 
 export type SubscribeProps<Value> = {
-    to: Store<Value>,
+    to: GovernObservable<Value>,
 }
 
 export type GovernNode<Value = any, Props = any> =
-    Store<Value> | 
+    GovernObservable<Value> | 
     GovernElement<Value, Props> |
     CombineChildren<keyof Value, Value> |
     Value

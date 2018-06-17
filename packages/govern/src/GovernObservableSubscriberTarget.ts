@@ -3,7 +3,7 @@ import { FlushTarget, TargetClosedError } from './Target'
 import { Subscription } from './Subscription'
 
 
-export class StoreSubscriberTarget<T> implements FlushTarget<T> {
+export class GovernObservableSubscriberTarget<T> implements FlushTarget<T> {
     priority: string;
 
     /**

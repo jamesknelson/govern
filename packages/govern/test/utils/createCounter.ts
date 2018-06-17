@@ -1,8 +1,8 @@
-import { combine, createElement, instantiate, Component, SFC, constant } from '../../src'
+import { combine, createElement, createObservable, Component, SFC, constant } from '../../src'
 
 export function createCounter(initialValue = 0) {
     const Counter = createCounterClass()
-    return instantiate(createElement(Counter, { initialValue }))
+    return createObservable(createElement(Counter, { initialValue }))
 }
 
 export function createCounterClass() {

@@ -1,4 +1,4 @@
-import { Governable, GovernableClass } from './StoreGovernor'
+import { Governable, GovernableClass } from './GovernObservableGovernor'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './Element'
@@ -97,8 +97,8 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
         this.impl.emitter.dispatcher.enqueueAction(action)
     }
 
-    createStoreGovernor(dispatcher: Dispatcher) {
-        return this.impl.createStoreGovernor(dispatcher)
+    createObservableGovernor(dispatcher: Dispatcher) {
+        return this.impl.createObservableGovernor(dispatcher)
     }
 
     shouldComponentPublish(prevProps, prevState, prevSubs) {

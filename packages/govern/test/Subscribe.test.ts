@@ -1,11 +1,11 @@
 import { createCounter } from './utils/createCounter'
-import { flatMap, combine, constant, createElement, instantiate, Component, SFC } from '../src'
+import { flatMap, combine, constant, createElement, createObservable, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe("Subscribing to governors", () => {
     it("outputs intial value", () => {
         let Component = () => constant('blue')
-        let store1 = instantiate(createElement(Component))
+        let store1 = createObservable(createElement(Component))
         let TestComponent = () => store1
         let harness = createTestHarness(createElement(TestComponent))
         expect(harness.value).toEqual("blue")
@@ -24,10 +24,10 @@ describe("Subscribing to governors", () => {
 
     it("can change store", () => {
         let Component1 = () => constant('blue')
-        let store1 = instantiate(createElement(Component1))
+        let store1 = createObservable(createElement(Component1))
 
         let Component2 = () => constant('orange')
-        let store2 = instantiate(createElement(Component2))
+        let store2 = createObservable(createElement(Component2))
         
         let Subscribe = ({ to }) => to
         let harness = createTestHarness(createElement(Subscribe, { to: store1 }))

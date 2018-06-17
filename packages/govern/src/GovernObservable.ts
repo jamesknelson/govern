@@ -8,12 +8,12 @@ import { DispatchedObserver } from './DispatchedObserver'
 import { ComponentImplementation } from './ComponentImplementation'
 import { Subscription } from './Subscription'
 import { Target, PublishTarget, isValidPublishTarget } from './Target'
-import { createStoreGovernor, StoreGovernor } from './StoreGovernor'
-import { StoreSubscriberTarget } from './StoreSubscriberTarget'
+import { createObservableGovernor, GovernObservableGovernor } from './GovernObservableGovernor'
+import { GovernObservableSubscriberTarget } from './GovernObservableSubscriberTarget'
 
 
 /**
- * A Store is a type of Observable, and also has a current value that
+ * An Observable of an element's output, where the latest value
  * can be retrieved through the `getValue` method.
  * 
  * - It has a "current value", which you can access through its `value`
@@ -24,10 +24,10 @@ import { StoreSubscriberTarget } from './StoreSubscriberTarget'
  * facilitating composition of multiple observables that are computed from
  * a single observable.
  */
-export class Store<Value, Props=any> implements DispatchedObservable<Value> {
-    governor: StoreGovernor<Value, Props>
+export class GovernObservable<Value, Props=any> implements DispatchedObservable<Value> {
+    governor: GovernObservableGovernor<Value, Props>
 
-    constructor(governor: StoreGovernor<Value, Props>) {
+    constructor(governor: GovernObservableGovernor<Value, Props>) {
         this.governor = governor
     }
 
@@ -39,7 +39,7 @@ export class Store<Value, Props=any> implements DispatchedObservable<Value> {
         endDispatch?: () => void,
         priority = "0",
     ): Subscription {
-        let target = new StoreSubscriberTarget(priority, nextOrObserver, error, complete, startDispatch, endDispatch)
+        let target = new GovernObservableSubscriberTarget(priority, nextOrObserver, error, complete, startDispatch, endDispatch)
         return this.governor.emitter.subscribeFlushTarget(target)
     }
 
@@ -59,20 +59,20 @@ export class Store<Value, Props=any> implements DispatchedObservable<Value> {
      * updated during a flush, this can be useful for calling app code from
      * within your UI components' lifecycle methods.
      */
-    enqueueAction = (fn: () => void) => {
+    waitUntilNotFlushing = (fn: () => void) => {
         this.governor.emitter.enqueueAction(fn)
     }
 }
 
-export function instantiate<Value, Props>(element: GovernElement<Value, Props>): Store<Value, Props> {
-    let storeGovernor
+export function createObservable<Value, Props>(element: GovernElement<Value, Props>): GovernObservable<Value, Props> {
+    let observableGovernor
     let dispatcher = new Dispatcher()
     dispatcher.enqueueAction(() => {
-        storeGovernor = createStoreGovernor(element, dispatcher)
+        observableGovernor = createObservableGovernor(element, dispatcher)
     })
-    return new Store(storeGovernor)
+    return new GovernObservable(observableGovernor)
 }
 
-export function isValidStore(x): x is Store<any, any> {
-    return x instanceof Store
+export function isValidObservable(x): x is GovernObservable<any, any> {
+    return x instanceof GovernObservable
 }

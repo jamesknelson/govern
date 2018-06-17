@@ -1,4 +1,4 @@
-import { map, flatMap, combine, createElement, instantiate, Component, Store, SFC, constant } from '../src'
+import { map, flatMap, combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -105,7 +105,7 @@ function createDataSourceClass() {
   }
 }
 
-const DataSourceData = (props: { dataSource: Store<{receive, data}> }) =>
+const DataSourceData = (props: { dataSource: GovernObservable<{receive, data}> }) =>
   flatMap(props.dataSource, state => state.data)
 
 function createFormControllerClass() {
@@ -142,7 +142,7 @@ describe("Model", () => {
   const Model = createModelClass()
 
   it('returns expected initial value', () => {
-    let store = instantiate(
+    let store = createObservable(
       createElement(Model, {
         defaultValue: {
           name: 'James',
@@ -195,15 +195,15 @@ describe("FormController", () => {
         return null
       }
     }
-    let data = instantiate(createElement(Constant))
+    let data = createObservable(createElement(Constant))
     let harness = createTestHarness(createElement(FormController, { data }))
     expect(harness.value.data).toBe(null)
     expect(harness.value.model.error.email).toBeTruthy()
   })
 
   it('emits a new model when initial data is received', () => {
-    let dataSource = instantiate(createElement(DataSource, {}))
-    let dataSourceData = instantiate(createElement(DataSourceData, { dataSource }))
+    let dataSource = createObservable(createElement(DataSource, {}))
+    let dataSourceData = createObservable(createElement(DataSourceData, { dataSource }))
     let harness = createTestHarness(createElement(FormController, { data: dataSourceData }))
     let received = {
       name: 'James',
