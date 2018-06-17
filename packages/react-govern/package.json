@@ -31,22 +31,23 @@
     "state"
   ],
   "peerDependencies": {
-    "@types/react": "^16.0.33",
-    "govern": "^0.4.0",
-    "react": "^16.0.0"
+    "@types/react": "^16.3.18",
+    "govern": "^0.10.0-0",
+    "react": "^16.4.1"
   },
   "devDependencies": {
     "@types/jest": "^22.1.0",
     "@types/react": "^16.0.33",
     "cross-env": "^5.0.5",
     "jest": "^22.1.4",
-    "react-test-renderer": "^16.0.0",
+    "react": "^16.4.1",
+    "react-test-renderer": "^16.4.1",
     "rimraf": "^2.6.2",
     "rollup": "^0.50.0",
     "rollup-plugin-commonjs": "^8.2.6",
     "rollup-plugin-node-resolve": "^3.0.0",
     "ts-jest": "^22.0.1",
-    "typescript": "^2.8.0-rc"
+    "typescript": "^2.8.4"
   },
   "jest": {
     "transform": {
@@ -65,8 +66,5 @@
         "skipBabel": true
       }
     }
-  },
-  "dependencies": {
-    "prop-types": "^15.6.1"
   }
 }

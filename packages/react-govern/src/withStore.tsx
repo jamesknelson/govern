@@ -1,9 +1,9 @@
 import * as React from 'react'
-import { createElement, isValidElement, isValidStore, Component, ComponentClass, Store, GovernElement } from 'govern'
-import { createStore } from './Store'
+import { createElement, isValidElement, isValidObservable, Component, ComponentClass, GovernObservable, GovernElement } from 'govern'
+import { Store } from './Store'
 
 // Diff / Omit taken from https://github.com/Microsoft/TypeScript/issues/12215#issuecomment-311923766
-type Diff<T extends string, U extends string> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T]
+type Diff<T extends string | number | symbol, U extends string | number | symbol> = ({ [P in T]: P } & { [P in U]: never } & { [x: string]: never })[T]
 type Omit<U, K extends keyof U> = Pick<U, Diff<keyof U, K>>
 
 // Injects props and removes them from the prop requirements.
@@ -48,7 +48,7 @@ interface WithStore {
 type MapOwnPropsToPropsParam<TOwnProps, Value> = (props: TOwnProps) => GovernElement<Value>
 
 type StoreProp<Value, PropName extends string> = {
-    [K in PropName]: Store<Value>
+    [K in PropName]: GovernObservable<Value>
 }
 
 /**
@@ -79,11 +79,14 @@ export const withStore: WithStore = (
     // that consumers can use refs if they need.
     class SubscribeWrapper extends React.Component<any> {
       render() {
-        return createStore(mapFn(this.props), (store) => {
-          return React.createElement(WrappedComponent, {
+        return Store.Element({
+          element: mapFn(this.props),
+          children: (store) => {
+            return React.createElement(WrappedComponent, {
               ...this.props,
               [propName]: store
-          })
+            })
+          }
         })
       }
     }

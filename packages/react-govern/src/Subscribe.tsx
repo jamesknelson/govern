@@ -1,26 +1,25 @@
 import * as React from 'react'
-import * as PropTypes from 'prop-types'
-import { createElement, instantiate, Dispatcher, Subscribable, GovernNode, Store, Subscription } from 'govern'
+import { combine, createElement, createObservable, Component, GovernElement, GovernObservable, Subscription, ElementType } from 'govern'
 
+const PriorityContext = (React as any).createContext(1)
+
+export function createSubscribe<T>(
+  to: GovernElement<T> | GovernObservable<T>,
+  render?: (value: T, dispatch: Function) => React.ReactNode,
+) {
+  return Subscribe.Element({ to, render })
+}
 
 export interface SubscribeProps<T> {
-  to: Subscribable<T>,
-  children: (value: T, dispatch: Function) => React.ReactNode,
+  to: GovernElement<T> | GovernObservable<T>,
+
+  children?: (value: T, dispatch: Function) => React.ReactNode,
+  render?: (value: T, dispatch: Function) => React.ReactNode,
 }
 
-
-/**
- * A factory to create a `<Subscribe to>` React element, with typing.
- * @param store The store to subscribe to
- * @param children A function to render each of the store's values.
- */
-export function createSubscribe<T>(
-  store: Subscribable<T>,
-  children: (value: T, dispatch: Function) => React.ReactNode
-): React.ReactElement<SubscribeProps<T>> {
-  return React.createElement(Subscribe, { to: store, children })
+export namespace Subscribe {
+  export type Props<T> = SubscribeProps<T>
 }
-
 
 /**
  * Accepts an observable as a prop, and passes each of its values to the
@@ -32,69 +31,76 @@ export function createSubscribe<T>(
  * 
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
-export class Subscribe extends React.Component<SubscribeProps<any>, { output: any, dummy: any, dispatch: any }> {
+export class Subscribe<T> extends React.Component<SubscribeProps<T>> {
+  /**
+   * A factory to create a `<Subscribe to>` React element, with typing.
+   * @param store The store to subscribe to
+   * @param children A function to render each of the store's values.
+   */
+  static Element<T>(props: SubscribeProps<T>): React.ReactElement<SubscribeProps<T>> {
+    return React.createElement(Subscribe, props) as any
+  }
+
+  render() {
+    return <PriorityContext.Consumer children={this.renderWithPriority} />
+  }
+
+  renderWithPriority = (priority) => {
+    return <InnerSubscribe {...this.props} priority={priority} />
+  }
+}
+
+
+interface InnerSubscribeProps<T> extends SubscribeProps<T> {
   priority: number
-  store: Store<any>
+}
+
+interface InnerSubscribeState<T> {
+  dispatch: (fn: () => void) => void,
+  snapshot: T,
+  dummy?: any
+}
+
+export class InnerSubscribe<T> extends React.Component<InnerSubscribeProps<T>, InnerSubscribeState<T>> {
+  observable: GovernObservable<BindingSnapshot<T>>
   subscription: Subscription
   isDispatching: boolean
   isAwaitingRenderFromProps: boolean
   isAwaitingRenderFromFlush: boolean
 
-  static contextTypes = {
-    govern_priority: PropTypes.number,
-  }
-
-  static childContextTypes = {
-    govern_priority: PropTypes.number,
-  }
-  
-  constructor(props: SubscribeProps<any>, context: any) {
-    super(props, context)
+  constructor(props: InnerSubscribeProps<T>) {
+    super(props)
     this.state = {} as any
     this.isDispatching = false
-    this.isAwaitingRenderFromProps = false
 
-    if (context.govern_priority) {
-      this.priority = context.govern_priority
-    }
-    else {
-      this.priority = 1
-    }
-  }
-
-  getChildContext() {
-    return {
-      govern_priority: this.priority + 1,
-    }
-  }
-
-  componentWillMount() {
     if (!this.props.to) {
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
 
-    this.store = instantiate(createElement(Flatten, { children: this.props.to }))
-    
-    this.handleChange(
-      this.store.getValue(),
-      this.store.UNSAFE_dispatch
-    )
+    this.observable = createObservable(Binding.Element({ initialElement: this.props.to }))
+
+    this.isAwaitingRenderFromFlush = true
+    this.isAwaitingRenderFromProps = false
+    this.state = {
+      snapshot: this.observable.getValue().snapshot,
+      dispatch: this.observable.waitUntilNotFlushing,
+    }
 
     // Create subsription within `componentWillMount` instead of in
     // `constructor`, as it is possible for components to have side effects
     // on initial subscription (as the first `componentDidFlush` is held
     // until then, and it can cause `setState`.
-    this.subscription = this.store.subscribe(
+    this.subscription = this.observable.subscribe(
       this.handleChange,
       this.receiveError,
       undefined,
       this.handleStartDispatch,
       this.handleEndDispatch,
-      String(this.priority)
+      String(this.props.priority)
     )
   }
 
-  componentWillReceiveProps(nextProps: SubscribeProps<any>) {
+  UNSAFE_componentWillReceiveProps(nextProps: SubscribeProps<any>) {
     if (!nextProps.to) {
       console.warn(`A "to" prop must be provided to <Subscribe> but "${this.props.to}" was received.`)
     }
@@ -108,9 +114,7 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
     // As elements are immutable, we can skip a lot of updates by
     // checking if the `to` element/store has changed.
     if (nextProps.to !== this.props.to) {
-      this.store.setProps({
-        children: nextProps.to,
-      })
+      this.observable.getValue().changeElement(nextProps.to)
     }
   }
 
@@ -129,11 +133,11 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 
   cleanup() {
-    if (this.store) {
+    if (this.observable) {
       this.subscription.unsubscribe()
-      this.store.dispose()
+      this.observable.dispose()
       delete this.subscription
-      delete this.store
+      delete this.observable
     }
   }
 
@@ -144,13 +148,17 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   render() {
     this.isAwaitingRenderFromFlush = false
     this.isAwaitingRenderFromProps = false
-    return this.props.children(this.state.output, this.state.dispatch)
+    let children = this.props.children! || this.props.render!
+    return children(this.state.snapshot, this.state.dispatch)
   }
 
-  handleChange = (output, dispatch) => {
+  handleChange = (snapshot: BindingSnapshot<T>, dispatch) => {
     this.isAwaitingRenderFromFlush = true
     this.isAwaitingRenderFromProps = false
-    this.setState({ output, dispatch })
+    this.setState({
+      snapshot: snapshot.snapshot,
+      dispatch
+    })
   }
 
   handleStartDispatch = () => {
@@ -168,10 +176,47 @@ export class Subscribe extends React.Component<SubscribeProps<any>, { output: an
   }
 }
 
-/**
- * A Govern component that accepts an element or store, instantiates and
- * updates props if required, and returns the output.
- */
-function Flatten(props: { children: GovernNode }) {
-  return props.children
+
+interface BindingProps<Value> {
+  initialElement: GovernElement<Value, any> | GovernObservable<Value>
 }
+
+interface BindingState<Value> {
+  element: GovernElement<Value, any> | GovernObservable<Value>
+}
+
+interface BindingSnapshot<Value> {
+  snapshot: Value
+  changeElement: (element: GovernElement<Value, any> | GovernObservable<Value>) => void
+}
+
+class Binding<T> extends Component<BindingProps<T>, BindingState<T>, BindingSnapshot<T>> {
+  static Element<T>(props: BindingProps<T>) {
+    return createElement(Binding as ElementType<Binding<T>>, props)
+  }
+
+  constructor(props: BindingProps<T>) {
+    super(props)
+    this.state = {
+      element: this.props.initialElement
+    }
+  }
+
+  render() {
+    return combine({
+      snapshot: this.state.element,
+      changeElement: this.changeElement,
+    })
+  }
+
+  shouldComponentPublish(prevProps, prevState, prevSubs) {
+    return prevSubs.snapshot !== this.subs.snapshot
+  }
+
+  changeElement = (element: GovernElement<T, any> | GovernObservable<T>) => {
+    this.setState({
+      element,
+    })
+  }
+}
+

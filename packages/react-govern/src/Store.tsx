@@ -1,26 +1,19 @@
 import * as React from 'react'
-import * as PropTypes from 'prop-types'
-import { createElement, instantiate, Dispatcher, GovernElement, GovernNode, Store as GovernStore, Subscription } from 'govern'
+import { createElement, createObservable, Component, ElementType, GovernElement, GovernObservable, combine } from 'govern'
 
-
-export interface StoreProps<T> {
-  of: GovernElement<T>,
-  children: (store: GovernStore<T>) => React.ReactNode,
-}
-
-
-/**
- * A factory to create a `<Store to>` React element, with typing.
- * @param store The store to subscribe to
- * @param children A function to render each of the store's values.
- */
 export function createStore<T>(
-  of: GovernElement<T>,
-  children: (store: GovernStore<T>) => React.ReactNode
-): React.ReactElement<StoreProps<T>> {
-  return React.createElement(Store, { of, children })
+  element: GovernElement<T>,
+  render?: (value: GovernObservable<BindingSnapshot<T>>) => React.ReactNode,
+) {
+  return Store.Element({ element, render })
 }
 
+export interface ObservableProps<T> {
+  element: GovernElement<T>,
+
+  children?: (store: GovernObservable<BindingSnapshot<T>>) => React.ReactNode,
+  render?: (store: GovernObservable<BindingSnapshot<T>>) => React.ReactNode,
+}
 
 /**
  * Accepts an observable as a prop, and passes each of its values to the
@@ -32,35 +25,34 @@ export function createStore<T>(
  * 
  * See https://github.com/Microsoft/TypeScript/issues/14729.
  */
-export class Store extends React.Component<StoreProps<any>, { output: any, dummy: any, dispatch: any }> {
-  store: GovernStore<any>
+export class Store<T=any> extends React.Component<ObservableProps<T>> {
+  static Element<T>(props: ObservableProps<T>): React.ReactElement<ObservableProps<T>> {
+    return React.createElement(Store, props) as any
+  }
+
+  observable: GovernObservable<BindingSnapshot<T>>
   isDispatching: boolean
   
-  constructor(props: StoreProps<any>, context: any) {
-    super(props, context)
-
-    this.state = {} as any
-    this.isDispatching = false
-    this.store = instantiate(createElement(Flatten, { children: this.props.of }))
+  constructor(props: ObservableProps<T>) {
+    super(props)
+    this.observable = createObservable(createElement(Binding as ElementType<Binding<T>>, { initialElement: this.props.element }))
   }
 
   componentWillMount() {
-    if (!this.props.of) {
-      console.warn(`An "element" prop must be provided to <Store> but "${this.props.of}" was received.`)
+    if (!this.props.element) {
+      console.warn(`An "element" prop must be provided to <Observable> but "${this.props.element}" was received.`)
     }
   }
 
-  componentWillReceiveProps(nextProps: StoreProps<any>) {
-    if (!nextProps.of) {
-      console.warn(`A "element" prop must be provided to <StoreProps> but "${this.props.of}" was received.`)
+  UNSAFE_componentWillReceiveProps(nextProps: ObservableProps<any>) {
+    if (!nextProps.element) {
+      console.warn(`A "element" prop must be provided to <Observable> but "${this.props.element}" was received.`)
     }
 
     // As elements are immutable, we can skip a lot of updates by
     // checking if the `to` element/store has changed.
-    if (nextProps.of !== this.props.of) {
-      this.store.setProps({
-        children: nextProps.of,
-      })
+    if (nextProps.element !== this.props.element) {
+      this.observable.getValue().changeElement(nextProps.element)
     }
   }
 
@@ -73,21 +65,60 @@ export class Store extends React.Component<StoreProps<any>, { output: any, dummy
   }
 
   disposeStore() {
-    if (this.store) {
-      this.store.dispose()
-      delete this.store
+    if (this.observable) {
+      this.observable.dispose()
+      delete this.observable
     }
   }
 
   render() {
-    return this.props.children(this.store)
+    let render = (this.props.children || this.props.render)!
+    return render(this.observable)
   }
 }
 
-/**
- * A Govern component that accepts an element or store, instantiates and
- * updates props if required, and returns the output.
- */
-function Flatten(props: { children: GovernNode }) {
-  return props.children
+
+interface BindingProps<Value> {
+  initialElement: GovernElement<Value, any>
 }
+
+interface BindingState<Value> {
+  element: GovernElement<Value>
+}
+
+interface BindingSnapshot<Value> {
+  snapshot: Value
+  changeElement: (element: GovernElement<Value, any>) => void
+}
+
+class Binding<X> extends Component<BindingProps<X>, BindingState<X>, BindingSnapshot<X>> {
+  constructor(props: BindingProps<X>) {
+    super(props)
+    this.state = {
+      element: this.props.initialElement
+    }
+  }
+
+  render() {
+    return combine({
+      snapshot: this.state.element,
+      changeElement: this.changeElement,
+    })
+  }
+
+  getPublishedValue() {
+    this.subs
+    return this.subs
+  }
+
+  shouldComponentPublish(prevProps, prevState, prevSubs) {
+    return prevSubs.snapshot !== this.subs.snapshot
+  }
+
+  changeElement = (element: GovernElement<X, any>) => {
+    this.setState({
+      element,
+    })
+  }
+}
+

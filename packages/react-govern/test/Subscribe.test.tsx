@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as Govern from 'govern'
 import * as ReactTestRenderer from 'react-test-renderer'
 
-import { Subscribe, createSubscribe } from '../src'
+import { Subscribe } from '../src'
 
 
 function createTester<T>(initialValue: T) {
@@ -10,7 +10,7 @@ function createTester<T>(initialValue: T) {
     state = {
       value: initialValue
     }
-    publish() {
+    render() {
       return {
         value: this.state.value,
         change: value => { this.setState({ value }) },
@@ -18,15 +18,15 @@ function createTester<T>(initialValue: T) {
     }
   }
 
-  let store = Govern.instantiate(Govern.createElement(Tester))
+  let store = Govern.createObservable(Govern.createElement(Tester))
   let transactionId
 
   return {
-    store: Govern.instantiate(Govern.map(store, x => x.value)),
+    store: Govern.createObservable(Govern.map(store, x => x.value)),
     next: (value) => {
       store.getValue().change(value)
     },
-    dispatch: store.UNSAFE_dispatch,
+    dispatch: store.waitUntilNotFlushing,
   }
 }
 
@@ -35,7 +35,10 @@ test('injects initial value', () => {
   let tester = createTester({ x: "hello" })
 
   let renderer = ReactTestRenderer.create(
-    createSubscribe(tester.store, value => value.x)
+    Subscribe.Element({
+      to: tester.store,
+      render: value => value.x
+    })
   )
   expect(renderer.toJSON()).toEqual("hello")
 })
@@ -44,7 +47,10 @@ test('injects subsequent outputs from same store', () => {
   let tester = createTester({ x: 1 })
   
   let renderer = ReactTestRenderer.create(
-    createSubscribe(tester.store, value => String(value.x))
+    Subscribe.Element({
+      to: tester.store,
+      render: value => String(value.x)
+    })
   )
   expect(renderer.toJSON()).toEqual("1")
   tester.dispatch(() => {
@@ -57,7 +63,10 @@ test("doesn't inject values mid-transaction", () => {
     let tester = createTester({ x: 1 })
 
   let renderer = ReactTestRenderer.create(
-    createSubscribe(tester.store, value => String(value.x))
+    Subscribe.Element({
+      to: tester.store,
+      render: value => String(value.x)
+    })
   )
   expect(renderer.toJSON()).toEqual("1")
   tester.dispatch(() => {
@@ -71,9 +80,12 @@ test("doesn't render mid-transaction", () => {
 
   let renderCount = 0
   let renderer = ReactTestRenderer.create(
-    createSubscribe(tester.store, value => {
-      renderCount++
-      return String(value.x)
+    Subscribe.Element({
+      to: tester.store,
+      render: value => {
+        renderCount++
+        return String(value.x)
+      }
     })
   )
   expect(renderCount).toEqual(1)
@@ -98,7 +110,10 @@ test('injects outputs from new stores', () => {
     }
 
     render() {
-      return createSubscribe(this.state.store, value => String(value.x))
+      return Subscribe.Element({
+        to: this.state.store,
+        render: value => String(value.x)
+      })
     }
   }
 

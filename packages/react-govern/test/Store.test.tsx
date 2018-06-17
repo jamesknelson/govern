@@ -1,16 +1,16 @@
-import * as React from 'react'
 import * as Govern from 'govern'
 import * as ReactTestRenderer from 'react-test-renderer'
 
-import { Store, createStore, Subscribe, createSubscribe } from '../src'
+import { withStore, Store, Subscribe } from '../src'
 
 
 function createTester<T>(initialValue: T) {
   class Tester extends Govern.Component {
     state = {
       value: initialValue
+    
     }
-    publish() {
+    render() {
       return {
         value: this.state.value,
         change: value => { this.setState({ value }) },
@@ -18,7 +18,7 @@ function createTester<T>(initialValue: T) {
     }
   }
 
-  let store = Govern.instantiate(Govern.createElement(Tester))
+  let store = Govern.createObservable(Govern.createElement(Tester))
   let transactionId
 
   return {
@@ -26,7 +26,7 @@ function createTester<T>(initialValue: T) {
     next: (value) => {
       store.getValue().change(value)
     },
-    dispatch: store.UNSAFE_dispatch,
+    dispatch: store.waitUntilNotFlushing,
   }
 }
 
@@ -35,9 +35,14 @@ test('injects initial value', () => {
   let tester = createTester({ x: "hello" })
 
   let renderer = ReactTestRenderer.create(
-    createStore(tester.element, store =>
-      createSubscribe(store, value => value.x)   
-    )
+    Store.Element({
+      element: tester.element,
+      render: store =>
+        Subscribe.Element({
+          to: store,
+          children: value => value.snapshot.x
+        })   
+    })
   )
   expect(renderer.toJSON()).toEqual("hello")
 })
@@ -46,9 +51,14 @@ test('allows changing values', () => {
   let tester = createTester({ x: 1 })
   
   let renderer = ReactTestRenderer.create(
-    createStore(tester.element, store =>
-      createSubscribe(store, value => String(value.x))
-    )
+    Store.Element({
+      element: tester.element,
+      render: store =>
+        Subscribe.Element({
+          to: store,
+          render: value => String(value.snapshot.x)
+        })
+    })
   )
   expect(renderer.toJSON()).toEqual("1")
   tester.dispatch(() => {
