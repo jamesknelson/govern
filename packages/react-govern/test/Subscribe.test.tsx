@@ -19,7 +19,6 @@ function createTester<T>(initialValue: T) {
   }
 
   let store = Govern.createObservable(Govern.createElement(Tester))
-  let transactionId
 
   return {
     store: Govern.createObservable(Govern.map(store, x => x.value)),

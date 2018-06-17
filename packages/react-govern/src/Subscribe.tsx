@@ -149,7 +149,11 @@ export class InnerSubscribe<T> extends React.Component<InnerSubscribeProps<T>, I
     this.isAwaitingRenderFromFlush = false
     this.isAwaitingRenderFromProps = false
     let children = this.props.children! || this.props.render!
-    return children(this.state.snapshot, this.state.dispatch)
+    return (
+      <PriorityContext.Provider value={this.props.priority + 1}>
+        {children(this.state.snapshot, this.state.dispatch)}
+      </PriorityContext.Provider>
+    )
   }
 
   handleChange = (snapshot: BindingSnapshot<T>, dispatch) => {
@@ -214,8 +218,10 @@ class Binding<T> extends Component<BindingProps<T>, BindingState<T>, BindingSnap
   }
 
   changeElement = (element: GovernElement<T, any> | GovernObservable<T>) => {
-    this.setState({
-      element,
+    this.dispatch(() => {
+      this.setState({
+        element,
+      })
     })
   }
 }
