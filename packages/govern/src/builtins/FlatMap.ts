@@ -21,21 +21,10 @@ const noop = () => {}
 export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
     initialDispatcher: Dispatcher
     from: Child<FromValue>
-    hasUnpublishedChanges: boolean = true
     impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue>;
     
     constructor(props: FlatMapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)
-
-        // This hack records *when* we receive new values from the underlying
-        // `to` component, even if the values are the same. It allows us to
-        // respect `shouldComponentUpdate` of `to` if it exists.
-        // DON'T TRY THIS AT HOME, FOLKS.
-        let originalSetKey = this.impl.setSubs
-        this.impl.setSubs = (key: string, value) => {
-            originalSetKey.call(this.impl, key, value)
-            this.hasUnpublishedChanges = true
-        }
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: FlatMapProps<FromValue, ToValue>) {
@@ -59,12 +48,11 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         return this.impl.props.to(this.from.value)
     }
 
-    shouldComponentPublish() {
-        return this.hasUnpublishedChanges
+    shouldComponentPublish(prevProps, prevState, prevSubs) {
+        return this.impl.subs === undefined || this.impl.subs !== prevSubs
     }
 
     publish() {
-        this.hasUnpublishedChanges = false
         return this.impl.subs
     }
 
