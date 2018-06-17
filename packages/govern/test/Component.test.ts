@@ -1,4 +1,4 @@
-import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant, combineArray } from '../src'
+import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -333,30 +333,6 @@ describe('Component', () => {
       harness.value.outer.inner.increase()
     })
     expect(harness.value.outer.inner.count).toBe(1)
-  })
-
-  it("can subscribe to arrays of stores", () => {
-    let counter1Store = createCounter()
-    let counter2Store = createCounter()
-
-    class TestComponent extends Component<{ updated }, any> {
-      state = {} as any
-
-      render() {
-        return combineArray([
-          counter1Store,
-          counter2Store,
-        ])
-      }
-    }
-
-    let harness = createTestHarness(createElement(TestComponent))
-    expect(harness.value[0].count).toBe(0)
-    harness.dispatch(() => {
-      harness.value[0].increase()
-    })
-    expect(harness.value[0].count).toBe(1)
-    expect(harness.value[1].count).toBe(0)
   })
 
   // it("can call actions on parents during disposal", () => {

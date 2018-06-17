@@ -1,7 +1,6 @@
 import { FlatMap } from './builtins/FlatMap'
 import { Map } from './builtins/Map'
 import { Combine } from './builtins/Combine'
-import { CombineArray } from './builtins/CombineArray'
 import { Distinct } from './builtins/Distinct'
 import { Component } from './Component'
 import { Dispatcher } from './Dispatcher'
@@ -16,7 +15,6 @@ import { shallowCompare } from './utils/shallowCompare';
 
 const BuiltInComponents = {
     combine: Combine,
-    combineArray: CombineArray,
     distinct: Distinct,
     flatMap: FlatMap,
     map: Map,

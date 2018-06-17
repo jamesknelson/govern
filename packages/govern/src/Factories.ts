@@ -1,5 +1,5 @@
 import { GovernObservable } from './GovernObservable'
-import { Attributes, BuiltInType, Key, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, DistinctProps, Subscribable } from './Core'
+import { Attributes, CombinedValue, Key, FlatMapProps, MapProps, SFC, ConstantProps, DistinctProps, Subscribable } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './GovernElement'
 import { GovernableClass } from './GovernObservableGovernor'
 
@@ -35,21 +35,8 @@ export function map<FromValue, ToValue>(
 export function combine<Children extends { [name: string]: any }>(
     children: Children,
     key?: Key
-  ): GovernElement<{
-    [K in keyof Children]:
-      Children[K] extends Subscribable<infer SubscribableSnapshot> ? SubscribableSnapshot :
-      Children[K] extends GovernObservable<infer ObservableSnapshot> ? ObservableSnapshot :
-      Children[K] extends GovernElement<infer ElementSnapshot> ? ElementSnapshot :
-      Children[K]
-  }, any> {
-    return createElement('combine', { children }) as any
-  }
-
-export function combineArray<ItemValue>(
-    children: CombineArrayChildren<ItemValue>,
-    key?: Key
-): GovernElement<ItemValue[], CombineArrayProps<ItemValue>> {
-    return createElement('combineArray', { children, key })
+): GovernElement<CombinedValue<Children>, { children: Children }> {
+    return createElement('combine', { children })
 }
 
 export function constant<Value>(

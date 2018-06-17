@@ -23,9 +23,8 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './GovernObservableGovernor'
-import { Attributes, BuiltInType, Key, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, DistinctProps } from './Core'
-import { GovernObservable, isValidObservable } from './GovernObservable'
-import { isPlainObject } from './utils/isPlainObject'
+import { Attributes, CombinedValue, Key, FlatMapProps, MapProps, SFC, ConstantProps, DistinctProps } from './Core'
+import { isValidObservable } from './GovernObservable'
 
 const RESERVED_PROPS = {
     key: true,
@@ -41,7 +40,6 @@ function hasValidKey(config) {
 
 const BUILT_IN_TYPES = [
     'combine',
-    'combineArray',
     'constant',
     'distinct',
     'flatMap',
@@ -96,17 +94,11 @@ export function createElement<FromValue, ToValue>(
     props?: Attributes & MapProps<FromValue, ToValue>
 ): GovernElement<ToValue, MapProps<FromValue, ToValue>>
 
-export function createElement<CombinedValue>(
+export function createElement<Children extends { [name: string]: any }>(
     type: 'combine',
-    props?: Attributes & CombineProps<CombinedValue> | null,
-    children?: CombineChildren<keyof CombinedValue, CombinedValue>
-): GovernElement<CombinedValue, CombineProps<CombinedValue>>
-
-export function createElement<ItemValue>(
-    type: 'combineArray',
-    props?: Attributes & CombineArrayProps<ItemValue> | null,
-    children?: CombineArrayChildren<ItemValue>
-): GovernElement<ItemValue[], CombineArrayProps<ItemValue>>
+    props?: Attributes & { children: Children } | null,
+    children?: Children
+): GovernElement<CombinedValue<Children>, { children: Children }>
 
 export function createElement<Value>(
     type: 'constant',

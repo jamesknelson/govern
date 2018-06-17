@@ -268,7 +268,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
 
         // Indicates whether all existing children should be destroyed and
         // recreated, even if they reconcile. We'll want to do this if the
-        // children move from a `combine` to a `combineArray`, etc.
+        // children move from a `combine` to something else, etc.
         let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
         
         // Create a new `subs` object, keeping around appropriate previous
@@ -276,9 +276,6 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
         // stores.
         if (nextRootElement.type === 'combine') {
             this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
-        }
-        else if (nextRootElement.type === 'combineArray') {
-            this.subs = typeHasChanged ? [] : (this.subs as any).slice(0) as any
         }
 
         // A list of keys on the existing `this.children` that need to be
@@ -417,13 +414,8 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
             // current child is a `<combine />`, we'll need to shallow clone our
             // child before updating it. Otherwise we'll also overwrite our last
             // published child, breaking `shouldComponentPublish`.
-            if (this.lastSubscribeElement) {
-                if (this.lastSubscribeElement.type === 'combineArray') {
-                    this.subs = (this.subs as any).slice(0)
-                }
-                else if (this.lastSubscribeElement.type === 'combine') {
-                    this.subs = Object.assign({}, this.subs)
-                }
+            if (this.lastSubscribeElement && this.lastSubscribeElement.type === 'combine') {
+                this.subs = Object.assign({}, this.subs)
             }
         }
 
@@ -570,25 +562,6 @@ function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { 
             let key = (isValidElement(node) && node.key) ? String(node.key) : index
             elements[key] = convertToElement(node)
             indexes[key] = index
-            keys.push(key)
-        }
-
-        return { keys, indexes, elements }
-    }
-    else if (element.type === 'combineArray') {
-        if (!Array.isArray(element.props.children)) {
-            throw new Error(`<combineArray> can only be used with arrays, but instead received a "${typeof element.props.children}".`)
-        }
-
-        let elements = {}
-        let indexes = {}
-        let childNodes = element.props.children
-        let keys = [] as string[]
-        for (let i = 0; i < childNodes.length; i++) {
-            let node = childNodes[i]
-            let key = isValidElement(node) ? (String(node.key) || String(i)) : String(i)
-            elements[key] = convertToElement(node)
-            indexes[key] = i
             keys.push(key)
         }
 

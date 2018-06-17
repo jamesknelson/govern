@@ -2,7 +2,7 @@ import { GovernElement } from './GovernElement'
 import { GovernableClass } from './GovernObservableGovernor'
 import { GovernObservable } from './GovernObservable'
 
-export type BuiltInType = 'combine' | 'combineArray' | 'constant' | 'distinct' | 'flatMap' | 'map' | 'subscribe'
+export type BuiltInType = 'combine' | 'constant' | 'distinct' | 'flatMap' | 'map' | 'subscribe'
 export type ComponentType<Value, Props> = GovernableClass<Value, Props> | StatelessComponent<Value, Props>;
 export type GovernType<Value = any, Props = any> = BuiltInType | ComponentType<Value, Props>;
 export type Subscribable<Value> = GovernElement<Value> | GovernObservable<Value>
@@ -60,20 +60,6 @@ export type FlatMapProps<FromValue, ToValue> = {
     to: (props: FromValue) => Subscribable<ToValue>
 }
 
-export type CombineChildren<Keys extends keyof CombinedValue, CombinedValue> = {
-    [K in Keys]: Subscribable<CombinedValue[K]> | CombinedValue[K]
-}
-export type CombineProps<CombinedValue> = {
-    children: CombineChildren<keyof CombinedValue, CombinedValue>
-}
-
-export type CombineArrayChildren<ItemValue> = {
-    [index: number]: Subscribable<ItemValue> | ItemValue
-}
-export type CombineArrayProps<ItemValue> = {
-    children: CombineArrayChildren<ItemValue>
-}
-
 export type ConstantProps<Value> = {
     of: Value,
 }
@@ -95,3 +81,12 @@ export interface StatelessComponent<Value, Props> {
     defaultProps?: Partial<Props>;
     displayName?: string;
 }
+
+export type CombinedValue<Children extends { [name: string]: any }> =
+    {
+        [K in keyof Children]:
+        Children[K] extends Subscribable<infer SubscribableSnapshot> ? SubscribableSnapshot :
+        Children[K] extends GovernObservable<infer ObservableSnapshot> ? ObservableSnapshot :
+        Children[K] extends GovernElement<infer ElementSnapshot> ? ElementSnapshot :
+        Children[K]
+    }
