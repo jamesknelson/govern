@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 import { GovernableClass } from './GovernObservableGovernor'
-import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, DistinctProps } from './Core'
+import { Attributes, BuiltInType, Key, FlatMapProps, MapProps, SFC, CombineChildren, CombineArrayChildren, CombineProps, CombineArrayProps, ConstantProps, DistinctProps } from './Core'
 import { GovernObservable, isValidObservable } from './GovernObservable'
 import { isPlainObject } from './utils/isPlainObject'
 
@@ -124,7 +124,7 @@ export function createElement<Value>(
 export function createElement<Value, Props>(
     type: SFC<Value, Props>,
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): SFCElement<Value, Props>;
+    ...children: any[]): SFCElement<Value, Props>;
 export function createElement<Value, Props>(
     type:
         (new (props: Props) => { props: Props }) &
@@ -132,7 +132,7 @@ export function createElement<Value, Props>(
             render(): GovernElement<Value> | Value;
         }),
     props?: Attributes & Props | null,
-    ...children: GovernNode[]): ComponentElement<Value, Props>;
+    ...children: any[]): ComponentElement<Value, Props>;
 
 // When using generics, TypeScript can fail because no props match Attributes.
 // This overload helps avoid this.
@@ -143,12 +143,12 @@ export function createElement<Value, Props>(
             render(): GovernElement<Value> | Value;
         }),
     props?: Props | null,
-    ...children: GovernNode[]): ComponentElement<Value, Props>;
+    ...children: any[]): ComponentElement<Value, Props>;
 
 export function createElement<Value, Props>(
     type: any,
     config?: Attributes & Props | null,
-    ...children: GovernNode[]
+    ...children: any[]
 ): GovernElement<Value, Props> {
     let propName
     
@@ -209,21 +209,21 @@ export function createElement<Value, Props>(
 export function cloneElement<Value, Props>(
     element: SFCElement<Value, Props>,
     props: Attributes & Props | null,
-    ...children: GovernNode[]): SFCElement<Value, Props>;
+    ...children: any[]): SFCElement<Value, Props>;
 export function cloneElement<Value, Props>(
     element: ComponentElement<Value, Props>,
     props: Attributes & Props | null,
-    ...children: GovernNode[]): ComponentElement<Value, Props>;
+    ...children: any[]): ComponentElement<Value, Props>;
 export function cloneElement<Value, Props>(
     element: GovernElement<Value, Props>,
     props: Attributes & Props | null,
-    ...children: GovernNode[]
+    ...children: any[]
 ): GovernElement<Value, Props>;
 
 export function cloneElement<Value, Props>(
     element: any,
     config: Attributes & Props | null,
-    ...children: GovernNode[]
+    ...children: any[]
 ): GovernElement<Value, Props> {
     let propName;
 
@@ -290,16 +290,6 @@ export function convertToElement(value): GovernElement<any, any> {
             key: null,
             value: <any>undefined,
         }
-    }
-    else if (Array.isArray(value)) {
-        // Create a clone, in case the array is mutatively modified,
-        // as adding children by mutation will break things.
-        return createElement('combineArray', { children: value.slice(0) })
-    }
-    else if (isPlainObject(value)) {
-        // Create a clone, in case the object is mutatively modified,
-        // as adding children by mutation will break things.
-        return createElement('combine', { children: { ...value } })
     }
     else {
         return createElement('constant', { of: value })

@@ -16,6 +16,10 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
         return this.impl.props.from
     }
 
+    // This lifecycle method is only used here. Perhaps it could be removed
+    // in favor of deriving Map from FlatMap/Constant, although having this
+    // available results in Map being implemented from 1 component instead
+    // of 3...
     getPublishedValue() {
         return this.impl.props.to(this.impl.subs as any)
     }

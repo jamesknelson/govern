@@ -11,9 +11,18 @@ type ReturnOf<T> = T extends (...args: any[]) => infer R ? R : never;
 export type StoreValue<S extends GovernObservable<any>> = ReturnOf<S["getValue"]>
 export type ElementValue<E extends GovernElement<any>> = E["value"]
 
-export type Value<X extends Subscribable<any>> =
-    X extends GovernObservable<infer T> ? T :
+export type Renderable<X> = GovernElement<X> | GovernObservable<X> | X
+
+export type Snapshot<X> =
     X extends GovernElement<infer T> ? T :
+    X extends GovernObservable<infer T> ? T :
+    X extends ComponentClass<infer T> ? T :
+    X extends SFC<infer T, any> ? T :
+    never
+
+export type Value<X extends Subscribable<any>> =
+    X extends GovernElement<infer T> ? T :
+    X extends GovernObservable<infer T> ? T :
     never
 
 export type ValueOf<X extends ComponentType<any, any>> =
@@ -22,7 +31,7 @@ export type ValueOf<X extends ComponentType<any, any>> =
 
 type ComponentClass<Value> =
     (new (props: any) => {
-        publish(): Value;
+        render(): GovernElement<Value> | Value;
     })
 
 export type StoreOf<X extends ComponentClass<any> | StatelessComponent<any, any> | GovernElement<any, any>> =
@@ -80,15 +89,9 @@ export type SubscribeProps<Value> = {
     to: GovernObservable<Value>,
 }
 
-export type GovernNode<Value = any, Props = any> =
-    GovernObservable<Value> | 
-    GovernElement<Value, Props> |
-    CombineChildren<keyof Value, Value> |
-    Value
-
 export type SFC<Value, Props> = StatelessComponent<Value, Props>;
 export interface StatelessComponent<Value, Props> {
-    (props: Props): GovernNode<Value, any>;
+    (props: Props): Renderable<Value>;
     defaultProps?: Partial<Props>;
     displayName?: string;
 }

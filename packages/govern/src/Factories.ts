@@ -1,19 +1,19 @@
 import { GovernObservable } from './GovernObservable'
-import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, DistinctProps, Subscribable } from './Core'
+import { Attributes, BuiltInType, Key, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, DistinctProps, Subscribable } from './Core'
 import { GovernElement, SFCElement, ComponentElement, createElement } from './GovernElement'
 import { GovernableClass } from './GovernObservableGovernor'
 
-type Factory<Value, Props> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Value, Props>;
+type Factory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => GovernElement<Value, Props>;
 
-type SFCFactory<Value, Props> = (props?: Attributes & Props, ...children: GovernNode[]) => SFCElement<Value, Props>;
+type SFCFactory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => SFCElement<Value, Props>;
 
-type ComponentFactory<Value, Props> = (props?: Attributes & Props, ...children: GovernNode[]) => ComponentElement<Value, Props>;
+type ComponentFactory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => ComponentElement<Value, Props>;
 
 // Custom components
 function createFactory<Value, Props>(type: SFC<Value, Props>): SFCFactory<Value, Props>;
 function createFactory<Value, Props>(type: GovernableClass<Value, Props>): Factory<Value, Props>
 function createFactory<Value, Props>(type: GovernableClass<Value, Props> | SFC<Value, Props>): Factory<Value, Props> {
-    return (props: Props, ...children: GovernNode[]) => createElement(type as any, props, ...children)   
+    return (props: Props, ...children: any[]) => createElement(type as any, props, ...children)   
 }
 
 export function flatMap<FromValue, ToValue>(

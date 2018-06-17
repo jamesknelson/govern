@@ -1,4 +1,4 @@
-import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
+import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant, combineArray } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -233,32 +233,6 @@ describe('Component', () => {
     expect(harness.value).toEqual({ a: 'a' })
   })
 
-  it("changing a child from an object with numeric keys to an array recreates the children", () => {
-    let childConstructorCount = 0
-    class Child extends Component {
-      constructor(props) {
-        super(props)
-        childConstructorCount++
-      }
-      render() {
-        return constant("test")
-      }
-    }
-    class TestComponent extends Component<{ updated }> {
-      render() {
-        return (
-          this.props.updated
-            ? [createElement(Child)]
-            : {'0': createElement(Child)} as any
-        )
-      }
-    }
-    let harness = createTestHarness(createElement(TestComponent, { updated: false }))
-    expect(childConstructorCount).toEqual(1)
-    harness.changeElement(createElement(TestComponent, { updated: true }))
-    expect(childConstructorCount).toEqual(2)
-  })
-
   it("events can be received from combined <subscribe /> elements when emitted during `UNSAFE_componentWillReceiveProps` ", () => {
     let counterStore = createCounter()
 
@@ -345,11 +319,11 @@ describe('Component', () => {
       state = {} as any
 
       render() {
-        return {
-          outer: {
+        return combine({
+          outer: combine({
             inner: counterStore
-          }
-        } as any
+          })
+        })
       }
     }
 
@@ -369,10 +343,10 @@ describe('Component', () => {
       state = {} as any
 
       render() {
-        return [
+        return combineArray([
           counter1Store,
           counter2Store,
-        ] as any
+        ])
       }
     }
 

@@ -247,79 +247,77 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
     }
 
     connect() {
-        if (this.lifecycle.render) {
-            this.pushFix()
-            this.isRunningSubscribe = true
-            let result = this.lifecycle.render()
-            this.isRunningSubscribe = false
-            this.popFix()
+        this.pushFix()
+        this.isRunningSubscribe = true
+        let result = this.lifecycle.render()
+        this.isRunningSubscribe = false
+        this.popFix()
 
-            if (result === undefined) {
-                console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
+        if (result === undefined) {
+            console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its subscribe method. If you really want to return an empty value, return "null" instead.`)
+        }
+
+        let lastRootElement = this.lastSubscribeElement
+        let nextRootElement = convertToElement(result)
+        this.lastSubscribeElement = nextRootElement
+
+        let { keys: lastKeys, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
+        let { keys: nextKeys, indexes: nextIndexes, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
+
+        // Indicates whether all existing children should be destroyed and
+        // recreated, even if they reconcile. We'll want to do this if the
+        // children move from a `combine` to a `combineArray`, etc.
+        let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
+        
+        // Create a new `subs` object, keeping around appropriate previous
+        // values, so we don't have to rerequest them from subscribed
+        // stores.
+        if (nextRootElement.type === 'combine') {
+            this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
+        }
+        else if (nextRootElement.type === 'combineArray') {
+            this.subs = typeHasChanged ? [] : (this.subs as any).slice(0) as any
+        }
+
+        // A list of keys on the existing `this.children` that need to be
+        // disposed. We'll start with all of the previous keys, and remove
+        // holdovers as we find them.
+        let childKeysToDispose = new Set(lastKeys)
+
+        // A list of keys which have new child information, and must be
+        // added to this.children after any previous keys are cleaned up.
+        let childKeysToAdd = [] as string[]
+
+        // A list of known indexes, which we'll use to decide whether to
+        // remove old values from `subs`
+        let knownIndexes = new Set(Object.values(nextIndexes))
+
+        for (let i = 0; i < nextKeys.length; i++) {
+            let key = nextKeys[i]
+            let nextElement = nextElements[key]
+            if (typeHasChanged || !doElementsReconcile(lastElements[key], nextElement)) {
+                childKeysToAdd.push(key)
             }
-
-            let lastRootElement = this.lastSubscribeElement
-            let nextRootElement = convertToElement(result)
-            this.lastSubscribeElement = nextRootElement
-
-            let { keys: lastKeys, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
-            let { keys: nextKeys, indexes: nextIndexes, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
-
-            // Indicates whether all existing children should be destroyed and
-            // recreated, even if they reconcile. We'll want to do this if the
-            // children move from a `combine` to a `combineArray`, etc.
-            let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
-            
-            // Create a new `subs` object, keeping around appropriate previous
-            // values, so we don't have to rerequest them from subscribed
-            // stores.
-            if (nextRootElement.type === 'combine') {
-                this.subs = typeHasChanged ? {} : Object.assign({}, this.subs) as any
+            else {
+                childKeysToDispose.delete(key)
+                this.updateChild(key, nextIndexes[key], nextElement.props, knownIndexes)
             }
-            else if (nextRootElement.type === 'combineArray') {
-                this.subs = typeHasChanged ? [] : (this.subs as any).slice(0) as any
-            }
+        }
 
-            // A list of keys on the existing `this.children` that need to be
-            // disposed. We'll start with all of the previous keys, and remove
-            // holdovers as we find them.
-            let childKeysToDispose = new Set(lastKeys)
+        // Clean up after any previous children that are no longer
+        // subscribed to
+        let childKeysToDisposeArray = Array.from(childKeysToDispose)
+        for (let i = 0; i < childKeysToDisposeArray.length; i++) {
+            this.removeChild(childKeysToDisposeArray[i], knownIndexes)
+        }
 
-            // A list of keys which have new child information, and must be
-            // added to this.children after any previous keys are cleaned up.
-            let childKeysToAdd = [] as string[]
-
-            // A list of known indexes, which we'll use to decide whether to
-            // remove old values from `subs`
-            let knownIndexes = new Set(Object.values(nextIndexes))
-
-            for (let i = 0; i < nextKeys.length; i++) {
-                let key = nextKeys[i]
-                let nextElement = nextElements[key]
-                if (typeHasChanged || !doElementsReconcile(lastElements[key], nextElement)) {
-                    childKeysToAdd.push(key)
-                }
-                else {
-                    childKeysToDispose.delete(key)
-                    this.updateChild(key, nextIndexes[key], nextElement.props, knownIndexes)
-                }
-            }
-
-            // Clean up after any previous children that are no longer
-            // subscribed to
-            let childKeysToDisposeArray = Array.from(childKeysToDispose)
-            for (let i = 0; i < childKeysToDisposeArray.length; i++) {
-                this.removeChild(childKeysToDisposeArray[i], knownIndexes)
-            }
-
-            for (let i = 0; i < childKeysToAdd.length; i++) {
-                let key = childKeysToAdd[i]
-                this.addChild(
-                    key,
-                    nextIndexes[key],
-                    nextElements[key],
-                )
-            }
+        for (let i = 0; i < childKeysToAdd.length; i++) {
+            let key = childKeysToAdd[i]
+            this.addChild(
+                key,
+                nextIndexes[key],
+                nextElements[key],
+            )
         }
     }
 
