@@ -16,7 +16,7 @@ export interface ComponentClass<Value, Props> extends GovernableClass<Value, Pro
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> {
+export interface ComponentLifecycle<Props={}, State={}, Subs=any> {
     constructor: Function & {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
     }
@@ -40,12 +40,12 @@ export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> {
     componentWillUnmount?(): void;
 }
 
-export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }
+export interface Component<Props={}, State={}, Subs=any> extends ComponentLifecycle<Props, State, Subs> { }
 
 type SubscribeType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
 
-export abstract class Component<Props, State={}, Value=any, Subs=any> implements Governable<Value, Props>, ComponentLifecycle<Props, State, Value, Subs> {
-    protected impl: ComponentImplementation<Props, State, Value, Subs>;
+export abstract class Component<Props, State={}, Subs=any> implements Governable<Subs, Props>, ComponentLifecycle<Props, State, Subs> {
+    protected impl: ComponentImplementation<Props, State, Subs>;
 
     constructor(props: Props) {
         this.impl = new ComponentImplementation(this, props)

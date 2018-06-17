@@ -3,14 +3,14 @@ import { DispatcherEmitter, EmitterObservableSubscription } from './DispatcherEm
 import { PublishTarget } from './Target'
 
 export class ComponentTarget<T> implements PublishTarget<T> {
-    impl: ComponentImplementation<any, any, any, any>
+    impl: ComponentImplementation<any, any, any>
     emitter: DispatcherEmitter<T>;
     key: string
     subscription: EmitterObservableSubscription;
 
     isPublishTarget = true as true
 
-    constructor(impl: ComponentImplementation<any, any, any, any>, key: string) {
+    constructor(impl: ComponentImplementation<any, any, any>, key: string) {
         this.impl = impl
         this.emitter = this.impl.emitter
         this.key = key

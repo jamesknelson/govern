@@ -18,10 +18,10 @@ interface Child<FromValue> {
 
 const noop = () => {}
 
-export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue> {
+export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<FlatMapProps<FromValue, ToValue>, any, ToValue> {
     initialDispatcher: Dispatcher
     from: Child<FromValue>
-    impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue, ToValue>;
+    impl: ComponentImplementation<FlatMapProps<FromValue, ToValue>, any, ToValue>;
     
     constructor(props: FlatMapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)

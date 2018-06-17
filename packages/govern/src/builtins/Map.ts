@@ -5,8 +5,8 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
-export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue, FromValue> {
-    impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue, FromValue>;
+export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue> {
+    impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue>;
     
     constructor(props: MapProps<FromValue, ToValue>) {
         this.impl = new ComponentImplementation(this, props)
@@ -17,7 +17,7 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
     }
 
     getPublishedValue() {
-        return this.impl.props.to(this.impl.subs)
+        return this.impl.props.to(this.impl.subs as any)
     }
 
     shouldComponentPublish() {

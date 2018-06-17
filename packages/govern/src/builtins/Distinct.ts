@@ -6,8 +6,8 @@ import { Governable, GovernObservableGovernor } from '../GovernObservableGoverno
 import { Target } from '../Target'
 import { shallowCompare } from '../utils/shallowCompare'
 
-export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value, Value> {
-    impl: ComponentImplementation<DistinctProps<Value>, {}, Value, Value>;
+export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value> {
+    impl: ComponentImplementation<DistinctProps<Value>, {}, Value>;
     
     constructor(props: DistinctProps<Value>) {
         this.impl = new ComponentImplementation(this, props)

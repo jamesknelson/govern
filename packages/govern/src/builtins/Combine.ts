@@ -5,8 +5,8 @@ import { Dispatcher } from '../Dispatcher'
 import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'
 
-export class Combine<CombinedValue> implements Governable<CombinedValue, CombineProps<CombinedValue>>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue> {
-    impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue, CombinedValue>;
+export class Combine<CombinedValue> implements Governable<CombinedValue, CombineProps<CombinedValue>>, ComponentImplementationLifecycle<CombineProps<CombinedValue>, {}, CombinedValue> {
+    impl: ComponentImplementation<CombineProps<CombinedValue>, {}, CombinedValue>;
     
     constructor(props: CombineProps<CombinedValue>) {
         this.impl = new ComponentImplementation(this, props)

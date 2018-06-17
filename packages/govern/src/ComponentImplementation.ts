@@ -10,7 +10,7 @@ import { createObservableGovernor, GovernObservableGovernor } from './GovernObse
 // on symbols.
 const Root: string = Symbol('root') as any
 
-export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any, Subs=any> {
+export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> {
     constructor: Function & {
         getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
     }
@@ -21,7 +21,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
     shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
 
-    getPublishedValue?(): Value
+    getPublishedValue?(): any
 
     // These lifecycle methods will be called after other Govern components have
     // received a published value, but before the update is flushed to the UI.
@@ -52,7 +52,7 @@ export interface ChildSubscription {
     governor: GovernObservableGovernor<any, any>,
 }
 
-export class ComponentImplementation<Props, State, Value, Subs> implements GovernObservableGovernor<Value, Props> {
+export class ComponentImplementation<Props, State, Subs> implements GovernObservableGovernor<Subs, Props> {
     props: Props;
     state: State;
     subs: Subs;
@@ -93,7 +93,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Gover
     // through to componentDidUpdate.
     lastUpdate: { props: Props, state: State, subs: Subs }
 
-    lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>
+    lifecycle: ComponentImplementationLifecycle<Props, State, Subs>
 
     // Holds any state that has been "set", but not yet set on this.state
     nextState: State
@@ -102,11 +102,11 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Gover
     previousPublish: { props: Props, state: State, subs: Subs };
 
     // A pipe for events out of this object
-    emitter: DispatcherEmitter<Value>
+    emitter: DispatcherEmitter<Subs>
 
     willDispose: boolean = false
 
-    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Value, Subs>, props: Props) {
+    constructor(lifecycle: ComponentImplementationLifecycle<Props, State, Subs>, props: Props) {
         this.lifecycle = lifecycle
         this.props = props
     }
