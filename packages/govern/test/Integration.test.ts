@@ -121,7 +121,7 @@ function createFormControllerClass() {
       })
     }
 
-    componentDidInstantiate() {
+    componentDidMount() {
       this.receiveDataIfAvailable(this.subs.data)
     }
 

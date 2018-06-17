@@ -31,13 +31,13 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any,
     // is more obvious that an unguarded `setState` will cause an infinite
     // loop.
     componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
-    componentDidInstantiate?(): void;
+    componentDidMount?(): void;
 
     // This will be called after a component's published value has been flushed
     // to any subscribers. It will not be called on instantiation.
     componentDidFlush?(): void;
     
-    componentWillBeDisposed?(): void;
+    componentWillUnmount?(): void;
 }
 
 interface Child {
@@ -71,7 +71,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
     // to the end of the connect.
     expectingChildChangeFor?: string
 
-    // Keep track of whether we need to call componentDidInstantiate on the
+    // Keep track of whether we need to call componentDidMount on the
     // next flush.
     hasCalledComponentDidInstantiate: boolean = false
 
@@ -146,13 +146,13 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
             }
         }
 
-        // Set this before `componentWillBeDisposed` to ensure `setState`
-        // can't be called within `componentWillBeDisposed`.
+        // Set this before `componentWillUnmount` to ensure `setState`
+        // can't be called within `componentWillUnmount`.
         this.isDisposed = true
 
-        if (this.lifecycle.componentWillBeDisposed) {
+        if (this.lifecycle.componentWillUnmount) {
             this.pushFix()
-            this.lifecycle.componentWillBeDisposed()
+            this.lifecycle.componentWillUnmount()
             this.popFix()
         }
         
@@ -224,7 +224,7 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
         // afterward, so we don't need to run them.
         //
         // It's also possible for `setState` to be called while disposing
-        // children, but before our own `componentWillBeDisposed` has been
+        // children, but before our own `componentWillUnmount` has been
         // called. In this case, we don't want to connect/publish, as some
         // children may have already been removed.
         if (!this.isReceivingProps && !this.isDisposing) {
@@ -496,9 +496,9 @@ export class ComponentImplementation<Props, State, Value, Subs> implements Store
 
         if (!this.hasCalledComponentDidInstantiate) {
             this.hasCalledComponentDidInstantiate = true
-            if (this.lifecycle.componentDidInstantiate) {
+            if (this.lifecycle.componentDidMount) {
                 this.pushFix()
-                this.lifecycle.componentDidInstantiate()
+                this.lifecycle.componentDidMount()
                 this.popFix()
             }
         }

@@ -31,7 +31,7 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         this.receiveProps(nextProps)
     }
 
-    componentWillBeDisposed() {
+    componentWillUnmount() {
         if (this.from) {
             if (this.from.target) {
                 this.from.subscription!.unsubscribe()

@@ -3,7 +3,7 @@ import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Dipatcher', () => {
-  it("actions dispatched within componentDidInstantiate within a flush are called", () => {
+  it("actions dispatched within componentDidMount within a flush are called", () => {
     let wasActionCalled = false
     let wasComponentDidInstantiateCalled = false
 
@@ -16,7 +16,7 @@ describe('Dipatcher', () => {
         return null
       }
 
-      componentDidInstantiate() {
+      componentDidMount() {
         wasComponentDidInstantiateCalled = true
 			  this.dispatch(() => {
           wasActionCalled = true

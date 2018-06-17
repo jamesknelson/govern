@@ -35,9 +35,9 @@ export interface ComponentLifecycle<Props={}, State={}, Value=any, Subs=any> {
     // is more obvious that an unguarded `setState` will cause an infinite
     // loop.
     componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
-    componentDidInstantiate?(): void;
+    componentDidMount?(): void;
     
-    componentWillBeDisposed?(): void;
+    componentWillUnmount?(): void;
 }
 
 export interface Component<Props={}, State={}, Value=any, Subs=any> extends ComponentLifecycle<Props, State, Value, Subs> { }

@@ -3,7 +3,7 @@ import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Component', () => {
-  it("calls only componentDidInstantiate on instantiation", () => {
+  it("calls only componentDidMount on instantiation", () => {
     let calledDidInstantiateWith = undefined as any
     let didCallDidUpdate = false
 
@@ -14,7 +14,7 @@ describe('Component', () => {
 			  })
       }
 		
-			componentDidInstantiate() {
+			componentDidMount() {
 			  calledDidInstantiateWith = this.subs
 			}
 		
