@@ -13,7 +13,7 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
     }
 
     render() {
-        return this.impl.props.from
+        return this.impl.props.from as any
     }
 
     // This lifecycle method is only used here. Perhaps it could be removed

@@ -1,5 +1,6 @@
 import { Component, getDisplayName } from './Component'
 import { convertToElement, doElementsReconcile, isValidElement, GovernElement } from './GovernElement'
+import { GovernObservable } from './GovernObservable'
 import { ComponentTarget } from './ComponentTarget'
 import { DispatcherEmitter } from './DispatcherEmitter'
 import { Dispatcher } from './Dispatcher';
@@ -17,7 +18,7 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> 
 
     componentWillReceiveProps?(nextProps: Props): void;
 
-    render(): GovernElement<Subs> | Subs | null;
+    render(): GovernObservable<Subs> | GovernElement<Subs> | Subs | null;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
     shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;

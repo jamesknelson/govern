@@ -33,13 +33,13 @@
     "@types/jest": "^22.1.0",
     "cross-env": "^5.0.5",
     "jest": "^22.1.4",
-    "react": "^16.2.0",
+    "react": "^16.4.1",
     "rimraf": "^2.6.2",
     "rollup": "^0.50.0",
     "rollup-plugin-commonjs": "^8.2.6",
     "rollup-plugin-node-resolve": "^3.0.0",
     "ts-jest": "^22.0.1",
-    "typescript": "^2.8.0-rc"
+    "typescript": "^2.8.4"
   },
   "jest": {
     "transform": {

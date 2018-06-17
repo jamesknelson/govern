@@ -1,4 +1,5 @@
 import { Governable, GovernableClass } from './GovernObservableGovernor'
+import { GovernObservable } from './GovernObservable'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './GovernElement'
@@ -16,7 +17,7 @@ export interface ComponentClass<Value, Props> extends GovernableClass<Value, Pro
 }
 
 export interface ComponentLifecycle<Props={}, State={}, Subs=any> extends ComponentImplementationLifecycle<Props, State, Subs> {
-    render(): GovernElement<Subs, any> | Subs | null;
+    render(): GovernObservable<Subs> | GovernElement<Subs, any> | Subs | null;
 }
 
 export interface Component<Props={}, State={}, Subs=any> extends ComponentLifecycle<Props, State, Subs> { }
