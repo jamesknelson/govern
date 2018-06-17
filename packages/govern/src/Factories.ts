@@ -32,12 +32,18 @@ export function map<FromValue, ToValue>(
     return createElement('map', { from, to, key })
 }
 
-export function combine<CombinedValue>(
-    children: CombineChildren<keyof CombinedValue, CombinedValue>,
+export function combine<Children extends { [name: string]: any }>(
+    children: Children,
     key?: Key
-): GovernElement<CombinedValue, CombineProps<CombinedValue>> {
-    return createElement('combine', { children, key })
-}
+  ): GovernElement<{
+    [K in keyof Children]:
+      Children[K] extends Subscribable<infer SubscribableSnapshot> ? SubscribableSnapshot :
+      Children[K] extends GovernObservable<infer ObservableSnapshot> ? ObservableSnapshot :
+      Children[K] extends GovernElement<infer ElementSnapshot> ? ElementSnapshot :
+      Children[K]
+  }, any> {
+    return createElement('combine', { children }) as any
+  }
 
 export function combineArray<ItemValue>(
     children: CombineArrayChildren<ItemValue>,

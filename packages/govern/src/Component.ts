@@ -2,8 +2,7 @@ import { Governable, GovernableClass } from './GovernObservableGovernor'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
 import { GovernElement } from './GovernElement'
-import { Target } from './Target'
-import { Dispatcher } from './Dispatcher';
+import { Dispatcher } from './Dispatcher'
 
 export type ElementType<T extends Component<any, any, any>> = {
     new (props: T['props']): T
@@ -16,35 +15,18 @@ export interface ComponentClass<Value, Props> extends GovernableClass<Value, Pro
     displayName?: string;
 }
 
-export interface ComponentLifecycle<Props={}, State={}, Subs=any> {
-    constructor: Function & {
-        getDerivedStateFromProps?(nextProps: Props, prevState: State): State extends object ? (Partial<State> | null) : any;
-    }
-
-    componentWillReceiveProps?(nextProps: Props): void;
-
-    render(): GovernElement<Subs, any> | null;
-
-    shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
-    
-    // These lifecycle methods will be called after other Govern components have
-    // received a published value, but before the update is flushed to the UI.
-    // 
-    // They can be used in a similar way to a theoretical
-    // `componentWillReceiveSubs`. I've opted for this method instead, as it
-    // is more obvious that an unguarded `setState` will cause an infinite
-    // loop.
-    componentDidUpdate?(prevProps?: Props, prevState?: State, prevSubs?: Subs): void;
-    componentDidMount?(): void;
-    
-    componentWillUnmount?(): void;
+export interface ComponentLifecycle<Props={}, State={}, Subs=any> extends ComponentImplementationLifecycle<Props, State, Subs> {
+    render(): GovernElement<Subs, any> | Subs | null;
 }
 
 export interface Component<Props={}, State={}, Subs=any> extends ComponentLifecycle<Props, State, Subs> { }
 
-type SubscribeType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
+type RenderType<T> =
+    T extends () => GovernElement<infer ElementSnapshot, any> ? ElementSnapshot :
+    T extends () => infer ConstantSnapshot ? ConstantSnapshot :
+    any;
 
-export abstract class Component<Props, State={}, Subs=any> implements Governable<Subs, Props>, ComponentLifecycle<Props, State, Subs> {
+export abstract class Component<Props, State={}, Subs=any, Value=any> implements Governable<any, Props>, ComponentLifecycle<Props, State, Subs> {
     protected impl: ComponentImplementation<Props, State, Subs>;
 
     constructor(props: Props) {
@@ -55,7 +37,7 @@ export abstract class Component<Props, State={}, Subs=any> implements Governable
         return (this.impl.getFix().props || {}) as Props
     }
 
-    get subs(): SubscribeType<this["render"]> {
+    get subs(): RenderType<this["render"]> {
         if (this.impl.isRunningSubscribe) {
             throw new Error(`You cannot access a component's "subs" property within its "subscribe" method. See component "${getDisplayName(this.constructor)}".`)
         }
@@ -104,6 +86,8 @@ export abstract class Component<Props, State={}, Subs=any> implements Governable
     shouldComponentPublish(prevProps, prevState, prevSubs) {
         return this.subs === undefined || this.subs !== prevSubs
     }
+
+    abstract render(): GovernElement<Subs> | Subs | null;
 }
 
 export function getDisplayName(componentClass) {

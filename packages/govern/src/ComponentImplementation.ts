@@ -16,7 +16,8 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Subs=any> 
     }
 
     componentWillReceiveProps?(nextProps: Props): void;
-    render(): any;
+
+    render(): GovernElement<Subs> | Subs | null;
 
     shouldComponentUpdate?(nextProps?: Props, nextState?: State): boolean;
     shouldComponentPublish?(prevProps?: Props, prevState?: State, prevSubs?: Subs): boolean;
@@ -249,7 +250,7 @@ export class ComponentImplementation<Props, State, Subs> implements GovernObserv
     connect() {
         this.pushFix()
         this.isRunningSubscribe = true
-        let result = this.lifecycle.render()
+        let result = this.lifecycle.render!()
         this.isRunningSubscribe = false
         this.popFix()
 

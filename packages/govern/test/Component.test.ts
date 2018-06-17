@@ -103,11 +103,11 @@ describe('Component', () => {
     expect(harness.value.a.count).toEqual(1)
   })
 
-  it("setState within UNSAFE_componentWillReceiveProps is reflected within the output", () => {
+  it("setState within componentWillReceiveProps is reflected within the output", () => {
     class TestComponent extends Component<{ updated }, { a }> {
       state = { a: 1 }
 
-			UNSAFE_componentWillReceiveProps(nextProps) {
+			componentWillReceiveProps(nextProps) {
         this.setState({ a: 2 })
 			}
 
@@ -153,7 +153,7 @@ describe('Component', () => {
     class TestComponent extends Component<{ updated }> {
       state = { x: 1 }
 
-      UNSAFE_componentWillReceiveProps(nextProps) {
+      componentWillReceiveProps(nextProps) {
         this.setState({
           x: 2
         })
@@ -233,11 +233,11 @@ describe('Component', () => {
     expect(harness.value).toEqual({ a: 'a' })
   })
 
-  it("events can be received from combined <subscribe /> elements when emitted during `UNSAFE_componentWillReceiveProps` ", () => {
+  it("events can be received from combined <subscribe /> elements when emitted during `componentWillReceiveProps` ", () => {
     let counterStore = createCounter()
 
     class TestComponent extends Component<{ updated }> {
-      UNSAFE_componentWillReceiveProps() {
+      componentWillReceiveProps() {
         this.subs.inner.increase()
       }
 
