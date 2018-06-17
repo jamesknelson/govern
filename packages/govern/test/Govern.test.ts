@@ -91,7 +91,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
 
   let element = createElement(TestComponent)
   let store = instantiate(element)
-  let mapStore = instantiate(store.flatMap(x => constant(x)))
+  let mapStore = instantiate(flatMap(store, x => constant(x)))
   let harness = createTestHarness(mapStore)  
   
   harness.dispatch(() => {
@@ -133,7 +133,7 @@ test("can dispose mapped items", async () => {
 
   let element = createElement(TestComponent)
   let store = instantiate(element)
-  let mapStore = instantiate(store.flatMap(x => constant(x)))
+  let mapStore = instantiate(flatMap(store, x => constant(x)))
 
   mapStore.dispose()
 })

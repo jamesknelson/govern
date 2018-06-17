@@ -69,13 +69,6 @@ export class Store<Value, Props=any> implements DispatchedObservable<Value> {
     UNSAFE_dispatch = (fn: () => void) => {
         this.governor.emitter.enqueueAction(fn)
     }
-
-    map<U>(transform: (value: Value) => U): GovernElement<U> {
-        return map(this, transform)
-    }
-    flatMap<U>(transform: (value: Value) => Subscribable<U>): GovernElement<U> {
-        return flatMap(this, transform)
-    }
 }
 
 export function instantiate<Value, Props>(element: GovernElement<Value, Props>): Store<Value, Props> {

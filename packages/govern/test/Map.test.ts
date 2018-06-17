@@ -46,7 +46,7 @@ describe('Map', () => {
     }
 
     let store = instantiate(createElement(OuterStore))
-    let mappedElement = store.map(x => x.inner)
+    let mappedElement = map(store, x => x.inner)
     let flat = createElement(Flatten, {
       children: mappedElement
     })
