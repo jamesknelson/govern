@@ -1,7 +1,7 @@
 import { Governable, GovernableClass } from './GovernObservableGovernor'
 import { ComponentState } from './Core'
 import { ComponentImplementation, ComponentImplementationLifecycle } from './ComponentImplementation'
-import { GovernElement } from './Element'
+import { GovernElement } from './GovernElement'
 import { Target } from './Target'
 import { Dispatcher } from './Dispatcher';
 

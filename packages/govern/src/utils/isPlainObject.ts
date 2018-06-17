@@ -8,7 +8,7 @@
  * Released under the MIT License.
  */
 
-import { isValidElement } from '../Element'
+import { isValidElement } from '../GovernElement'
 
 function isObject(x) {
 	return typeof x === 'object' && x !== null;

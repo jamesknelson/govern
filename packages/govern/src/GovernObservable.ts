@@ -1,6 +1,6 @@
 import { Subscribable } from './Core'
 import { Dispatcher } from './Dispatcher'
-import { GovernElement } from './Element'
+import { GovernElement } from './GovernElement'
 import { constant, flatMap, map } from './Factories'
 import { Component, getDisplayName } from './Component'
 import { DispatchedObservable } from './DispatchedObservable'

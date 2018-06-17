@@ -1,5 +1,5 @@
 import { Component, getDisplayName } from './Component'
-import { convertToElement, doElementsReconcile, isValidElement, GovernElement } from './Element'
+import { convertToElement, doElementsReconcile, isValidElement, GovernElement } from './GovernElement'
 import { ComponentTarget } from './ComponentTarget'
 import { DispatcherEmitter } from './DispatcherEmitter'
 import { Dispatcher } from './Dispatcher';

@@ -1,6 +1,6 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { DistinctProps } from '../Core'
-import { createElement } from '../Element'
+import { createElement } from '../GovernElement'
 import { Dispatcher } from '../Dispatcher'
 import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
 import { Target } from '../Target'

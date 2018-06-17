@@ -1,4 +1,4 @@
-import { GovernElement } from './Element'
+import { GovernElement } from './GovernElement'
 import { GovernableClass } from './GovernObservableGovernor'
 import { GovernObservable } from './GovernObservable'
 

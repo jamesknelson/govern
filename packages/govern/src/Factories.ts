@@ -1,6 +1,6 @@
 import { GovernObservable } from './GovernObservable'
 import { Attributes, BuiltInType, Key, GovernNode, FlatMapProps, MapProps, SFC, CombineArrayChildren, CombineArrayProps, CombineChildren, CombineProps, ConstantProps, DistinctProps, Subscribable } from './Core'
-import { GovernElement, SFCElement, ComponentElement, createElement } from './Element'
+import { GovernElement, SFCElement, ComponentElement, createElement } from './GovernElement'
 import { GovernableClass } from './GovernObservableGovernor'
 
 type Factory<Value, Props> = (props?: Attributes & Props, ...children: GovernNode[]) => GovernElement<Value, Props>;
