@@ -85,6 +85,10 @@ export abstract class Component<Props, State={}, Value=any, Subs=any> implements
     }
 
     abstract publish(): Value;
+
+    shouldComponentPublish(prevProps, prevState, prevSubs) {
+        return this.subs === undefined || this.subs !== prevSubs
+    }
 }
 
 export function getDisplayName(componentClass) {

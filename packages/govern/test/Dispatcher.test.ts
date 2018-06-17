@@ -1,4 +1,4 @@
-import { combine, createElement, instantiate, Component, Store, SFC } from '../src'
+import { combine, createElement, instantiate, map, Component, Store, SFC } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -31,14 +31,17 @@ describe('Dipatcher', () => {
       }
 
 			subscribe() {
-			  return this.state.child || null
+        return map(
+          this.state.child || null,
+          () => ({
+            doFetch: this.doFetch,
+            doSetState: this.doSetState
+          })
+        )
       }
 
       publish() {
-        return {
-          doFetch: this.doFetch,
-          doSetState: this.doSetState
-        }
+        return this.subs
       }
 
       doSetState = () => {
@@ -59,7 +62,9 @@ describe('Dipatcher', () => {
     // `subscribe` listeners are called on flush
     let subscription = store.subscribe(() => {
       subscription.unsubscribe()
-      store.getValue().doFetch()
+      store.UNSAFE_dispatch(() => {
+        store.getValue().doFetch()
+      })
     })
 
     // cause something to be emitted to subscription

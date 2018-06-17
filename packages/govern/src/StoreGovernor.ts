@@ -11,6 +11,7 @@ import { StoreGovernor } from './StoreGovernor'
 import { Subscription } from './Subscription'
 import { FlushTarget, PublishTarget, Target } from './Target'
 import { DispatcherEmitter } from './DispatcherEmitter';
+import { shallowCompare } from './utils/shallowCompare';
 
 
 const BuiltInComponents = {

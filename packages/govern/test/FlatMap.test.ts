@@ -22,10 +22,6 @@ describe('FlatMap', () => {
     let harness = createTestHarness(store)
 
     expect(harness.value).toEqual({ c: 'test' })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("accepts changes to from element's props", () => {
@@ -44,10 +40,6 @@ describe('FlatMap', () => {
       expect(harness.value).toEqual({ x: 4 })
     })
     expect(harness.value).toEqual({ x: 8 })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("accepts changes to map fn", () => {
@@ -66,10 +58,6 @@ describe('FlatMap', () => {
       expect(harness.value).toEqual({ x: 4 })
     })
     expect(harness.value).toEqual({ x: 8 })
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("passes changes on subscribed from element", () => {
@@ -93,10 +81,6 @@ describe('FlatMap', () => {
       model.getValue().change({ firstName: 'James', lastName: 'Nelson' })
     })
     expect(harness.value).toEqual('James')
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("allows actions on `from` to be called when parent is in dispatch", () => {
@@ -171,10 +155,6 @@ describe('FlatMap', () => {
     let harness = createTestHarness(instantiate(createElement(TestComponent)))
     harness.dispatch(() => {})
     expect(harness.value.count).toEqual(2)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("a change in `from` can cause a change in `to` element", () => {
@@ -201,10 +181,6 @@ describe('FlatMap', () => {
     expect(harness.value.count).toEqual(3)
     harness.setProps({ updated: true })
     expect(harness.value.count).toEqual(3)
-
-    return new Promise(resolve => {
-      setTimeout(resolve, 0)
-    })
   })
 
   it("doesn't emit a new value when the `to` element doesn't, even if `from` changes", () => {

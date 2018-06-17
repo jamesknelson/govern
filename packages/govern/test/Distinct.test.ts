@@ -38,14 +38,20 @@ describe('Distinct', () => {
   it("supports custom comparators via the 'by' prop", () => {
     let counter = createCounter()
 
-    function TestComponent() {
-      return combine({
-        count: distinct(
-          map(counter, x => Math.floor(x.count / 2)),
-          () => false
-        ),
-        increase: counter.getValue().increase,
-      })
+    class TestComponent extends Component {
+      subscribe() {
+        return combine({
+          count: distinct(
+            map(counter, x => Math.floor(x.count / 2)),
+            () => false
+          ),
+          increase: counter.getValue().increase,
+        })
+      }
+
+      publish() {
+        return this.subs
+      }
     }
   
     let counterStore = instantiate(createElement(TestComponent))
