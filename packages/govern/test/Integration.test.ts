@@ -1,4 +1,4 @@
-import { map, flatMap, combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
+import { map, flatMap, combine, createElement, createObservable, Component, GovernObservable } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 function createModelClass() {
@@ -19,11 +19,11 @@ function createModelClass() {
     }
 
     render() {
-      return constant({
+      return {
         change: this.change,
         value: this.state.value,
         error: this.props.validate(this.state.value)
-      })
+      }
     }
   }
 

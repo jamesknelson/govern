@@ -1,7 +1,6 @@
-import { distinct, combine, constant, map, createElement, createObservable, Component, SFC } from '../src'
-import { createModelClass } from './utils/createModelClass'
+import { distinct, combine, map, createElement, Component } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
-import { createCounter, createCounterClass } from './utils/createCounter';
+import { createCounter } from './utils/createCounter';
 
 describe('Distinct', () => {
   it("doesn't emit a new value when its child value hasn't changed", () => {

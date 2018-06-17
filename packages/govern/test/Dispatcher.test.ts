@@ -1,6 +1,4 @@
-import { combine, createElement, createObservable, map, Component, GovernObservable, SFC } from '../src'
-import { createCounter } from './utils/createCounter'
-import { createTestHarness } from './utils/createTestHarness'
+import { createElement, createObservable, map, Component } from '../src'
 
 describe('Dipatcher', () => {
   it("actions dispatched within componentDidMount within a flush are called", () => {

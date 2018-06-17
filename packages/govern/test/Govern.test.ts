@@ -1,4 +1,4 @@
-import { flatMap, combine, constant, createElement, createObservable, Component, SFC } from '../src'
+import { flatMap, map, combine, createElement, createObservable, Component, SFC } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('createObservable', () => {
@@ -28,11 +28,11 @@ describe('createObservable', () => {
       }
 
       render() {
-        return constant({
+        return {
           a: this.props.a,
           b: 2,
           c: this.props.c,
-        })
+        }
       }
     }
 
@@ -41,28 +41,6 @@ describe('createObservable', () => {
     let output = store.getValue()
     expect(output).toEqual({ a: 1, b: 2, c: 3 })
   })
-
-  // it("can be called during a flush", () => {
-  //   function TestComponent(props) {
-  //     return {
-  //       a: props.a,
-  //     }
-  //   }
-
-  //   let element = createElement(TestComponent, { a: 1 })
-  //   let store = instantiate(element)
-  //   let mapStore
-    
-  //   store.subscribe((state, dispatch) => {
-  //     mapStore = instantiate(store.map(x => x.a))
-  //   })
-
-  //   store.transactionStart('1')
-  //   store.setProps({ a: 2 })
-  //   store.transactionEnd('1')
-
-  //   expect(mapStore.getValue()).toBe(2)
-  // })
 })
 
 test("can call `dispatch` from a subscribed component, within a `dispatch` of a subscription", async () => {
@@ -70,14 +48,14 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
     state = { value: undefined }
 
     render() {
-      return constant({
+      return {
         value: this.state.value,
         change: value => {
           this.dispatch(() => {
             this.setState({ value }) 
           })
         },
-      })
+      }
     }
   }
 
@@ -91,7 +69,7 @@ test("can call `dispatch` from a subscribed component, within a `dispatch` of a 
 
   let element = createElement(TestComponent)
   let store = createObservable(element)
-  let harness = createTestHarness(flatMap(store, x => constant(x)))  
+  let harness = createTestHarness(map(store, x => x))
   
   harness.dispatch(() => {
     harness.value.model.change('test')
@@ -111,14 +89,14 @@ test("can dispose mapped items", async () => {
     state = { value: undefined }
 
     render() {
-      return constant({
+      return {
         value: this.state.value,
         change: value => {
           this.dispatch(() => {
             this.setState({ value }) 
           })
         },
-      })
+      }
     }
   }
 
@@ -132,7 +110,7 @@ test("can dispose mapped items", async () => {
 
   let element = createElement(TestComponent)
   let store = createObservable(element)
-  let mapStore = createObservable(flatMap(store, x => constant(x)))
+  let mapStore = createObservable(map(store, x => x))
 
   mapStore.dispose()
 })
@@ -145,10 +123,10 @@ test("children can cause their own disposal", () => {
     }
 
     render() {
-      return constant({
+      return {
         value: this.state.value,
         change: (value) => this.setState({ value })
-      })
+      }
     }
   }
 

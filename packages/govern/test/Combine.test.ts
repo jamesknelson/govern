@@ -1,5 +1,5 @@
 import { createCounter, createCounterClass } from './utils/createCounter'
-import { combine, createElement, createObservable, Component, SFC, constant } from '../src'
+import { combine, createElement, createObservable, Component } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
 
 describe('Combine', () => {
@@ -42,7 +42,7 @@ describe('Combine', () => {
         }
 
         render() {
-            return constant(this.props.x*2)
+            return this.props.x*2
         }
     }
 

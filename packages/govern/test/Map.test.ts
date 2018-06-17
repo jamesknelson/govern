@@ -1,19 +1,17 @@
-import { map, combine, constant, createElement, createObservable, Component, SFC } from '../src'
-import { createModelClass } from './utils/createModelClass'
+import { map, combine, createElement, createObservable, Component } from '../src'
 import { createTestHarness } from './utils/createTestHarness'
-import { createCounter, createCounterClass } from './utils/createCounter';
 
 describe('Map', () => {
   class Double extends Component<{x: number}> {
     render() {
-      return constant(this.props.x*2)
+      return this.props.x*2
     }
   }
 
   it("doesn't flattern the result", () => {
     class Test extends Component<{a: string}> {
       render() {
-        return constant({ b: this.props.a })
+        return { b: this.props.a }
       }
     }
 
@@ -26,9 +24,9 @@ describe('Map', () => {
   it("can map to a child of a combined and flattened store", () => {
     class InnerStore extends Component {
       render() {
-        return constant({
+        return {
           name: 'bob'
-        })
+        }
       }
     }
 

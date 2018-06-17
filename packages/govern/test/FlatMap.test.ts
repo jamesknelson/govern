@@ -1,4 +1,4 @@
-import { flatMap, map, combine, constant, createElement, createObservable, Component, SFC } from '../src'
+import { flatMap, constant, combine, createElement, createObservable, Component } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
 import { createCounter, createCounterClass } from './utils/createCounter';
@@ -6,14 +6,14 @@ import { createCounter, createCounterClass } from './utils/createCounter';
 describe('FlatMap', () => {
   class Double extends Component<{x: number}> {
     render() {
-      return constant(this.props.x*2)
+      return this.props.x*2
     }
   }
 
   it("maps initial value", () => {
     class Test extends Component<{a: string}> {
       render() {
-          return constant({ b: this.props.a })
+          return { b: this.props.a }
       }
     }
 
@@ -159,10 +159,10 @@ describe('FlatMap', () => {
       }
 
       render() {
-        return constant({
+        return {
           count: this.props.count,
           increase: this.props.increase,
-        })
+        }
       }
     }
 

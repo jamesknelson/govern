@@ -1,4 +1,4 @@
-import { combine, createElement, createObservable, Component, GovernObservable, SFC, constant } from '../src'
+import { combine, createElement, createObservable, Component } from '../src'
 import { createCounter } from './utils/createCounter'
 import { createTestHarness } from './utils/createTestHarness'
 
@@ -187,7 +187,7 @@ describe('Component', () => {
       }
 
       render() {
-        return constant("hello")
+        return "hello"
       }
     }
 
@@ -215,7 +215,7 @@ describe('Component', () => {
   it(`removing a property of a <combine /> connected child removes its value from subs`, () => {
     class Constant extends Component {
       render() {
-        return constant('a')
+        return 'a'
       }
     }
     let observable = createObservable(createElement(Constant))
@@ -285,7 +285,7 @@ describe('Component', () => {
       }
 
       render() {
-        return constant(this.state.hello)
+        return this.state.hello
       }
     }
 
@@ -302,12 +302,12 @@ describe('Component', () => {
       }
 
       render() {
-        return constant(this.state.hello)
+        return this.state.hello || null
       }
     }
 
     let harness = createTestHarness(createElement(TestComponent, { updated: false }))
-    expect(harness.value).toBe(undefined)
+    expect(harness.value).toBe(null)
     harness.changeElement(createElement(TestComponent, { updated: true }))
     expect(harness.value).toBe('world')
   })

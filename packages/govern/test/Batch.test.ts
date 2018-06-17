@@ -1,8 +1,6 @@
-import { map, combine, createElement, GovernElement, createObservable, GovernObservable, Component, SFC } from '../src'
+import { map, combine, createElement, GovernElement, createObservable, GovernObservable, Component } from '../src'
 import { createModelClass } from './utils/createModelClass'
 import { createTestHarness } from './utils/createTestHarness'
-
-type ReturnType<T> = T extends (...args: any[]) => GovernElement<infer R, any> ? R : never;
 
 describe('Batching', () => {
   function FirstName(props: { userStore: GovernObservable<{ firstName: string, lastName: string }> }) {
