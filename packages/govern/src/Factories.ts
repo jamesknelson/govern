@@ -1,20 +1,5 @@
-import { GovernObservable } from './GovernObservable'
-import { Attributes, CombinedValue, Key, FlatMapProps, MapProps, SFC, ConstantProps, DistinctProps, Subscribable } from './Core'
-import { GovernElement, SFCElement, ComponentElement, createElement } from './GovernElement'
-import { GovernableClass } from './GovernObservableGovernor'
-
-type Factory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => GovernElement<Value, Props>;
-
-type SFCFactory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => SFCElement<Value, Props>;
-
-type ComponentFactory<Value, Props> = (props?: Attributes & Props, ...children: any[]) => ComponentElement<Value, Props>;
-
-// Custom components
-function createFactory<Value, Props>(type: SFC<Value, Props>): SFCFactory<Value, Props>;
-function createFactory<Value, Props>(type: GovernableClass<Value, Props>): Factory<Value, Props>
-function createFactory<Value, Props>(type: GovernableClass<Value, Props> | SFC<Value, Props>): Factory<Value, Props> {
-    return (props: Props, ...children: any[]) => createElement(type as any, props, ...children)   
-}
+import { CombinedValue, Key, FlatMapProps, MapProps, SFC, ConstantProps, DistinctProps, Subscribable } from './Core'
+import { GovernElement, createElement } from './GovernElement'
 
 export function flatMap<FromValue, ToValue>(
     from: Subscribable<FromValue>,

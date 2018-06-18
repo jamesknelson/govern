@@ -4,13 +4,9 @@ import { Combine } from './builtins/Combine'
 import { Distinct } from './builtins/Distinct'
 import { Component } from './Component'
 import { Dispatcher } from './Dispatcher'
-import { GovernElement, isValidElement } from './GovernElement'
-import { GovernObservable } from './GovernObservable'
+import { GovernElement } from './GovernElement'
 import { GovernObservableGovernor } from './GovernObservableGovernor'
-import { Subscription } from './Subscription'
-import { FlushTarget, PublishTarget, Target } from './Target'
 import { DispatcherEmitter } from './DispatcherEmitter';
-import { shallowCompare } from './utils/shallowCompare';
 
 
 const BuiltInComponents = {

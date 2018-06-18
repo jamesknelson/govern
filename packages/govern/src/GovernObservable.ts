@@ -1,13 +1,8 @@
-import { Subscribable } from './Core'
 import { Dispatcher } from './Dispatcher'
 import { GovernElement } from './GovernElement'
-import { constant, flatMap, map } from './Factories'
-import { Component, getDisplayName } from './Component'
 import { DispatchedObservable } from './DispatchedObservable'
 import { DispatchedObserver } from './DispatchedObserver'
-import { ComponentImplementation } from './ComponentImplementation'
 import { Subscription } from './Subscription'
-import { Target, PublishTarget, isValidPublishTarget } from './Target'
 import { createObservableGovernor, GovernObservableGovernor } from './GovernObservableGovernor'
 import { GovernObservableSubscriberTarget } from './GovernObservableSubscriberTarget'
 

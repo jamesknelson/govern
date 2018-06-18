@@ -1,5 +1,4 @@
 import { Observer } from './Observable'
-import { Subscription } from './Subscription'
 
 export interface DispatchedObserver<T> extends Observer<T> {
     // Any actions which can affect the state of the observable must be

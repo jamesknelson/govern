@@ -1,9 +1,7 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { MapProps } from '../Core'
-import { createElement } from '../GovernElement'
 import { Dispatcher } from '../Dispatcher'
 import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
-import { Target } from '../Target'
 
 export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<FromValue, ToValue>>, ComponentImplementationLifecycle<MapProps<FromValue, ToValue>, {}, ToValue> {
     impl: ComponentImplementation<MapProps<FromValue, ToValue>, {}, ToValue>;

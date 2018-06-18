@@ -2,8 +2,7 @@ import { ComponentImplementation, ComponentImplementationLifecycle } from '../Co
 import { FlatMapProps } from '../Core'
 import { Dispatcher } from '../Dispatcher'
 import { createObservableGovernor, Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
-import { GovernObservable } from '../GovernObservable'
-import { GovernElement, createElement, convertToElement, doElementsReconcile } from '../GovernElement'
+import { GovernElement, convertToElement, doElementsReconcile } from '../GovernElement'
 import { Subscription } from '../Subscription'
 import { PublishTarget } from '../Target'
 import { DispatcherEmitter } from '../DispatcherEmitter';

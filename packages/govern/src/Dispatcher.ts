@@ -1,4 +1,3 @@
-import { closedSubscription, Subscription } from './Subscription'
 import { DispatcherEmitter } from './DispatcherEmitter'
 import { GovernObservableGovernor } from './GovernObservableGovernor'
 

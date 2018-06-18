@@ -1,9 +1,7 @@
 import { ComponentImplementation, ComponentImplementationLifecycle } from '../ComponentImplementation'
 import { DistinctProps } from '../Core'
-import { createElement } from '../GovernElement'
 import { Dispatcher } from '../Dispatcher'
 import { Governable, GovernObservableGovernor } from '../GovernObservableGovernor'
-import { Target } from '../Target'
 import { shallowCompare } from '../utils/shallowCompare'
 
 export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>, ComponentImplementationLifecycle<DistinctProps<Value>, {}, Value> {

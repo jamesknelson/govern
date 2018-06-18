@@ -1,4 +1,3 @@
-import { Dispatcher } from './Dispatcher'
 import { EmitterObservableSubscription, DispatcherEmitter } from './DispatcherEmitter'
 import { Subscription } from './Subscription'
 
