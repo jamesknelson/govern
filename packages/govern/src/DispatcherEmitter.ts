@@ -111,17 +111,21 @@ export class DispatcherEmitter<T=any> {
         this.dispatcher.enqueueAction(fn)
     }
 
-    publish(value: T) {
+    publishAndReact(value: T) {
         if (!this.isStopped) {
             let targets = this.publishTargets
             let len = targets.length
             let copy = targets.slice()
             this.value = value
-            this.dispatcher.registerPublish(this, len === 0)
+            this.dispatcher.registerPublishAndReaction(this, len === 0)
             for (let i = 0; i < len; i++) {
                 copy[i].next(value)
             }
         }
+    }
+
+    react() {
+        this.dispatcher.registerReaction(this)
     }
 
     error(err?: any) {

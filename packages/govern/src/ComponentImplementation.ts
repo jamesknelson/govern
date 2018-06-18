@@ -439,12 +439,17 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
                 publishedValue = this.lifecycle.getPublishedValue() as any
                 this.popFix()
             }
-            this.emitter.publish(publishedValue)
+            this.emitter.publishAndReact(publishedValue)
             this.previousPublish = {
                 props: this.props,
                 state: this.state,
                 subs: this.subs,
             }
+        }
+        else {
+            // We still want to call lifecylce methods, even if nothing is
+            // published.
+            this.emitter.react()
         }
     }
 

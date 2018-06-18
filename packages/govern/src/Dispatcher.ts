@@ -125,7 +125,7 @@ export class Dispatcher {
         this.flushQueue.delete(emitter)
     }
 
-    registerPublish(emitter: DispatcherEmitter, hasNoListeners: boolean) {
+    registerPublishAndReaction(emitter: DispatcherEmitter, hasNoListeners: boolean) {
         // If we're publishing on an emitter with flush-targets, make sure
         // that a flush is scheduled for that priority.
         let priorities = Array.from(this.emitterPriorities.get(emitter) || [])
@@ -139,10 +139,19 @@ export class Dispatcher {
             throw new Error(`A source cannot publish a value during a flush.`)
         }
 
-        this.reactionQueue.push(emitter)
         if (this.emitterPriorities.get(emitter)!.size > 0) {
             this.flushQueue.add(emitter)
         }
+
+        this.registerReaction(emitter)
+    }
+
+    registerReaction(emitter: DispatcherEmitter) {
+        // If we're publishing on an emitter with flush-targets, make sure
+        // that a flush is scheduled for that priority.
+        let priorities = Array.from(this.emitterPriorities.get(emitter) || [])
+
+        this.reactionQueue.push(emitter)
         if (this.postQueue.indexOf(emitter) === -1) {
             // For post, we want to work backwords from the deepest component
             // to the highest. As we probably added them in the opposite
