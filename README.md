@@ -100,7 +100,7 @@ Govern provides a `<Subscribe to>` React component that allows React components 
 
 This component takes a Govern element for its `to` prop, and a render function for its `children` prop. It calls the render function with each new published value -- kind of like a super-powered version of React's context API.
 
-Here's a barebones example that connects a `<Model>` to an input field. [See it live at CodeSandbox](https://codesandbox.io/s/0y10o4977l).
+Here's a barebones example that connects a `<FieldModel>` to an input field. [See it live at CodeSandbox](https://codesandbox.io/s/0y10o4977l).
 
 ```js
 import * as React from 'react'
@@ -479,7 +479,7 @@ class RegistrationFormController extends Govern.Component {
 
 Govern's `map` and `flatMap` primitives serve a similar purpose to the React [Render Prop](https://reactjs.org/docs/render-props.html) pattern. However, map/flatMap have a number of advantages:
 
-- You can use `shouldComponentUpdate` (doing so in React components with render props results in wailing and gnashing of teeth)
+- You can use `shouldComponentUpdate` (doing so in React components with render props results in weeping and gnashing of teeth)
 - You can change the structure of components' children (doing so in React results in child components being remounted)
 - You can use the `combine` primitive on mapped components (combining React components with render props results in pyramids of doom)
 
