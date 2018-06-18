@@ -38,11 +38,11 @@ export abstract class Component<Props, State={}, Value=any> implements Governabl
         return (this.impl.getFix().props || {}) as Props
     }
 
-    get subs(): RenderType<this["render"]> {
-        if (this.impl.isRunningSubscribe) {
+    get value(): RenderType<this["render"]> {
+        if (this.impl.isRunningRender) {
             throw new Error(`You cannot access a component's "value" property within its "render" method. See component "${getDisplayName(this.constructor)}".`)
         }
-        return this.impl.getFix().subs as any
+        return this.impl.getFix().value as any
     }
 
     get state() {
@@ -85,7 +85,7 @@ export abstract class Component<Props, State={}, Value=any> implements Governabl
     }
 
     shouldComponentPublish(prevProps, prevState, prevValue) {
-        return this.subs === undefined || this.subs !== prevValue
+        return this.value === undefined || this.value !== prevValue
     }
 
     abstract render(): GovernElement<Value> | Value | null;

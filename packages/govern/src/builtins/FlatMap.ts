@@ -48,8 +48,8 @@ export class FlatMap<FromValue, ToValue> implements Governable<ToValue, FlatMapP
         return this.impl.props.to(this.from.value)
     }
 
-    shouldComponentPublish(prevProps, prevState, prevSubs) {
-        return this.impl.subs === undefined || this.impl.subs !== prevSubs
+    shouldComponentPublish(prevProps, prevState, prevValue) {
+        return this.impl.value === undefined || this.impl.value !== prevValue
     }
 
     // Reimplement impl's `createObservableGovernor`, so that we can get a value

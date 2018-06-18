@@ -19,7 +19,7 @@ export class Distinct<Value> implements Governable<Value, DistinctProps<Value>>,
 
     shouldComponentPublish(prevProps, prevState, prevSubs) {
         let comparator = this.impl.props.by || shallowCompare
-        return !comparator(prevSubs, this.impl.subs)
+        return !comparator(prevSubs, this.impl.value)
     }
 
     createObservableGovernor(dispatcher: Dispatcher): GovernObservableGovernor<Value> {

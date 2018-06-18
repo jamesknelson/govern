@@ -142,7 +142,7 @@ test("children can cause their own disposal", () => {
     }
 
     componentDidUpdate() {
-      if (this.subs.a && this.subs.a.value === 1) {
+      if (this.value.a && this.value.a.value === 1) {
         this.setState({
           items: {}
         })

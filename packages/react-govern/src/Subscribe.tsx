@@ -214,7 +214,7 @@ class Binding<T> extends Component<BindingProps<T>, BindingState<T>, BindingSnap
   }
 
   shouldComponentPublish(prevProps, prevState, prevSubs) {
-    return prevSubs.snapshot !== this.subs.snapshot
+    return prevSubs.snapshot !== this.value.snapshot
   }
 
   changeElement = (element: GovernElement<T, any> | GovernObservable<T>) => {

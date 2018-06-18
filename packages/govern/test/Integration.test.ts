@@ -73,10 +73,10 @@ function createModelClass() {
 
     change = (value) => {
       if (value.name) {
-        this.subs.children.name.change(value.name)
+        this.value.children.name.change(value.name)
       }
       if (value.email) {
-        this.subs.children.email.change(value.email)
+        this.value.children.email.change(value.email)
       }
     }
   }
@@ -122,17 +122,17 @@ function createFormControllerClass() {
     }
 
     componentDidMount() {
-      this.receiveDataIfAvailable(this.subs.data)
+      this.receiveDataIfAvailable(this.value.data)
     }
 
     componentDidUpdate(prevProps, prevState, prevSubs) {
-      this.receiveDataIfAvailable(this.subs.data)
+      this.receiveDataIfAvailable(this.value.data)
     }
 
     receiveDataIfAvailable(output) {
       if (this.awaitingData && output && Object.keys(output).length > 0) {
         this.awaitingData = false
-        this.subs.model.change(output)
+        this.value.model.change(output)
       }
     }
   }

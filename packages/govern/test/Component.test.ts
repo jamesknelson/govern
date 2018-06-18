@@ -15,7 +15,7 @@ describe('Component', () => {
       }
 		
 			componentDidMount() {
-			  calledDidInstantiateWith = this.subs
+			  calledDidInstantiateWith = this.value
 			}
 		
 			componentDidUpdate(nextProps, nextState, nextComp) {
@@ -90,8 +90,8 @@ describe('Component', () => {
 		
 			componentDidUpdate(prevProps, prevState, prevSubs) {
         didUpdateCallCount += 1
-        if (this.subs.a.count === 0) {
-          this.subs.a.increase()
+        if (this.value.a.count === 0) {
+          this.value.a.increase()
         }
 			}
     }
@@ -238,7 +238,7 @@ describe('Component', () => {
 
     class TestComponent extends Component<{ updated }> {
       componentWillReceiveProps() {
-        this.subs.inner.increase()
+        this.value.inner.increase()
       }
 
       render() {
@@ -263,7 +263,7 @@ describe('Component', () => {
           child: counterStore,
           update: () => {
             this.setState({})
-            this.subs.child.increase()
+            this.value.child.increase()
           }
         })
       }

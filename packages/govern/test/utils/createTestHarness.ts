@@ -33,7 +33,7 @@ class Harness<Value> extends Component<HarnessProps<Value>, any, HarnessSnapshot
   }
 
   shouldComponentPublish(prevProps, prevState, prevSubs) {
-    return prevSubs.value !== this.subs.value
+    return prevSubs.value !== this.value.value
   }
 
   changeElement = (element: GovernElement<Value, any>) => {

@@ -27,11 +27,6 @@ export interface ComponentImplementationLifecycle<Props={}, State={}, Value=any>
 
     // These lifecycle methods will be called after other Govern components have
     // received a published value, but before the update is flushed to the UI.
-    // 
-    // They can be used in a similar way to a theoretical
-    // `componentWillReceiveSubs`. I've opted for this method instead, as it
-    // is more obvious that an unguarded `setState` will cause an infinite
-    // loop.
     componentDidUpdate?(prevProps?: Props, prevState?: State, prevValue?: Value): void;
     componentDidMount?(): void;
 
@@ -57,10 +52,10 @@ export interface ChildSubscription {
 export class ComponentImplementation<Props, State, Value> implements GovernObservableGovernor<Value, Props> {
     props: Props;
     state: State;
-    subs: Value;
+    value: Value;
 
     // What the associated Component instance sees.
-    fixed: { props: Props, state: State, subs: Value }[] = [];
+    fixed: { props: Props, state: State, value: Value }[] = [];
 
     // Arbitrary functions to be run after componentDidUpdate
     callbacks: Function[] = []
@@ -69,7 +64,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
     // symbols.
     children: Map<string, Child> = new Map()
 
-    // If we're running `connect`, we can defer handling of new subs values
+    // If we're running `connect`, we can defer handling of new value values
     // to the end of the connect.
     expectingChildChangeFor?: string
 
@@ -84,16 +79,16 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
     // method, so that we don't double connect/double publish.
     isReceivingProps: boolean = false
 
-    // Keep track of whether the user is running "subscribe", so we can
-    // prevent it from accessing `this.subs`.
-    isRunningSubscribe: boolean = false
+    // Keep track of whether the user is running "render", so we can
+    // prevent it from accessing `this.value`.
+    isRunningRender: boolean = false
 
-    // The last result of the `subscribe` function
-    lastSubscribeElement?: GovernElement<any, any>
+    // The last result of the `render` function
+    lastRenderedElement?: GovernElement<any, any>
 
-    // Keep track of previous props, state and subs, so we can pass them
+    // Keep track of previous props, state and value, so we can pass them
     // through to componentDidUpdate.
-    lastUpdate: { props: Props, state: State, subs: Value }
+    lastUpdate: { props: Props, state: State, value: Value }
 
     lifecycle: ComponentImplementationLifecycle<Props, State, Value>
 
@@ -101,7 +96,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
     nextState: State
 
     // Keep the previously published values around for shouldComponentPublish
-    previousPublish: { props: Props, state: State, subs: Value };
+    previousPublish: { props: Props, state: State, value: Value };
 
     // A pipe for events out of this object
     emitter: DispatcherEmitter<Value>
@@ -114,17 +109,17 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
     }
 
     /**
-     * Create a fixed set of props/state/subs that can be used
+     * Create a fixed set of props/state/value that can be used
      * within one method of a component instance.
      */
     getFix() {
-        return this.fixed[0] || { props: this.props, state: this.state, subs: this.subs }
+        return this.fixed[0] || { props: this.props, state: this.state, value: this.value }
     }
-    pushFix(fix?: { props: Props, state: State, subs: Value }) {
+    pushFix(fix?: { props: Props, state: State, value: Value }) {
         this.fixed.unshift(fix ? fix : {
             props: this.props,
             state: this.state,
-            subs: this.subs,
+            value: this.value,
         })
     }
     popFix() {
@@ -161,7 +156,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         this.children.clear()
         delete this.nextState
         delete this.state
-        delete this.subs
+        delete this.value
         this.emitter.complete()
     }
 
@@ -250,32 +245,32 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
 
     connect() {
         this.pushFix()
-        this.isRunningSubscribe = true
+        this.isRunningRender = true
         let result = this.lifecycle.render!()
-        this.isRunningSubscribe = false
+        this.isRunningRender = false
         this.popFix()
 
         if (result === undefined) {
             console.warn(`The "${getDisplayName(this.lifecycle.constructor)}" component returned "undefined" from its render method. If you really want to return an empty value, return "null" instead.`)
         }
 
-        let lastRootElement = this.lastSubscribeElement
+        let lastRootElement = this.lastRenderedElement
         let nextRootElement = convertToElement(result)
-        this.lastSubscribeElement = nextRootElement
+        this.lastRenderedElement = nextRootElement
 
-        let { keys: lastKeys, elements: lastElements } = getChildrenFromSubscribedElement(lastRootElement)
-        let { keys: nextKeys, indexes: nextIndexes, elements: nextElements } = getChildrenFromSubscribedElement(nextRootElement)
+        let { keys: lastKeys, elements: lastElements } = getChildrenFromRenderedElement(lastRootElement)
+        let { keys: nextKeys, indexes: nextIndexes, elements: nextElements } = getChildrenFromRenderedElement(nextRootElement)
 
         // Indicates whether all existing children should be destroyed and
         // recreated, even if they reconcile. We'll want to do this if the
         // children move from a `combine` to something else, etc.
         let typeHasChanged = !lastRootElement || nextRootElement.type !== lastRootElement.type
         
-        // Create a new `subs` object, keeping around appropriate previous
+        // Create a new `value` object, keeping around appropriate previous
         // values, so we don't have to rerequest them from subscribed
         // stores.
         if (nextRootElement.type === 'combine' && typeHasChanged) {
-            this.subs = {} as any
+            this.value = {} as any
         }
 
         // A list of keys on the existing `this.children` that need to be
@@ -288,7 +283,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         let childKeysToAdd = [] as string[]
 
         // A list of known indexes, which we'll use to decide whether to
-        // remove old values from `subs`
+        // remove old values from `value`
         let knownIndexes = new Set(Object.values(nextIndexes))
 
         for (let i = 0; i < nextKeys.length; i++) {
@@ -350,9 +345,9 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         let oldIndex = child.index
         if (index !== oldIndex) {
             child.index = index
-            this.subs[index] = child.value
+            this.value[index] = child.value
             if (!knownIndexes.has(oldIndex)) {
-                delete this.subs[oldIndex]
+                delete this.value[oldIndex]
             }
         }
 
@@ -361,7 +356,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         }
         else if (child.element.type !== 'subscribe') {
             // Observables will immediately emit their new value
-            // on `setProps`, ensuring that `subs` is updated.
+            // on `setProps`, ensuring that `value` is updated.
             this.expectingChildChangeFor = key
             child.subscription.governor.setProps(nextProps)
             delete this.expectingChildChangeFor
@@ -380,7 +375,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         }       
 
         if (child.index !== Root && !knownIndexes.has(child.index)) {
-            delete this.subs[child.index]
+            delete this.value[child.index]
         }
      
         this.children.delete(key)
@@ -392,10 +387,10 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         child.value = value
 
         if (child.index === Root) {
-            this.subs = value
+            this.value = value
         }
         else {
-            this.subs = Object.assign({}, this.subs, { [child.index]: value })
+            this.value = Object.assign({}, this.value, { [child.index]: value })
         }
     }
 
@@ -409,7 +404,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
             throw new Error(`A Govern component cannot receive new values from children outside of a dispatch.`)
         }
 
-        // Mutatively update `subs`
+        // Mutatively update `value`
         this.setValue(key, value)
 
         // We don't need to `publish` if there is already one scheduled.
@@ -425,15 +420,15 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
             !this.lifecycle.shouldComponentPublish
 
         if (!shouldForcePublish) {
-            let { props, state, subs } = this.previousPublish
+            let { props, state, value } = this.previousPublish
             this.pushFix()
-            shouldComponentPublish = this.lifecycle.shouldComponentPublish!(props, state, subs)
+            shouldComponentPublish = this.lifecycle.shouldComponentPublish!(props, state, value)
             this.popFix()
         }
         
-        // Publish a new value based on the current props, state and subs.
+        // Publish a new value based on the current props, state and value.
         if (shouldComponentPublish) {
-            let publishedValue = this.subs as any
+            let publishedValue = this.value as any
             if (this.lifecycle.getPublishedValue) {
                 this.pushFix()
                 publishedValue = this.lifecycle.getPublishedValue() as any
@@ -443,7 +438,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
             this.previousPublish = {
                 props: this.props,
                 state: this.state,
-                subs: this.subs,
+                value: this.value,
             }
         }
         else {
@@ -494,7 +489,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
             this.lifecycle.componentDidUpdate!(
                 this.lastUpdate.props,
                 this.lastUpdate.state,
-                this.lastUpdate.subs
+                this.lastUpdate.value
             )
             this.popFix()
         }
@@ -502,7 +497,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
         this.lastUpdate = {
             props: this.props,
             state: this.state,
-            subs: this.subs,
+            value: this.value,
         }
 
         return true
@@ -535,8 +530,7 @@ export class ComponentImplementation<Props, State, Value> implements GovernObser
 }
 
 
-// TODO: memoize this with a weakmap if it results in significantly improved perf
-function getChildrenFromSubscribedElement(element?: GovernElement<any, any>): { keys: string[], indexes: { [key: string]: string }, elements: { [key: string]: GovernElement<any, any> } } {
+function getChildrenFromRenderedElement(element?: GovernElement<any, any>): { keys: string[], indexes: { [key: string]: string }, elements: { [key: string]: GovernElement<any, any> } } {
     if (!element) {
         return { keys: [], indexes: {}, elements: {} }
     }

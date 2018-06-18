@@ -21,7 +21,7 @@ export class Map<FromValue, ToValue> implements Governable<ToValue, MapProps<Fro
     // available results in Map being implemented from 1 component instead
     // of 3...
     getPublishedValue() {
-        return this.impl.props.to(this.impl.subs as any)
+        return this.impl.props.to(this.impl.value as any)
     }
 
     shouldComponentPublish() {
