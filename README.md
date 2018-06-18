@@ -1,23 +1,19 @@
 Govern
 ======
 
-A component-based state management library for React.
+A component-based state management library.
 
 [![npm version](https://img.shields.io/npm/v/govern.svg)](https://www.npmjs.com/package/govern)
 
-1. [Read the introduction &raquo;](http://jamesknelson.com/component-based-state-management-react/)
-
-2. [Follow the guide &raquo;](http://jamesknelson.com/sensible-react-forms-with-govern/)
-
-3. [Try it at CodeSandbox &raquo;](https://codesandbox.io/s/0ozlm2lxjl)
+[Try it live at CodeSandbox](https://codesandbox.io/s/31oo429ql1).
 
 ---
 
-Managing state in React apps can be daunting. Govern makes it staightforward. It lets you get more done with the APIs you already know, and untangles your business logic in the same way that React untangled your view.
+Managing state in React apps can be daunting. Govern makes it straightforward.
 
-With Govern, you manage your state with *store components*. These are a lot like React components - they can receive props, call `setState`, and define lifecycle methods. They can be defined as ES6 classes, or as stateless functions. 
+With Govern, you manage your state with an API you already know - *components*. Govern components are just like React components - they receive props, call `setState`, and define lifecycle methods. But where React components render UI elements, Govern components render plain old JavaScript objects.
 
-Store components can handle state, actions, side effects, and selectors. This means that Govern can replace redux (or MobX), redux-thunk, redux-saga, reselect, and even recompose. But you can still use these tools when it makes sense - Govern is flexible, just like React.
+Govern components can handle state, actions, side effects, and selectors. This means that Govern can replace redux (or MobX), redux-thunk, redux-saga, reselect, and even recompose. But you can still use these tools when it makes sense - Govern is flexible, just like React.
 
 And if you know React, then you already know most of Govern's API, so you'll be productive in no time.
 
@@ -29,22 +25,39 @@ npm install --save govern react-govern
 yarn add govern react-govern
 ```
 
-Simple, Sensible Forms: a short guide.
---------------------------------------
+Simple, Sensible Forms: A Guide.
+--------------------------------
 
-Creating forms with React is usually a little awkward. Govern makes it easy and fun. It lets you break your state into small components, and then reuse them -- as God and Douglas McIlroy intended.
+Creating forms with React can be a little awkward. While React components are great for representing the form's UI, most forms also have a lot of business logic behind the UI.
+
+Govern makes forms simpler by allowing you to write components that *just* manage business logic.
+
+This guide will walk you through creating a Govern component that manages the business logic for user registration, including:
+
+- Form state
+- Validation
+- Submitting a request
+- Redirecting the user on success
 
 
-### Defining store components
+### Defining Govern components
 
-Govern components are just JavaScript classes that extend `Govern.Component`. Like React components, they have props, state, and lifecycle methods.
+Govern components are just JavaScript classes that extend `Govern.Component`. Like React components, they have `props`, `state`, and lifecycle methods like `componentDidMount` and `componentDidUpdate`.
 
-For example, here's how you'd create a `Model` component that handles state and validation for individual form fields:
+To build a form, you'll need to store the form's state somewhere. And ideally, this state will be decoupled from the view -- which makes a Govern component the perfect place to store it!
+
+Forms are usually composed from multiple fields. So let's start by building a component that models a single field's logic. It'll need to output the following:
+
+- The current value of the field
+- A function to change the current value
+- Any validation errors
+
+Here's an example of how you could make this component with Govern:
 
 ```js
 import * as Govern from 'govern'
 
-class Model extends Govern.Component {
+class FieldModel extends Govern.Component {
   static defaultProps = {
     defaultValue: ''
   }
@@ -57,7 +70,7 @@ class Model extends Govern.Component {
     }
   }
 
-  publish() {
+  render() {
     let value = this.state.value
     let error = this.props.validate ? this.props.validate(value) : null
 
@@ -76,16 +89,18 @@ class Model extends Govern.Component {
 }
 ```
 
-Govern components have one major difference from React components: instead of `render`, they take a `publish` method. This is where you specify the component's output, which will be computed each time the component's props or state change.
+The neat thing about the above component is that if you know React, you already know what is going on here!
+
+The only difference from a standard React component is that instead of rendering UI elements, you render raw data. Which you can then subscribe from within your view.
 
 
-### Subscribing to stores
+### Subscribing to a Govern component
 
-Now that you have a Model component, the next step is to subscribe to its published values from inside of your React app.
+Govern provides a `<Subscribe to>` React component that allows React components to subscribe to Govern components.
 
-Govern exports a `<Subscribe to>` React component to handle this for you. This component takes a Govern element for its `to` prop, and a render function for its `children` prop. It calls the render function with each new published value -- just like React's context API.
+This component takes a Govern element for its `to` prop, and a render function for its `children` prop. It calls the render function with each new published value -- kind of like a super-powered version of React's context API.
 
-Here's a barebones example that connects a `<Model>` to an input field, using `<Subscribe>`. [See it live at CodeSandbox](https://codesandbox.io/s/0y10o4977l).
+Here's a barebones example that connects a `<Model>` to an input field. [See it live at CodeSandbox](https://codesandbox.io/s/0y10o4977l).
 
 ```js
 import * as React from 'react'
@@ -93,7 +108,11 @@ import * as ReactDOM from 'react-dom'
 import { Subscribe } from 'react-govern'
 
 ReactDOM.render(
-  <Subscribe to={<Model validate={validateEmail} />}>
+  <Subscribe to={
+    // JSX is optional. This is equivalent to:
+    // Govern.createElement(Model, { validate: validateEmail })
+    <FieldModel validate={validateEmail} />
+  }>
     {emailModel =>
       <label>
         Email: 
@@ -113,27 +132,33 @@ ReactDOM.render(
 
 function validateEmail(value) {
   if (value.indexOf('@') === -1) {
-    return "pleae enter a valid e-mail"
+    return "please enter a valid e-mail"
   }
 }
 ```
 
-Congratulations -- you've just learned a new way to manage state! And all you need to remember is that:
+Of course, forms usually have a number of fields, and it would be downright tedious to hook them all up this way. In fact, if you've used React Context, you may have experienced this yourself. Luckily, Govern gives you another option.
 
-- Store components extend from `Govern.Component` in place of `React.Component`.
-- Store components use a `publish` method in place of `render`.
-- You can subscribe to store components with `<Subscribe to>`.
+### Combining components
 
-These three things will get you a long way. But there's one more tool that will make your life even easier:
+Govern components can render more than just plain old JavaScript objects -- like React, they can also render other components!
 
+```js
+class WrapperComponent extends Govern.Component {
+  render() {
+    return (
+      <FieldModel
+        validate={validateEmail}
+        defaultValue={this.props.defaultValue.email}
+      />
+    )
+  }
+}
+```
 
-### Combining stores
+There's just one problem -- how do you combine multiple components? Unlike React, Govern isn't rendering to the DOM, so you can't wrap multiple components with `<div>` or `<span>` tags.
 
-Govern components have one special method that doesn't exist on React components -- `subscribe`.
-
-When a component's `subscribe` method returns some Govern elements, the component will subscribe to those elements, placing their latest published values on `this.subs`. You can then use the value of `this.subs` within the component's `publish` method, allowing you to *combine* store components.
-
-For example, you could combine two `<Model>` elements to create a `<RegistrationFormModel>` component:
+To solve this, Govern provides its own primitives for combining elements. For example, the `Govern.combine` primitive can be used to render an object with the latest values of some specified elements:
 
 ```js
 class RegistrationFormModel extends Govern.Component {
@@ -141,17 +166,21 @@ class RegistrationFormModel extends Govern.Component {
     defaultValue: { name: '', email: '' }
   }
 
-  subscribe() {
+  render() {
     let defaultValue = this.props.defaultValue
 
-    return {
-      name: <Model defaultValue={defaultValue.name} validate={validateNotEmpty} />,
-      email: <Model defaultValue={defaultValue.email} validate={validateEmail} />,
-    }
-  }
-
-  publish() {
-    return this.subs
+    return Govern.combine({
+      name:
+        <FieldModel
+          defaultValue={defaultValue.name}
+          validate={validateNotEmpty}
+        />,
+      email:
+        <FieldModel
+          defaultValue={defaultValue.email}
+          validate={validateEmail}
+        />,
+    })
   }
 }
 
@@ -162,9 +191,9 @@ function validateNotEmpty(value) {
 }
 ```
 
-You can then subscribe to the form model with `<Subscribe to>`, just as before.
+And with that, you now have a component that manages the state of your entire form! You can then subscribe to the form model with `<Subscribe to>`, just as before.
 
-One of the benefits of using the same `<Model>` component for every field is that it makes creating reusable form controls simpler. For example, you could create a `<Field>` React component to render your field models. [See it live at CodeSandbox](https://codesandbox.io/s/vv09or2853).
+One of the benefits of using the same `<FieldModel>` component for every field is that it makes creating reusable form controls simpler. For example, you could create a `<Field>` React component to render your field models. [See it live at CodeSandbox](https://codesandbox.io/s/vv09or2853).
 
 ```js
 class Field extends React.Component {
@@ -205,15 +234,16 @@ ReactDOM.render(
 
 ### Stateless functional components
 
-You'll sometimes find yourself creating components that just `subscribe` to a few elements, and then re-publish the outputs without any changes. Govern provides a shortcut for defining this type of component: just return the elements you want to subscribe to from a plain function -- like React's stateless functional components.
+Like React, Govern allows you to define your components as simple render functions.
 
-For example, you could convert the above `<RegistrationFormModel>` component to a stateless functional component. [See it live at CodeSandbox](https://codesandbox.io/s/pyr7y18xq).
+For example, you could convert the above `<RegistrationFormModel>` component to a stateless functional component. [See it live at CodeSandbox](https://codesandbox.io/s/n5993ozp5l).
 
 ```js
-const RegistrationFormModel = ({ defaultValue }) => ({
-  name: <Model defaultValue={defaultValue.name} validate={validateNotEmpty} />,
-  email: <Model defaultValue={defaultValue.email} validate={validateEmail} />
-});
+const RegistrationFormModel = ({ defaultValue }) =>
+  Govern.combine({
+    name: <FieldModel defaultValue={defaultValue.name} validate={validateNotEmpty} />,
+    email: <FieldModel defaultValue={defaultValue.email} validate={validateEmail} />
+  });
 
 RegistrationFormModel.defaultProps = {
   defaultValue: { name: '', email: '' } 
@@ -225,108 +255,155 @@ RegistrationFormModel.defaultProps = {
 
 Once you have some data in your form, submitting it is easy -- you just publish a `submit` handler along with the form data. Everything you know about handling HTTP requests in React components transfers over to Govern components.
 
-But Govern gives you an advantage over plain old React -- your requests can be components too!
+But before we can make a request, we need to know data the request should contain. Which is a problem, because the form data is stored within a child component...
 
-For example, this component takes the request body as props, makes a request in the `componentDidInstantiate` lifecyle method, and emits the request status via the `publish` method.
+#### The `value` instance variable
+
+Each Govern component has a `value` instance variable that holds the current rendered value. You can use this to access the actions and state that child components have exposed to subscribers.
+
+For example, a `RegistrationFormController` component could render a `<RegistrationFormModel>`, and use the `value` instance variable to get the form's state when the user presses "submit":
+
+```js
+class RegistrationFormController extends Govern.Component {
+  render() {
+    return Govern.combine({
+      model: <RegistrationFormModel />,
+      submit: this.submit,
+      request:
+        this.state.action &&
+        <PostRegistrationRequest
+          data={this.state.action.data}
+
+          // Like React, components will be unmounted and remounted if the key
+          // changes. This ensures that resubmitting results in a new request.
+          key={this.state.action.key}
+        />,
+    })
+  }
+
+  submit = e => {
+    e.preventDefault();
+
+    let data = {
+      email: this.value.model.email.value,
+      name: this.value.model.name.value
+    };
+
+    // Make an AJAX request with the form's data.
+    postRegistration(data)
+  };
+}
+```
+
+
+#### Request components
+
+One great thing about Govern is that it let's you re-use patterns that are already well understood by the community. For example, you could implement your request by following Dave Ceddia's excellent guide on [AJAX Requests in React](https://daveceddia.com/ajax-requests-in-react/).
+
+Of course, the other great thing about Govern is that it let's you decouple your UI from your state -- without learning a brand new API. One practical example is that you can put your AJAX logic in *Request Components*. Like with Dave Ceddia's guide, these components make a request on mount. But instead of rendering the output directly to the UI, they render an object containing the request's status.
 
 ```js
 import * as axios from "axios";
 
 class PostRegistrationRequest extends Govern.Component {
   state = {
-    status: 'fetching',
+    isBusy: true,
   }
 
-  publish() {
+  render() {
     return this.state
   }
 
-  componentDidInstantiate() {
+  componentDidMount() {
     axios.post('/user', this.props.data)
       .then(response => {
-        if (!this.isDisposed) {
+        if (!this.isCancelled) {
           this.setState({
-            status: 'success',
-            result: response.data,
+            data: response.data,
+            isBusy: false,
+            response,
+            wasSuccessful: true,
           })
         }
       })
-      .catch((error = {}) => {
-        if (!this.isDisposed) {
+      .catch(response => {
+        if (!this.isCancelled) {
           this.setState({
-            status: 'error',
-            message: error.message || "Unknown Error",
+            data: response && response.data,
+            isBusy: false,
+            response,
+            wasError: true,
           })
         }
       });
   }
 
-  componentWillBeDisposed() {
-    this.isDisposed = true
+  componentWillUnmount() {
+    // If the component is unmounted, we should not handle the response.
+    this.isCancelled = true
   }
 }
 ```
 
-You can then make a request by subscribing to a new `<PostRegistrationRequest>` element. [See it live at CodeSandbox](https://codesandbox.io/s/8zxv9kq9vl).
+Defining requests as Govern components may feel a little weird at first, but it has some big advantages:
+
+- Requests can automatically retry on failure, outputting a relevant status as they change
+- Unlike promises, request components can output progress and be cancelled by unmounting
+- You can pass elements around as "lazy" requests - they won't be run until they're mounted
+
+Request components also make it easy to share communication logic within and between applications. For an example, see [this gist](https://gist.github.com/jamesknelson/ab93890eb26f2841a2f8846d4013b151) of an axios-based `<Request>` component.
+
+Once you have a request component like `PostRegistrationRequest`, you can start it by subscribing to it from a parent component. [See it live at CodeSandbox](https://codesandbox.io/s/313j167zpp).
 
 ```js
 class RegistrationFormController extends Govern.Component {
   state = {
-    request: null
+    action: null
   };
 
-  subscribe() {
-    return {
+  render() {
+    return Govern.combine({
       model: <RegistrationFormModel />,
-      request: this.state.request
-    };
-  }
+      submit: this.submit,
+      request:
+        this.state.action &&
+        <PostRegistrationRequest
+          data={this.state.action.data}
 
-  publish() {
-    return {
-      ...this.subs,
-      canSubmit: this.canSubmit(),
-      submit: this.submit
-    };
-  }
-
-  canSubmit() {
-    return (
-      !this.subs.model.email.error &&
-      !this.subs.model.name.error &&
-      (!this.subs.request || this.subs.request.status === "error")
-    );
+          // Like React, components will be unmounted and remounted if the key
+          // changes. This ensures that resubmitting results in a new request.
+          key={this.state.action.key}
+        />,
+    })
   }
 
   submit = e => {
     e.preventDefault();
-
-    if (this.canSubmit()) {
-      let data = {
-        email: this.subs.model.email.value,
-        name: this.subs.model.name.value
-      };
-
-      this.setState({
-        request: (
-          <PostRegistrationRequest data={data} key={new Date().getTime()} />
-        )
-      });
-    }
+    this.setState({
+      action: {
+        data: {
+          email: this.value.model.email.value,
+          name: this.value.model.name.value
+        },
+        key: Date.now(),
+      }
+    });
   };
 }
 
 ReactDOM.render(
-  <Subscribe to={<RegistrationFormController />}>
-    {({ canSubmit, model, request, submit }) => (
+  <Subscribe to={
+    <RegistrationFormController />
+  }>
+    {({ model, request, submit }) => (
       <form onSubmit={submit}>
         {request &&
-          request.status === "error" && (
-            <p style={{ color: "red" }}>{request.message}</p>
+          request.wasError && (
+            <p style={{ color: "red" }}>Your request failed :-(</p>
           )}
         <Field label="Name" model={model.name} />
         <Field label="E-mail" model={model.email} />
-        <button type="submit" disabled={!canSubmit}>
+        <button type="submit">
           Register
         </button>
       </form>
@@ -338,123 +415,242 @@ ReactDOM.render(
 
 Note how the `key` prop is used in the above example; just like React, changing `key` will result in a new component instance being created, and thus a new request being made each time the user clicks "save".
 
-While request components can take a little getting used to, they have the benefit of being able to publish multiple statuses over time -- where promises can only publish one. For example, you could publish *disconnected* or *unauthenticated* states, along with a `retry` action that attempts to fix them.
-
-Request components also make it easy to share communication logic within and between applications. For an example, see [this gist](https://gist.github.com/jamesknelson/ab93890eb26f2841a2f8846d4013b151) of an axios-based `<Request>` component.
+But while we do want the user to be able to start a new request if the previous one failed, we don't want the user to accidentally start two requests, or to start a second request after the first one succeeds. How can we keep track of this?
 
 
-### Performance note: selecting data
+### Computed values
 
-Govern's `<Subscribe>` component needs to call its render prop each time that *any* part of its output changse. This is great for small components, but as the output gets larger and more complicated, the number of re-renders will also grow -- and a perceivable delay can creep into user interactions.
+Suppose that the `RegistrationFormController` component renders a `canSubmit` boolean. This would make it possible to guard against resubmission by checking `this.value.canSubmit` within the `submit` action, and to set the `disabled` prop of the submit button.
 
-Where possible, you should stick to `<Subscribe>`. But in the rare case that there is noticeable lag, you can use Govern's `<Store of>` component to instantiate a *Store* object, which allows you to manually manage subscriptions.
+This hypothetical `canSubmit` value would be `true` when:
 
-Once you have a store object, there are two ways you can use it:
+- The model does not have any errors, and
+- Submit hasn't been clicked yet (i.e. `this.state.action` is null) or
+- The previous submit failed (i.e. `this.value.request.wasError` is true)
 
-- You can access the latest output with its `getValue()` method.
-- You can return the store from a component's `subscribe` method, and then republish the individual parts that you want.
+While `this.value` can't be accessed directly from within `render()`, Govern provides a `map` primitive that allows you to map the output of an element, just like you can map an array.
 
-For example, here's how the above example would look with a `<Store of>` component. Note that this adds a fair amount of complexity -- try to stick to `<Subscribe to>` unless performance becomes an issue. [See it live at CodeSandbox](https://codesandbox.io/s/616xxyppyz).
+For example, you could use `Govern.map` to compute a `canSubmit` value for the above component as so. [See it live at CodeSandbox](https://codesandbox.io/s/l7pk9wnpjl).
 
 ```js
-class MapDistinct extends Govern.Component {
-  subscribe() {
-    return this.props.from
+class RegistrationFormController extends Govern.Component {
+  state = {
+    action: null
+  };
+
+  render() {
+    return Govern.map(
+      Govern.combine({
+        model: <RegistrationFormModel />,
+        request:
+          this.state.action &&
+          <PostRegistrationRequest
+            data={this.state.action.data}
+            key={this.state.action.key}
+          />,
+      }),
+      ({ model, request }) => ({
+        model,
+        request,
+        submit: this.submit,
+        canSubmit:
+          !model.email.error && !model.name.error &&
+          (!request || request.wasError)
+      })
+    )
   }
-  shouldComponentUpdate(nextProps, nextState, nextSubs) {
-    return nextProps.to(nextSubs) !== this.props.to(this.subs)
+
+  submit = e => {
+    e.preventDefault();
+    if (this.value.canSubmit) {
+      this.setState({
+        action: {
+          data: {
+            email: this.value.model.email.value,
+            name: this.value.model.name.value
+          },
+          key: Date.now(),
+        }
+      });
+    }
+  };
+}
+```
+
+Govern's `map` and `flatMap` primitives serve a similar purpose to the React [Render Prop](https://reactjs.org/docs/render-props.html) pattern. However, map/flatMap have a number of advantages:
+
+- You can use `shouldComponentUpdate` (doing so in React components with render props results in wailing and gnashing of teeth)
+- You can change the structure of components' children (doing so in React results in child components being remounted)
+- You can use the `combine` primitive on mapped components (combining React components with render props results in pyramids of doom)
+
+But returning to our registration form example, the user now has a problem - once they've registered, they'll be stuck on a screen with a disabled form. Let's fix this by automatically redirecting them to a welcome page.
+
+
+### Reacting to changes in value
+
+To redirect away from the page when the request completes, we just need to watch for the `wasSuccessful` value of `<PostRegistrationRequest>` to turn to true.
+
+Govern doesn't currently provide a way to watch a controller's output value. But not to worry, we can just pass the output through another component's props using the `flatMap` primitive, and watch it that way.
+
+[See it live at CodeSandbox](https://codesandbox.io/s/31oo429ql1).
+
+```js
+class RegistrationFormController extends Govern.Component {
+  state = {
+    action: null
+  };
+
+  render() {
+    return Govern.flatMap(
+      Govern.combine({
+        model: <RegistrationFormModel />,
+        request:
+          this.state.action &&
+          <PostRegistrationRequest
+            data={this.state.action.data}
+            key={this.state.action.key}
+          />,
+      }),
+      ({ model, request }) => 
+        <InnerRegistrationFormController
+          // Separate the output (which will be passed through to our
+          // subscribers) from the props used by the inner component itself.
+          history={this.props.history}
+          output={{
+            model,
+            request,
+            submit: this.submit,
+            canSubmit: 
+              !model.email.error && !model.name.error &&
+              (!request || request.wasError)
+          }}
+        />
+    )
   }
-  publish() {
-    return this.props.to(this.subs)
-  }
+
+  submit = e => {
+    e.preventDefault();
+    if (this.value.canSubmit) {
+      this.setState({
+        action: {
+          data: {
+            email: this.value.model.email.value,
+            name: this.value.model.name.value
+          },
+          key: Date.now(),
+        }
+      });
+    }
+  };
 }
 
-const Field = ({ model, label }) => (
-  <Subscribe to={model}>
-    {model => (
-      <label style={{ display: "block" }}>
-        <span>{label}</span>
-        <input
-          value={model.value}
-          onChange={e => model.change(e.target.value)}
-        />
-        {model.error && <p style={{ color: "red" }}>{model.error}</p>}
-      </label>
-    )}
-  </Subscribe>
-);
+class InnerRegistrationFormController extends Govern.Component {
+  hasNavigated = false
+
+  render() {
+    return this.props.output
+  }
+
+  componentDidUpdate() {
+    let request = this.props.output.request
+    if (request && request.wasSuccessful && !this.hasNavigated) {
+      this.hasNavigated = true
+      this.props.history.push('/members/welcome')
+    }
+  }
+}
+```
+
+So what's the difference between `map` and `flatMap`? Simple:
+
+- `map` expects a function that **returns a plain JavaScript object**
+- `flatMap` expects a function that **returns an element**
+
+
+The App Observable
+------------------
+
+Most apps have a single "App" component that holds application-wide state, including authentication, cached data, etc. Because this component is relevant to the entire app, mounting it with the react-govern <Subscribe> doesn't make sense -- it would cause the entire app to be re-rendered on any change, and would require you to pass the output via props or React context.
+
+It's best to stick to `<Subscribe>` where possible. But when you need more control, you can create a **Govern observable**.
+
+Govern observables are wrappers around a Govern component. They can be manually instantiated, and passed to primitives like `map` and `flatMap` in place of elements. You can also pass them through React props and context, allowing you to access app-level state within controllers for individual screens.
+
+
+### An offline indicator
+
+This example App observable exports a value that indicates whether the user is online or offline. A React component then subscribes to the offline indicator using `flatMap` and `distinct` -- which ensures that the indicator only re-renders when `isOnline` changes, regardless of other changes within the store.
+
+The App also exports an automatically increasing `counter` variable; notice how even though the counter is increasing, the online/offline status only changes when you enable/disabled your network connectivity.
+
+[See it live at CodeSandbox](https://codesandbox.io/s/9yzkqx9wr).
+
+```js
+import * as Govern from "govern";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import { Subscribe } from "react-govern";
+
+class App extends Govern.Component {
+  state = {
+    isOnline: window.navigator.onLine,
+    counter: 1
+  };
+
+  render() {
+    return this.state;
+  }
+
+  componentDidMount() {
+    window.addEventListener("offline", this.handleOnlineChange);
+    window.addEventListener("online", this.handleOnlineChange);
+    window.setInterval(() => {
+      this.setState(state => ({
+        counter: state.counter + 1
+      }));
+    }, 1000);
+  }
+
+  handleOnlineChange = () => {
+    this.setState({
+      isOnline: window.navigator.onLine
+    });
+  };
+}
+
+const appObservable = Govern.createObservable(<App />);
+
+let counterRenderCount = 0;
+let networkRenderCount = 0;
 
 ReactDOM.render(
-  <Store of={<RegistrationFormController />}>
-    {store => (
-      <form onSubmit={store.getValue().submit}>
-        <Subscribe
-          to={<MapDistinct from={store} to={output => output.request} />}
-        >
-          {request =>
-            request && request.status === "error" ? (
-              <p style={{ color: "red" }}>{request.message}</p>
-            ) : null
-          }
-        </Subscribe>
-        <Field
-          label="Name"
-          model={<MapDistinct from={store} to={output => output.model.name} />}
-        />
-        <Field
-          label="E-mail"
-          model={<MapDistinct from={store} to={output => output.model.email} />}
-        />
-        <Subscribe
-          to={<MapDistinct from={store} to={output => output.canSubmit} />}
-        >
-          {canSubmit => (
-            <button type="submit" disabled={!canSubmit}>
-              Register
-            </button>
-          )}
-        </Subscribe>
-      </form>
-    )}
-  </Store>,
+  <div>
+    <Subscribe
+      to={Govern.flatMap(appObservable, app => Govern.distinct(app.counter))}
+    >
+      {counter => (
+        <React.Fragment>
+          <h3>Counter (rendered {++counterRenderCount} times)</h3>
+          {String(counter)}
+        </React.Fragment>
+      )}
+    </Subscribe>
+    
+    <Subscribe
+      to={Govern.flatMap(appObservable, app => Govern.distinct(app.isOnline))}
+    >
+      {isOnline => (
+        <React.Fragment>
+          <h3>Network status (rendered {++networkRenderCount} times)</h3>
+          {isOnline ? "ONLINE" : "offline"}
+        </React.Fragment>
+      )}
+    </Subscribe>
+  </div>,
   document.getElementById("root")
 );
 ```
 
-Note how the above example only uses `getValue()` to access the `submit` action. This is ok, because we know that `submit` won't change, and thus we don't need to subscribe to future values.
-
-Also note how the selector component defines a `shouldComponentUpdate` method. If this *wasn't* defined, then each update to the `from` store would cause a new publish -- even if the published value didn't change! Defining `shouldComponentUpdate` gives you control over exactly which changes cause a publish.
-
-
-### Built-in components
-
-Govern has a number of built-in elements to help you reduce boilerplate and accomplish common tasks. These are particularly useful for creating selector components.
-
-The three built-ins that you'll use most often are:
-
-1. `<map from={Store | Element} to={output => mappedOutput} />`
-
-Maps the output of `from`, using the function passed to `to`. Each publish on the `from` store will result in a new publish.
-
-2. `<flatMap from={Store | Element} to={output => mappedElement} />`
-
-Maps the output of `from`, using the output of whatever element is returned by `to`. Each published of the *mapped* element results in a new publish.
-
-3. `<distinct by?={(x, y) => boolean} children>`
-
-Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using reference equality, but you can supply a custom comparison function via the `by` prop.
-
----
-
-For example, you could use the `<flatMap>` and `<distinct>` built-ins to rewrite the `<MapDistinct>` component from the previous example as a stateless functional component. [See it live at CodeSandbox](https://codesandbox.io/s/0ozlm2lxjl).
-
-```js
-const MapDistinct = props => (
-  <distinct>
-    <map from={props.from} to={props.to} />
-  </distinct>
-);
-```
 
 
 Two out of Three types of state
@@ -462,7 +658,7 @@ Two out of Three types of state
 
 React application state can be split into roughly three categories:
 
--   Environment state
+-   App store
 
     State that is global to your entire application. For example:
 
@@ -471,9 +667,9 @@ React application state can be split into roughly three categories:
     * Authentication state
     * Cached data
 
-    *Govern is great at handling environment state -- but it can also integrate with your existing Redux or MobX-based store.*
+    *Govern is great at handling environment state, and can also be integrated with your existing Redux or MobX-based store.*
 
--   Control state
+-   Controllers
 
     State that represents that current view, and any actions that have been initialized from it. For example:
 
@@ -481,11 +677,11 @@ React application state can be split into roughly three categories:
     * Errors form requests
     * Selected list items
 
-    *Govern is great at handling control state. Just follow the guide above.*
+    *Govern is great at handling control state.*
 
 -   View state
 
-    State that represents the view, but does not affect the environment or control state. For example, animations and transitions.
+    State that represents the view, but does not affect the environment or control state. For example, animations, transitions, and state for controlling interactions with DOM elements.
 
     *Govern is **not** meant to handle view state. Use React component state instead.*
 
@@ -495,34 +691,32 @@ API Documentation
 
 ### Govern.Component
 
-Govern components are JavaScript classes that extend `Govern.Component`, and contain a `publish()` method.
+Govern components are JavaScript classes that extend `Govern.Component`, and contain a `render()` method.
 
-If you've used React, the component API will be familiar. However, there are a couple differences:
+If you've used React, the component API will be familiar. There are just a few differences:
 
-- Govern components output plain JavaScript objects instead of DOM elements
-- Govern components can declare subscriptions to other elements and stores
+- `render` can output anything!
+- There are no refs; use `this.value` instead
+- Context is not supported; use Govern Observables instead
+- `getSnapshotBeforeUpdate` is not available (or necessary)
+- The `dispatch` method allows for manually specified batches
 
-As a component author, the most obvious difference is that you'll define a `publish()` method in place of `render()`.
+##### Rendering
 
-Govern also gives you the `subscribe()` method, and `subs` instance property, which combine to allow you to declare subscriptions to elements and stores.
-
-##### Publishing and subscribing
-
-- `publish()`
-- `subscribe()`
-- `subs`
+- `render()`
+- `value` (the latest output of the element returned by `render()`)
 
 ##### Methods shared with React
 
 - `constructor()`
 - `static getDerivedStateFromProps()`
-- `UNSAFE_componentWillReceiveProps()`
-- `componentDidInstantiate()` (see React's `componentDidMount()`)
+- `componentWillReceiveProps()`
+- `componentDidMount()`
 - `componentDidUpdate()`
-- `componentWillBeDisposed()` (see React's `componentWillUnmount()`)
+- `componentWillUnmount()`
 - `setState()`
 
-##### Miscelaneous methods
+##### Miscellaneous methods
 
 - `dispatch()`
 
@@ -545,20 +739,20 @@ Govern also gives you the `subscribe()` method, and `subs` instance property, wh
 constructor(props)
 ```
 
-Identical to React's component [constructor](https://reactjs.org/docs/react-component.html#constructor), a Govern component's constructor can be used to bind event handlers, set initial state, etc.
+Similar to React's component [constructor](https://reactjs.org/docs/react-component.html#constructor), a Govern component's constructor can be used to bind event handlers, set initial state, etc.
 
 ##### `static getDerivedStateFromProps()`
 
 ```js
-static getDerivedStateFromProps(nextProps, prevState)
+static getDerivedStateFromProps(props, state)
 ```
 
-Identical to React's [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops), this can be used to compute state from props.
+Similar to React's [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops), this can be used to compute state from props.
 
-##### `componentDidInstantiate()`
+##### `componentDidMount()`
 
 ```js
-componentDidInstantiate()
+componentDidMount()
 ```
 
 Similar to React's [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount), this component will be called once the initial output is available.
@@ -567,40 +761,40 @@ Note that this will be called *before* the initial value of the component is flu
 
 Any Govern state changes caused by this method will be executed before changes are flushed to React.
 
-##### `UNSAFE_componentWillReceiveProps()`
+##### `componentWillReceiveProps()`
 
 ```js
-UNSAFE_componentWillReceiveProps(nextProps)
+componentWillReceiveProps(nextProps)
 ```
 
-Identical to React's [UNSAFE_componentWillReceiveProps](https://reactjs.org/docs/react-component.html#unsafe_componentwillreceiveprops).
+Similar to React's [UNSAFE_componentWillReceiveProps](https://reactjs.org/docs/react-component.html#unsafe_componentwillreceiveprops). Not prefixed with `UNSAFE_` as Govern doesn't have plans for supporting async rendering.
 
 Where possible, avoid this in favor of `static getDerivedStateFromProps`.
 
 ##### `shouldComponentUpdate()`
 
 ```js
-shouldComponentUpdate(nextProps, nextState, nextSubs)
+shouldComponentUpdate(nextProps, nextState)
 ```
 
-Similar to React's [shouldComponentUpdate](https://reactjs.org/docs/react-component.html#shouldcomponentupdate), but receives a third argument with the latest values of the component's subscriptions.
+Similar to React's [shouldComponentUpdate](https://reactjs.org/docs/react-component.html#shouldcomponentupdate).
 
-When defined, returning a falsy value will prevent `publish` from being called, and prevent any changes from being published to subscribers.
+When defined, returning a falsy value will prevent `render` from being called.
 
 ##### `componentDidUpdate()`
 
 ```js
-componentDidUpdate(prevProps, prevState, prevSubs)
+componentDidUpdate(prevProps, prevState)
 ```
 
-Similar to React's [componentDidUpdate](https://reactjs.org/docs/react-component.html#componentdidupdate), but receives a third argument with the previous values of the component's subscriptions.
+Similar to React's [componentDidUpdate](https://reactjs.org/docs/react-component.html#componentdidupdate), but receives a third argument with the previous `value`.
 
-Any Govern state changes caused by this method will be executed before changes are flushed to React.
+Any Govern state changes caused by this method will be executed before changes are flushed to `<Subscribe>` React components.
 
-##### `componentWillBeDisposed()`
+##### `componentWillUnmount()`
 
 ```js
-componentWillBeDisposed()
+componentWillUnmount()
 ```
 
 Similar to React's [componentWillUnmount](https://reactjs.org/docs/react-component.html#componentwillunmount) lifecycle method, this component will be called before a component is scheduled to be disposed.
@@ -611,7 +805,7 @@ Similar to React's [componentWillUnmount](https://reactjs.org/docs/react-compone
 setState(updater[, callback])
 ```
 
-Identical to React's [setState](https://reactjs.org/docs/react-component.html#setstate).
+Similar to React's [setState](https://reactjs.org/docs/react-component.html#setstate).
 
 ##### `dispatch()`
 
@@ -634,9 +828,9 @@ Identical to React's [`props`](https://reactjs.org/docs/react-component.html#pro
 
 Identical to React's [`state`](https://reactjs.org/docs/react-component.html#state).
 
-##### `subs`
+##### `value`
 
-This property holds the latest output of any elements or stores that have been returned from your `subscribe()` method.
+This property holds the latest output of the element that was returned from your component's `render()` method.
 
 
 #### Class properties
@@ -648,101 +842,167 @@ Identical to React's [`defaultProps`](https://reactjs.org/docs/react-component.h
 
 ### Stateless functional components
 
-Govern's stateless functional components are a little different to React's. While React can treat function components as `render()` methods, a Govern stateless Govern component with just a `publish()` wouldn't be very useful at all.
-
-As such, Govern treats function components as the `subscribe()` method of a class component, and publishes `this.subs` as its output.
-
-For example, if you have a stateless functional component `sfc(props)`, then it will map to the following class component:
+As with React, you can define a component as a stateless function, which will be treated as the `render()` method of an otherwise empty component.
 
 ```js
-class SFC extends Govern.Component {
-  subscribe() {
-    return sfc(this.props)
-  }
+// Stateless functional component
+const SFC = () =>
+  ({ foo: 'bar' })
 
-  publish() {
-    return this.subs
+// Equivalent class component
+class SFC extends Govern.Component {
+  render() {
+    return { foo: 'bar' }
   }
 }
 ```
 
 
-### Built-in Govern components
+### Primitive Govern components
 
-Govern provides a number of useful primitives as built-in elements. Just like React, these can be created by passing a string as the first argument to `createElement()`.
+Govern provides a number of primitives for composing elements. Typically these are accessed through the following factory methods:
 
+- `combine()`
+- `map()`
+- `flatMap()`
+- `distinct()`
+- `constant()`
 
-#### `<map>`
+Like React, these can also be created by passing a string as the first argument to `Govern.createElement()`. Govern also accepts elements created by `React.createElement()`, so you can define them with JSX.
+
+#### `combine()`
 
 ```js
-<map from={Store | Element} to={output => mappedOutput} />
+// With factory function
+Govern.combine({ name: elementOrObservable })
+
+// With JSX
+<combine>{{
+  name: elementOrObservable
+}}</combine>
+```
+
+#### `map()`
+
+```js
+// With factory function
+Govern.map(elementOrObservable, value => computedValue)
+
+// With JSX
+<map from={elementOrObservable} to={value => computedValue} />
 ```
 
 Maps the output of `from`, using the function passed to `to`. Each publish on the `from` store will result in a new publish.
 
-#### `<flatMap>`
+#### `flatMap()`
 
 ```js
-<flatMap from={Store | Element} to={output => mappedElement} />
+// With factory function
+Govern.flatMap(elementOrObservable, value => computedElement)
+
+// With JSX
+<flatMap from={elementOrObservable} to={value => computedElement} />
 ```
 
 Maps the output of `from`, using the output of whatever element is returned by `to`. Each published of the *mapped* element results in a new publish.
 
-#### `<distinct>`
+#### `distinct()`
 
 ```js
-<distinct by?={(x, y) => boolean} children={GovernElement | Store}>
+// With factory function
+Govern.distinct(children, /* optional */ (x, y) => areValuesEqual)
+
+// With JSX
+<distinct by={/* optional */ (x, y) => areValuesEqual}>
+  {elementOrObservable}
+</distinct>
 ```
 
-Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using reference equality, but you can supply a custom comparison function via the `by` prop.
+Publishes the output of the child element, but only when it differs from the previous output. By default, outputs are compared using shallow equality, but you can supply a custom comparison function via the `by` prop.
 
+#### `constant()`
+
+```js
+// With factory function
+Govern.constant(value)
+
+// With JSX
+<constant>{{value}}</constant>
+```
+
+An element to represent an unchanging value. You won't usually need this, as objects returned from `render()` are treated as constants by default. However, it can come in handy in conjunction with `flatMap`, which expects its props to be elements.
 
 ### React components
 
-The *react-govern* package exports two components for creating and subscribing to Govern stores/elements within React applications.
-
-#### `<Store>`
-
-```js
-<Store of={GovernElement} children={store => ReactElement} />
-```
-
-Instantiates the given Govern element as a `Store` object, and passes this object to the render function specified on `children`.
-
-When the element passed to `of` changes, Govern will compare it against the previous element. If the element type and `key` prop match, Govern will update the props on the existing component instance. Otherwise, it will dispose the existing component instance and create a new one.
-
-Unlike `<Subscribe>`, the render function will not be called when the store publishes new values. It will only be called when a new store is created, or when the `<Subscribe>` component itself is re-rendered.
-
+The *react-govern* package exports a single component for creating and subscribing to Govern stores/elements within React applications.
 
 #### `<Subscribe>`
 
 ```js
-<Subscribe to={GovernElement | Store} children={output => ReactElement} />
+<Subscribe to={elementOrObservable}>
+  {value => <SomeReactElement />}
+</Subscribe>
 ```
 
-Instantiates a store for the given Govern Element (if necessary), and subscribes to it -- passing each value to the `children` render function.
+Mounts the given Govern Element (if necessary), and subscribes to it -- passing each value to the `children` render function.
 
-Uses the same strategy as `<Store>` for reconciling the element passed to `to`.
+Any prop changes are passed through; if the type or key of the `to` element changes, the old component will be unmounted.
 
 
-### `Store` objects
+### `GovernObservable` objects
 
-#### `getValue()`
+Govern components are basically observables. In fact, Govern lets you create Observables from Govern elements. These observables implement the proposed [ESNext Observable](https://github.com/tc39/proposal-observable) specification, along with some Govern-specific methods.
 
-```
-getValue()
-```
+Observables can be passed to `combine`, `flatMap` and `map`, in place of elements.
 
-Return the store's current output.
+Govern observables are a great way to manage an app-wide store. Just create an observable at the root of your application, then pass it down to where it is required using React context or as a prop, and subscribe to the parts you need with `distinct`, `map`, etc.
 
-#### `subscribe()`
+#### `createObservable()`
 
 ```
-subscribe(onNext, onError, onComplete, onStartDispatch, onEndDispatch, priority)
+createObservable(element)
 ```
+
+Instantiates the component specified by the `element` argument, and returns a `GovernObservable` object that can be used to interact with the component.
+
+#### Observable methods
+
+##### `getValue()`
+
+```
+observable.getValue()
+```
+
+Return the component's current value.
+
+##### `subscribe()`
+
+```
+observable.subscribe(onNext, onError?, onComplete?, onStartDispatch?, onEndDispatch?, priority?)
+```
+
+*In general, you should avoid manually creating subscriptions in favor of using the `<Subscribe to>` component from the *react-govern* package.*
 
 Creates a new subscription to the store.
 
-This method is compatible with the [ESNext Observable proposal](https://github.com/tc39/proposal-observable), and thus can be used with RxJS, etc.
+This method is compatible with the proposed [ESNext Observable](https://github.com/tc39/proposal-observable) specification, and thus can be used with RxJS, etc.
 
-In general, you should avoid manually creating subscriptions in favor of using the `<Subscribe to>` component from the *react-govern* package.
+If `onStartDispatch` and `onEndDispatch` are not provided, then `onNext` not be called during a dispatch. 
+
+`Component.prototype.setState` cannot be called on the any component connected to the observable while `onNext` is being called. If you need to call actions during an `onNext` handler, wrap the call within `waitUntilNotFlushing()`.
+
+##### `dispose()`
+
+```
+observable.dispose()
+```
+
+Clean up any resources used by the observable.
+
+##### `waitUntilNotFlushing()`
+
+```
+waitUntilNotFlushing(functionToRunWhenNotFlushing)
+```
+
+Runs the specified function once it is safe to call `setState` again. Mainly used when you need to call an action from within an observables `subscribe()` handler, or from within a React lifecycle method.
