@@ -120,6 +120,7 @@ export class InnerSubscribe<T> extends React.Component<InnerSubscribeProps<T>, I
 
   componentDidCatch(error) {
     this.cleanup()
+    throw error
   }
 
   componentWillUnmount() {
